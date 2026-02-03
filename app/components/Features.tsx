@@ -43,24 +43,24 @@ export function Features() {
   ];
 
   return (
-    <section id="features" className="py-24">
+    <section id="features" className="py-16 sm:py-20 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-20">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-4 tracking-tight">Une plateforme complète pour tous les acteurs</h2>
-          <p className="text-neutral-600">Conçue pour accélérer chaque étape du processus, de la déclaration initiale au règlement final.</p>
+        <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16 lg:mb-20">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">Une plateforme complète pour tous les acteurs</h2>
+          <p className="text-neutral-600 text-sm sm:text-base leading-relaxed">Conçue pour accélérer chaque étape du processus, de la déclaration initiale au règlement final.</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {features.map((feature, idx) => (
             <motion.div 
               key={idx}
               whileHover={{ y: -5 }}
-              className="p-8 rounded-3xl border border-neutral-100 bg-white hover:shadow-xl hover:shadow-neutral-100 transition-all"
+              className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-neutral-100 bg-white hover:shadow-xl hover:shadow-neutral-100 transition-all"
             >
-              <div className={`w-12 h-12 ${feature.color} rounded-2xl flex items-center justify-center mb-6`}>
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 ${feature.color} rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6`}>
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3">{feature.title}</h3>
               <p className="text-neutral-600 leading-relaxed text-sm">
                 {feature.description}
               </p>

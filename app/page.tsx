@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigation } from '@/app/components/Navigation';
 import { Hero } from '@/app/components/Hero';
 import { Stats } from '@/app/components/Stats';
@@ -9,15 +9,70 @@ import { HowItWorks } from '@/app/components/HowItWorks';
 import { Testimonials } from '@/app/components/Testimonials';
 import { CTA } from '@/app/components/CTA';
 import { Footer } from '@/app/components/Footer';
+import { Login } from '@/app/components/Login';
+import { SignUp } from '@/app/components/SignUp';
+
+type ViewState = 'landing' | 'login' | 'signup';
 
 interface LandingPageProps {
   onStart: (role: 'client' | 'gestionnaire') => void;
 }
 
 export function LandingPage({ onStart }: LandingPageProps) {
+  const [currentView, setCurrentView] = useState<ViewState>('landing');
+
+  const handleLogin = () => {
+    setCurrentView('login');
+  };
+
+  const handleSignUp = () => {
+    setCurrentView('signup');
+  };
+
+  const handleBackToLanding = () => {
+    setCurrentView('landing');
+  };
+
+  const handleLoginSubmit = (email: string, password: string) => {
+    // Handle login logic here
+    console.log('Login attempt:', { email, password });
+    // For now, just redirect to client area
+    onStart('client');
+  };
+
+  const handleSignUpSubmit = (userData: { fullName: string; email: string; password: string }) => {
+    // Handle signup logic here
+    console.log('Signup attempt:', userData);
+    // For now, just redirect to client area
+    onStart('client');
+  };
+
+  // Render Login View
+  if (currentView === 'login') {
+    return (
+      <Login
+        onBack={handleBackToLanding}
+        onSignUp={handleSignUp}
+        onLogin={handleLoginSubmit}
+      />
+    );
+  }
+
+  // Render SignUp View
+  if (currentView === 'signup') {
+    return (
+      <SignUp
+        onBack={handleBackToLanding}
+        onLogin={handleLogin}
+        onSignUp={handleSignUpSubmit}
+      />
+    );
+  }
+
+  // Render Landing View (default)
   return (
     <div className="min-h-screen bg-white text-neutral-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-      <Navigation onStart={onStart} />
+      <Navigation onStart={onStart} onLogin={handleLogin} />
       <Hero onStart={onStart} />
       <Stats />
       <Features />

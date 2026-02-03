@@ -1,0 +1,194 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Client {
+  clientId    String   @id @default(cuid())
+  cin         String   @unique
+  firstName   String
+  lastName    String
+  email       String   @unique
+  phone       String   @unique  
+  dateOfBirth DateTime
+  address     String
+  city        String
+  province    String
+  postalCode  String?
+
+  // Verification & Status
+  status          ClientStatus @default(ACTIVE)
+  emailVerified   Boolean @default(false)
+  phoneVerified   Boolean @default(false)
+  documentVerified Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+  lastLoginAt DateTime?
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  policies    Policy[]
+  claims      Claim[]
+}
+
+model User {
+  userId        String   @id @default(uuid()) @map("user_id") @db.Uuid
+  username      String   @unique @db.VarChar(100)
+  email         String   @unique @db.VarChar(255)
+  passwordHash  String   @map("password_hash") @db.VarChar(255)
+  firstName     String?  @map("first_name") @db.VarChar(100)
+  lastName      String?  @map("last_name") @db.VarChar(100)
+  role          UserRole
+  currentWorkload Int    @default(0) @map("current_workload")
+  maxWorkload   Int      @default(20) @map("max_workload")
+  isActive      Boolean  @default(true) @map("is_active")
+  lastLogin     DateTime? @map("last_login")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  assignedClaims Claim[]
+
+  @@index([role], map: "idx_users_role")
+  @@index([email], map: "idx_users_email")
+  @@map("users")
+}
+
+model Policy {
+  policyId      String      @id @default(uuid()) @map("policy_id") @db.Uuid
+  clientId      String      @map("client_id") @db.Uuid
+  client        Client      @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  policyNumber  String      @unique @map("policy_number") @db.VarChar(50)
+  policyType    PolicyType  @map("policy_type")
+  coverageType  String?     @map("coverage_type") @db.VarChar(100)
+  startDate     DateTime    @map("start_date") @db.Date
+  endDate       DateTime    @map("end_date") @db.Date
+  premiumAmount Decimal     @map("premium_amount") @db.Decimal(12, 2)
+  insuredAmount Decimal     @map("insured_amount") @db.Decimal(12, 2)
+  deductible    Decimal     @default(0) @db.Decimal(12, 2)
+  status        PolicyStatus @default(ACTIVE)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  claims        Claim[]
+
+  @@index([clientId], map: "idx_policies_client")
+  @@index([status], map: "idx_policies_status")
+  @@index([policyType], map: "idx_policies_type")
+  @@map("policies")
+}
+
+model Claim {
+  claimId           String      @id @default(uuid()) @map("claim_id") @db.Uuid
+  claimNumber       String      @unique @map("claim_number") @db.VarChar(50)
+  policyId          String?     @map("policy_id") @db.Uuid
+  policy            Policy?     @relation(fields: [policyId], references: [policyId])
+  clientId          String      @map("client_id") @db.Uuid
+  client            Client      @relation(fields: [clientId], references: [clientId])
+  
+  // Claim information
+  claimType         ClaimType   @map("claim_type")
+  incidentDate      DateTime    @map("incident_date")
+  declarationDate   DateTime    @default(now()) @map("declaration_date")
+  incidentLocation  String?     @map("incident_location") @db.Text
+  description       String      @db.Text
+  
+  // Financial
+  claimedAmount     Decimal?    @map("claimed_amount") @db.Decimal(12, 2)
+  estimatedAmount   Decimal?    @map("estimated_amount") @db.Decimal(12, 2)
+  approvedAmount    Decimal?    @map("approved_amount") @db.Decimal(12, 2)
+  
+  // Workflow
+  status            ClaimStatus @default(DECLARED)
+  priority          Priority    @default(NORMAL)
+  assignedTo        String?     @map("assigned_to") @db.Uuid
+  assignedUser      User?       @relation(fields: [assignedTo], references: [userId])
+  
+  // AI Scoring
+  riskScore         Decimal?    @map("risk_score") @db.Decimal(5, 2)
+  fraudScore        Decimal?    @map("fraud_score") @db.Decimal(5, 2)
+  
+  // Metadata
+  declarationChannel DeclarationChannel? @map("declaration_channel")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  @@index([clientId], map: "idx_claims_client")
+  @@index([policyId], map: "idx_claims_policy")
+  @@index([status], map: "idx_claims_status")
+  @@index([assignedTo], map: "idx_claims_assigned")
+  @@map("claims")
+}
+
+enum ClaimType {
+  ACCIDENT
+  THEFT
+  FIRE
+  WATER_DAMAGE
+}
+
+enum ClaimStatus {
+  DECLARED
+  ANALYZING
+  DOCS_REQUIRED
+  UNDER_EXPERTISE
+  IN_DECISION
+  APPROVED
+  IN_PAYMENT
+  CLOSED
+  REJECTED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum DeclarationChannel {
+  WEB
+  MOBILE
+  PHONE
+  API
+}
+
+enum PolicyType {
+  AUTO
+  HOME
+  HEALTH
+  LIFE
+}
+
+enum PolicyStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+  SUSPENDED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  MANAGER_SENIOR
+  MANAGER_JUNIOR
+  EXPERT
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+  BLOCKED
+}

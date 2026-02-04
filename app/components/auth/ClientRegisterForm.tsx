@@ -4,12 +4,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, User, Phone, MapPin, Calendar, CreditCard } from 'lucide-react';
 import Link from 'next/link';
-import { useClientAuth } from '@/app/hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 
 export default function ClientRegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [formData, setFormData] = useState({
     // Personal Info
     firstName: '',
@@ -29,31 +31,40 @@ export default function ClientRegisterForm() {
     agreeToTerms: false,
   });
 
-  const clientAuth = useClientAuth();
+  const router = useRouter();
+  const auth = useSimpleAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    setErrorMessage('');
     
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      setErrors({ confirmPassword: 'Passwords do not match' });
       return;
     }
     
     if (!formData.agreeToTerms) {
-      alert('Please agree to the terms and conditions');
+      setErrors({ agreeToTerms: 'Please agree to the terms and conditions' });
       return;
     }
+
+    setIsLoading(true);
 
     // Remove confirmPassword from the data sent to server
     const { confirmPassword, agreeToTerms, ...registrationData } = formData;
     
-    // Convert dateOfBirth string to Date object
-    const dataToSend = {
-      ...registrationData,
-      dateOfBirth: new Date(registrationData.dateOfBirth)
-    };
-    
-    clientAuth.register(dataToSend);
+    try {
+      await auth.register(registrationData);
+      // Redirect to login with success message
+      router.push('/auth/login?registered=true');
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -72,8 +83,7 @@ export default function ClientRegisterForm() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const isLoading = clientAuth.isLoading;
-  const errorMessage = clientAuth.registerError;
+  // Morocco provinces/regions
 
   // Morocco provinces/regions
   const moroccanProvinces = [

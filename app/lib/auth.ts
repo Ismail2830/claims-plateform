@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from './prisma';
+import { logClientAuth, logStaffAuth, extractRequestInfo } from './logging';
 
 // JWT Secret - In production, use environment variable
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
@@ -79,6 +80,13 @@ export const authenticateClient = async (email: string, password: string) => {
     data: { lastLoginAt: new Date() }
   });
 
+  // Log successful login
+  await logClientAuth('LOGIN', client.clientId, undefined, undefined, {
+    email: client.email,
+    loginTime: new Date(),
+    success: true
+  });
+
   const tokenPayload: ClientTokenPayload = {
     clientId: client.clientId,
     email: client.email,
@@ -137,6 +145,15 @@ export const authenticateStaff = async (email: string, password: string) => {
   await prisma.user.update({
     where: { userId: user.userId },
     data: { lastLogin: new Date() }
+  });
+
+  // Log successful login
+  await logStaffAuth('LOGIN', user.userId, undefined, undefined, {
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    loginTime: new Date(),
+    success: true
   });
 
   const tokenPayload: StaffTokenPayload = {
@@ -220,6 +237,14 @@ export const registerClient = async (data: {
       lastName: true,
       status: true
     }
+  });
+
+  // Log client registration
+  await logClientAuth('CREATE' as any, client.clientId, undefined, undefined, {
+    email: client.email,
+    cin: client.cin,
+    registrationTime: new Date(),
+    success: true
   });
 
   return client;

@@ -39,6 +39,9 @@ model Client {
   // Relations
   policies    Policy[]
   claims      Claim[]
+  documents   ClaimDocument[] @relation("DocumentUploadedByClient")
+  comments    ClaimComment[] @relation("CommentAuthorClient")
+  auditLogs   AuditLog[] @relation("AuditLogClient")
 }
 
 model User {
@@ -58,6 +61,12 @@ model User {
 
   // Relations
   assignedClaims Claim[]
+  documentsUploaded ClaimDocument[] @relation("DocumentUploadedBy")
+  documentsVerified ClaimDocument[] @relation("DocumentVerifiedBy")
+  statusChanges ClaimStatusHistory[] @relation("StatusChangedBy")
+  commentsAuthored ClaimComment[] @relation("CommentAuthorUser")
+  commentsRead ClaimComment[] @relation("CommentReadBy")
+  auditLogs AuditLog[] @relation("AuditLogUser")
 
   @@index([role], map: "idx_users_role")
   @@index([email], map: "idx_users_email")
@@ -124,11 +133,154 @@ model Claim {
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
+  // Relations
+  documents     ClaimDocument[]
+  statusHistory ClaimStatusHistory[]
+  comments      ClaimComment[]
+  auditLogs     AuditLog[]
+
   @@index([clientId], map: "idx_claims_client")
   @@index([policyId], map: "idx_claims_policy")
   @@index([status], map: "idx_claims_status")
   @@index([assignedTo], map: "idx_claims_assigned")
   @@map("claims")
+}
+
+// Supporting Tables
+
+model ClaimDocument {
+  documentId    String      @id @default(uuid()) @map("document_id") @db.Uuid
+  claimId       String      @map("claim_id") @db.Uuid
+  claim         Claim       @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+  
+  fileName      String      @map("file_name") @db.VarChar(255)
+  originalName  String      @map("original_name") @db.VarChar(255)
+  fileType      DocumentType @map("file_type")
+  mimeType      String      @map("mime_type") @db.VarChar(100)
+  fileSize      Int         @map("file_size")
+  filePath      String      @map("file_path") @db.VarChar(500)
+  
+  uploadedBy    String?     @map("uploaded_by") @db.Uuid
+  uploadedByUser User?      @relation("DocumentUploadedBy", fields: [uploadedBy], references: [userId])
+  uploadedByClient String?  @map("uploaded_by_client") @db.Uuid
+  uploadedByClientRef Client? @relation("DocumentUploadedByClient", fields: [uploadedByClient], references: [clientId])
+  
+  status        DocumentStatus @default(UPLOADED)
+  description   String?     @db.Text
+  isRequired    Boolean     @default(false) @map("is_required")
+  verifiedAt    DateTime?   @map("verified_at")
+  verifiedBy    String?     @map("verified_by") @db.Uuid
+  verifiedByUser User?      @relation("DocumentVerifiedBy", fields: [verifiedBy], references: [userId])
+  
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([claimId], map: "idx_claim_documents_claim")
+  @@index([fileType], map: "idx_claim_documents_type")
+  @@index([status], map: "idx_claim_documents_status")
+  @@map("claim_documents")
+}
+
+model ClaimStatusHistory {
+  historyId     String      @id @default(uuid()) @map("history_id") @db.Uuid
+  claimId       String      @map("claim_id") @db.Uuid
+  claim         Claim       @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+  
+  fromStatus    ClaimStatus? @map("from_status")
+  toStatus      ClaimStatus  @map("to_status")
+  changedBy     String?     @map("changed_by") @db.Uuid
+  changedByUser User?       @relation("StatusChangedBy", fields: [changedBy], references: [userId])
+  
+  reason        String?     @db.Text
+  notes         String?     @db.Text
+  isSystemGenerated Boolean @default(false) @map("is_system_generated")
+  
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([claimId], map: "idx_claim_status_history_claim")
+  @@index([toStatus], map: "idx_claim_status_history_status")
+  @@index([changedBy], map: "idx_claim_status_history_user")
+  @@index([createdAt], map: "idx_claim_status_history_date")
+  @@map("claim_status_history")
+}
+
+model ClaimComment {
+  commentId     String      @id @default(uuid()) @map("comment_id") @db.Uuid
+  claimId       String      @map("claim_id") @db.Uuid
+  claim         Claim       @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+  
+  message       String      @db.Text
+  commentType   CommentType @default(GENERAL) @map("comment_type")
+  isInternal    Boolean     @default(false) @map("is_internal")
+  
+  authorId      String?     @map("author_id") @db.Uuid
+  authorUser    User?       @relation("CommentAuthorUser", fields: [authorId], references: [userId])
+  authorClientId String?    @map("author_client_id") @db.Uuid
+  authorClient  Client?     @relation("CommentAuthorClient", fields: [authorClientId], references: [clientId])
+  
+  parentCommentId String?   @map("parent_comment_id") @db.Uuid
+  parentComment ClaimComment? @relation("CommentReplies", fields: [parentCommentId], references: [commentId])
+  replies       ClaimComment[] @relation("CommentReplies")
+  
+  isRead        Boolean     @default(false) @map("is_read")
+  readAt        DateTime?   @map("read_at")
+  readBy        String?     @map("read_by") @db.Uuid
+  readByUser    User?       @relation("CommentReadBy", fields: [readBy], references: [userId])
+  
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([claimId], map: "idx_claim_comments_claim")
+  @@index([authorId], map: "idx_claim_comments_author_user")
+  @@index([authorClientId], map: "idx_claim_comments_author_client")
+  @@index([parentCommentId], map: "idx_claim_comments_parent")
+  @@index([createdAt], map: "idx_claim_comments_date")
+  @@map("claim_comments")
+}
+
+model AuditLog {
+  logId         String      @id @default(uuid()) @map("log_id") @db.Uuid
+  
+  // Entity Information
+  entityType    EntityType  @map("entity_type")
+  entityId      String      @map("entity_id") @db.Uuid
+  claimId       String?     @map("claim_id") @db.Uuid
+  claim         Claim?      @relation(fields: [claimId], references: [claimId])
+  
+  // Action Information
+  action        AuditAction @map("action")
+  description   String      @db.Text
+  
+  // User Information
+  userId        String?     @map("user_id") @db.Uuid
+  userRef       User?       @relation("AuditLogUser", fields: [userId], references: [userId])
+  clientId      String?     @map("client_id") @db.Uuid
+  clientRef     Client?     @relation("AuditLogClient", fields: [clientId], references: [clientId])
+  
+  // System Information
+  ipAddress     String?     @map("ip_address") @db.VarChar(45)
+  userAgent     String?     @map("user_agent") @db.Text
+  sessionId     String?     @map("session_id") @db.VarChar(255)
+  
+  // Data Changes
+  oldValues     Json?       @map("old_values")
+  newValues     Json?       @map("new_values")
+  metadata      Json?       @map("metadata")
+  
+  // Risk & Security
+  riskLevel     RiskLevel   @default(LOW) @map("risk_level")
+  isSuspicious  Boolean     @default(false) @map("is_suspicious")
+  
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@index([claimId], map: "idx_audit_logs_claim")
+  @@index([userId], map: "idx_audit_logs_user")
+  @@index([clientId], map: "idx_audit_logs_client")
+  @@index([action], map: "idx_audit_logs_action")
+  @@index([createdAt], map: "idx_audit_logs_date")
+  @@index([riskLevel], map: "idx_audit_logs_risk")
+  @@map("audit_logs")
 }
 
 enum ClaimType {
@@ -191,4 +343,66 @@ enum ClientStatus {
   SUSPENDED
   PENDING_VERIFICATION
   BLOCKED
+}
+
+// Supporting Tables Enums
+
+enum DocumentType {
+  PHOTO
+  PDF
+  INVOICE
+  ESTIMATE
+  POLICE_REPORT
+  MEDICAL_REPORT
+  IDENTITY_DOCUMENT
+  INSURANCE_CERTIFICATE
+  OTHER
+}
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum CommentType {
+  GENERAL
+  STATUS_UPDATE
+  DOCUMENT_REQUEST
+  EXPERT_NOTE
+  CLIENT_QUESTION
+  INTERNAL_NOTE
+}
+
+enum EntityType {
+  CLAIM
+  CLIENT
+  USER
+  POLICY
+  DOCUMENT
+}
+
+enum AuditAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  UPLOAD
+  DOWNLOAD
+  APPROVE
+  REJECT
+  ASSIGN
+  UNASSIGN
+  STATUS_CHANGE
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, Shield } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useClientAuth, useStaffAuth } from '@/app/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 
 export default function UnifiedLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -15,8 +15,11 @@ export default function UnifiedLoginForm() {
   });
 
   const router = useRouter();
-  const clientAuth = useClientAuth();
-  const staffAuth = useStaffAuth();
+  const searchParams = useSearchParams();
+  const auth = useSimpleAuth();
+  const wasRegistered = searchParams.get('registered') === 'true';
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,31 +28,23 @@ export default function UnifiedLoginForm() {
       return;
     }
 
-    // Try staff login first
+    console.log('ClientLoginForm: Starting login process');
+    setIsLoading(true);
+    setErrorMessage('');
+
     try {
-      await staffAuth.login({
-        email: formData.email,
-        password: formData.password,
-      });
+      console.log('ClientLoginForm: Calling auth.login');
+      await auth.login(formData.email, formData.password);
+      console.log('ClientLoginForm: Login successful, redirecting');
       
-      // If staff login succeeds, redirect to admin dashboard
-      router.push('/dashboard/manager');
-      return;
-    } catch (staffError) {
-      // If staff login fails, try client login
-      try {
-        await clientAuth.login({
-          email: formData.email,
-          password: formData.password,
-        });
-        
-        // If client login succeeds, redirect to client dashboard
-        router.push('/dashboard/client');
-        return;
-      } catch (clientError) {
-        // Both logins failed
-        console.error('Login failed for both client and staff');
-      }
+      // Use replace instead of push to prevent back button issues
+      router.replace('/dashboard/client');
+      
+    } catch (error: any) {
+      console.error('ClientLoginForm: Login error:', error);
+      setErrorMessage(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,9 +54,6 @@ export default function UnifiedLoginForm() {
       [e.target.name]: e.target.value
     }));
   };
-
-  const isLoading = clientAuth.isLoading || staffAuth.isLoading;
-  const errorMessage = clientAuth.loginError || staffAuth.loginError;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -82,21 +74,29 @@ export default function UnifiedLoginForm() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <div className="text-left">
-              <h1 className="text-xl font-bold text-gray-900">ISM Assurance</h1>
-              <p className="text-sm text-gray-600">Login Portal</p>
-            </div>
-          </div>
+          <h1 className="text-6xl font-bold text-gray-900 mb-6">ISM Assurance</h1>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-          <p className="text-gray-600">Sign in to access your dashboard</p>
+          <p className="text-gray-600">Sign in to manage your claims and policies</p>
         </div>
 
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          {/* Registration Success Message */}
+          {wasRegistered && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <p className="text-sm text-green-800">
+                  <strong>Registration successful!</strong> You can now sign in with your credentials.
+                </p>
+              </div>
+            </motion.div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
@@ -212,13 +212,6 @@ export default function UnifiedLoginForm() {
               <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-500">
                 Register here
               </Link>
-            </p>
-          </div>
-
-          {/* Info Note */}
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800 text-center">
-              <strong>Note:</strong> This login works for both clients and administrators. You'll be redirected to the appropriate dashboard based on your account type.
             </p>
           </div>
         </div>

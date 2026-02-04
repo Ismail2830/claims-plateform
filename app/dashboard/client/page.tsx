@@ -2,27 +2,49 @@
 
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useClientAuth } from '@/app/hooks/useAuth';
+import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { FileText, Plus, Clock, CheckCircle, AlertCircle, User, Phone, Mail, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ClientDashboard() {
-  const clientAuth = useClientAuth();
+  const auth = useSimpleAuth();
   const router = useRouter();
-  const { user, isAuthenticated } = clientAuth;
+  const { user, token, isLoading } = auth;
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    console.log('ClientDashboard: Auth state changed', {
+      isLoading,
+      hasToken: !!token,
+      hasUser: !!user
+    });
+    
+    // Only redirect if we're not loading and don't have a token
+    if (!isLoading && !token) {
+      console.log('ClientDashboard: No token found, redirecting to login');
       router.push('/auth/login');
     }
-  }, [isAuthenticated, router]);
+  }, [token, isLoading, router]);
 
-  if (!isAuthenticated || !user) {
+  // Show loading while checking authentication
+  if (isLoading) {
+    console.log('ClientDashboard: Showing loading state');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!token || !user) {
+    console.log('ClientDashboard: Missing token or user, showing redirect message');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to login...</p>
         </div>
       </div>
     );
@@ -78,13 +100,17 @@ export default function ClientDashboard() {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Welcome back, {user?.data.firstName}!
+                Welcome back, {user?.firstName}!
               </h1>
               <p className="text-gray-600">Manage your insurance claims and policies</p>
             </div>
             <div className="flex items-center gap-4">
+              <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <Plus className="w-4 h-4" />
+                New Claim
+              </button>
               <button
-                onClick={() => clientAuth.logout()}
+                onClick={() => auth.logout()}
                 className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 Sign Out
@@ -235,28 +261,28 @@ export default function ClientDashboard() {
                   <User className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-medium text-gray-900">{user?.data.firstName} {user?.data.lastName}</p>
+                    <p className="font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-medium text-gray-900">{user?.data.email}</p>
+                    <p className="font-medium text-gray-900">{user?.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-600">Phone</p>
-                    <p className="font-medium text-gray-900">{user?.data.phone}</p>
+                    <p className="font-medium text-gray-900">{user?.phone}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-600">Location</p>
-                    <p className="font-medium text-gray-900">{user?.data.city}, {user?.data.province}</p>
+                    <p className="font-medium text-gray-900">{user?.city}, {user?.province}</p>
                   </div>
                 </div>
               </div>

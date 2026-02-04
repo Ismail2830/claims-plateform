@@ -1,10 +1,18 @@
 import React from 'react';
 
 interface CTAProps {
-  onStart: (role: 'client' | 'gestionnaire') => void;
+  onStart?: (role: 'client' | 'gestionnaire') => void;
 }
 
 export function CTA({ onStart }: CTAProps) {
+  const handleStart = (role: 'client' | 'gestionnaire') => {
+    if (onStart) {
+      onStart(role);
+    } else {
+      // Default behavior: redirect to login page
+      window.location.href = '/auth/login';
+    }
+  };
   return (
     <section className="py-16 sm:py-20 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -17,7 +25,7 @@ export function CTA({ onStart }: CTAProps) {
             <p className="text-blue-100 text-base sm:text-lg mb-8 sm:mb-10 leading-relaxed">Rejoignez les milliers d'assureurs et d'assurés qui ont choisi la simplicité et la performance.</p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
               <button 
-                onClick={() => onStart('client')}
+                onClick={() => handleStart('client')}
                 className="bg-white text-blue-600 px-6 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl font-bold hover:bg-neutral-50 transition-all shadow-xl shadow-blue-900/20 text-sm sm:text-base"
               >
                 Commencer maintenant

@@ -4,10 +4,18 @@ import { Zap, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/file/ImageWithFallback';
 
 interface HeroProps {
-  onStart: (role: 'client' | 'gestionnaire') => void;
+  onStart?: (role: 'client' | 'gestionnaire') => void;
 }
 
 export function Hero({ onStart }: HeroProps) {
+  const handleStart = (role: 'client' | 'gestionnaire') => {
+    if (onStart) {
+      onStart(role);
+    } else {
+      // Default behavior: redirect to login page
+      window.location.href = '/auth/login';
+    }
+  };
   return (
     <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 overflow-hidden">
@@ -34,13 +42,13 @@ export function Hero({ onStart }: HeroProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <button 
-                onClick={() => onStart('client')}
-                className="bg-neutral-900 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-200 text-sm sm:text-base"
+                onClick={() => handleStart('client')}
+                className="bg-blue-600 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 text-sm sm:text-base"
               >
                 Accès Client <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button 
-                onClick={() => onStart('gestionnaire')}
+                onClick={() => handleStart('gestionnaire')}
                 className="bg-white text-neutral-900 border border-neutral-200 px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all text-sm sm:text-base"
               >
                 Espace Gestionnaire
@@ -58,7 +66,7 @@ export function Hero({ onStart }: HeroProps) {
                   </div>
                 ))}
               </div>
-              <p>Déjà utilisé par plus de <span className="font-bold text-neutral-900">10,000+</span> assurés satisfaits.</p>
+              <p>Déjà utilisé par plus de <span className="font-bold text-black">10,000+</span> assurés satisfaits.</p>
             </div>
           </motion.div>
           

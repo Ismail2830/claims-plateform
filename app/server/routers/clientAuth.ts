@@ -351,7 +351,7 @@ export const clientAuthRouter = createTRPCRouter({
               claimId: newClaim.claimId,
               fromStatus: null,
               toStatus: 'DECLARED',
-              changedBy: ctx.client.clientId,
+              changedBy: null, // Client-initiated, not changed by a staff user
               reason: 'Initial claim declaration',
               notes: 'Claim created by client through web portal'
             }
@@ -400,6 +400,130 @@ export const clientAuthRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: error instanceof Error ? error.message : 'Failed to create claim',
+        });
+      }
+    }),
+
+  // Get Dashboard Statistics (Protected)
+  getDashboardStats: clientProtected
+    .query(async ({ ctx }) => {
+      try {
+        const clientId = ctx.client.clientId;
+        
+        // Get claims statistics
+        const [totalClaims, pendingClaims, approvedClaims, rejectedClaims] = await Promise.all([
+          prisma.claim.count({ where: { clientId } }),
+          prisma.claim.count({ where: { clientId, status: { in: ['DECLARED', 'ANALYZING', 'DOCS_REQUIRED', 'UNDER_EXPERTISE', 'IN_DECISION'] } } }),
+          prisma.claim.count({ where: { clientId, status: 'APPROVED' } }),
+          prisma.claim.count({ where: { clientId, status: 'REJECTED' } }),
+        ]);
+
+        // Get policies statistics
+        const [activePolicies, totalCoverage] = await Promise.all([
+          prisma.policy.count({ where: { clientId, status: 'ACTIVE' } }),
+          prisma.policy.aggregate({
+            where: { clientId, status: 'ACTIVE' },
+            _sum: { insuredAmount: true }
+          })
+        ]);
+
+        return {
+          success: true,
+          data: {
+            totalClaims,
+            pendingClaims,
+            approvedClaims,
+            rejectedClaims,
+            activePolicies,
+            totalCoverage: totalCoverage._sum.insuredAmount || 0,
+          },
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to fetch dashboard stats',
+        });
+      }
+    }),
+
+  // Get Recent Activities (Protected)
+  getRecentActivities: clientProtected
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(10),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const clientId = ctx.client.clientId;
+        
+        // Get recent audit logs for this client
+        const activities = await prisma.auditLog.findMany({
+          where: { clientId },
+          select: {
+            auditLogId: true,
+            action: true,
+            description: true,
+            entityType: true,
+            createdAt: true,
+            claim: {
+              select: {
+                claimNumber: true,
+                status: true,
+              }
+            },
+            policy: {
+              select: {
+                policyNumber: true,
+                status: true,
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: input.limit,
+        });
+
+        // Transform activities to user-friendly format
+        const formattedActivities = activities.map((activity) => {
+          let type = 'Unknown Activity';
+          let status: 'info' | 'success' | 'warning' | 'error' = 'info';
+          
+          if (activity.entityType === 'CLAIM') {
+            if (activity.action === 'CREATE') {
+              type = 'Claim Submission';
+              status = 'info';
+            } else if (activity.action === 'UPDATE') {
+              type = 'Claim Update';
+              status = activity.claim?.status === 'APPROVED' ? 'success' : 
+                     activity.claim?.status === 'REJECTED' ? 'error' : 'warning';
+            }
+          } else if (activity.entityType === 'POLICY') {
+            if (activity.action === 'CREATE') {
+              type = 'Policy Issued';
+              status = 'success';
+            } else if (activity.action === 'UPDATE') {
+              type = 'Policy Update';
+              status = 'info';
+            }
+          }
+
+          return {
+            id: activity.auditLogId,
+            type,
+            description: activity.description,
+            timestamp: activity.createdAt,
+            status,
+          };
+        });
+
+        return {
+          success: true,
+          data: formattedActivities,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to fetch recent activities',
         });
       }
     }),

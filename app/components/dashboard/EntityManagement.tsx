@@ -805,6 +805,33 @@ const CreateEntityModal: React.FC<{
 }> = ({ entityType, onClose, onSubmit }) => {
   const [formData, setFormData] = useState<any>({});
   const [loading, setLoading] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [fetchingOptions, setFetchingOptions] = useState(false);
+
+  // Fetch clients and policies for dropdowns
+  useEffect(() => {
+    const fetchOptions = async () => {
+      if (entityType === 'policies' || entityType === 'claims') {
+        setFetchingOptions(true);
+        try {
+          const clientsData = await clientAPI.list({ limit: 100 });
+          setClients(clientsData.data?.clients || []);
+          
+          if (entityType === 'claims') {
+            const policiesData = await policyAPI.list({ limit: 100 });
+            setPolicies(policiesData.data?.policies || []);
+          }
+        } catch (error) {
+          console.error('Error fetching options:', error);
+        } finally {
+          setFetchingOptions(false);
+        }
+      }
+    };
+
+    fetchOptions();
+  }, [entityType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -999,6 +1026,25 @@ const CreateEntityModal: React.FC<{
         return (
           <div className="space-y-4">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.clientId || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, clientId: e.target.value }))}
+                required
+                disabled={fetchingOptions}
+              >
+                <option value="">
+                  {fetchingOptions ? 'Loading clients...' : 'Select Client'}
+                </option>
+                {clients.map((client) => (
+                  <option key={client.clientId} value={client.clientId}>
+                    {client.firstName} {client.lastName} ({client.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Policy Number</label>
               <input
                 type="text"
@@ -1006,6 +1052,7 @@ const CreateEntityModal: React.FC<{
                 value={formData.policyNumber || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, policyNumber: e.target.value }))}
                 required
+                placeholder="e.g., POL-2026-001234"
               />
             </div>
             <div>
@@ -1086,6 +1133,50 @@ const CreateEntityModal: React.FC<{
         return (
           <div className="space-y-4">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.clientId || ''}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, clientId: e.target.value, policyId: '' }));
+                }}
+                required
+                disabled={fetchingOptions}
+              >
+                <option value="">
+                  {fetchingOptions ? 'Loading clients...' : 'Select Client'}
+                </option>
+                {clients.map((client) => (
+                  <option key={client.clientId} value={client.clientId}>
+                    {client.firstName} {client.lastName} ({client.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Policy</label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.policyId || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, policyId: e.target.value }))}
+                required
+                disabled={fetchingOptions || !formData.clientId}
+              >
+                <option value="">
+                  {fetchingOptions ? 'Loading policies...' : 
+                   !formData.clientId ? 'Select client first' : 
+                   'Select Policy'}
+                </option>
+                {policies
+                  .filter(policy => !formData.clientId || policy.clientId === formData.clientId)
+                  .map((policy) => (
+                    <option key={policy.policyId} value={policy.policyId}>
+                      {policy.policyNumber} - {policy.policyType}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Claim Number</label>
               <input
                 type="text"
@@ -1093,6 +1184,7 @@ const CreateEntityModal: React.FC<{
                 value={formData.claimNumber || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, claimNumber: e.target.value }))}
                 required
+                placeholder="e.g., CLM-2026-001234"
               />
             </div>
             <div>
@@ -1112,12 +1204,12 @@ const CreateEntityModal: React.FC<{
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Incident Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Declaration Date</label>
               <input
                 type="date"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={formData.incidentDate || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, incidentDate: e.target.value }))}
+                value={formData.declarationDate || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, declarationDate: e.target.value }))}
                 required
               />
             </div>

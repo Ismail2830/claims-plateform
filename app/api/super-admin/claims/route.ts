@@ -357,6 +357,7 @@ export async function POST(request: NextRequest) {
         data: {
           claimId: newClaim.claimId,
           toStatus: 'DECLARED',
+          changedBy: null, // System-generated, no specific user
           reason: 'Claim created',
           isSystemGenerated: true,
         },
@@ -546,6 +547,7 @@ export async function PUT(request: NextRequest) {
             claimId: claimId,
             fromStatus: existingClaim.status,
             toStatus: validatedData.status,
+            changedBy: null, // Super Admin action, could be improved to track actual admin
             reason: 'Super Admin override',
             notes: `Status changed from ${existingClaim.status} to ${validatedData.status}`,
           },
@@ -763,6 +765,7 @@ export async function PATCH(request: NextRequest) {
               claimId: claim.claimId,
               fromStatus: null,
               toStatus: null,
+              changedBy: null, // Super Admin action
               reason: newExpertId ? 'Claim reassigned' : 'Claim unassigned',
               notes: `Reassigned by Super Admin`,
             },
@@ -874,6 +877,7 @@ export async function PATCH(request: NextRequest) {
       const statusHistoryData = claimIds.map(claimId => ({
         claimId,
         toStatus: statusChange as any,
+        changedBy: null, // Super Admin bulk action
         reason: reason || `Bulk ${action} by Super Admin`,
         notes: `Bulk operation performed on ${claimIds.length} claims`,
       }));

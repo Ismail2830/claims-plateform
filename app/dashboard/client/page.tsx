@@ -6,6 +6,7 @@ import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
 import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
+import { trpc } from '@/app/lib/trpc-client';
 import { 
   PlusCircle, 
   FileText, 
@@ -24,6 +25,47 @@ export default function ClientDashboard() {
   const auth = useSimpleAuth();
   const router = useRouter();
   const { user, token, isLoading } = auth;
+
+  // Always call hooks in the same order - before any early returns
+  // Fetch real data from tRPC
+  const { data: dashboardStats, isLoading: statsLoading, error: statsError } = trpc.clientAuth.getDashboardStats.useQuery(
+    undefined,
+    { 
+      enabled: !!token && !!user,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      // Add timeout to prevent hanging
+      staleTime: 30000, // 30 seconds
+      cacheTime: 60000 // 1 minute
+    }
+  );
+
+  const { data: recentActivitiesData, isLoading: activitiesLoading, error: activitiesError } = trpc.clientAuth.getRecentActivities.useQuery(
+    { limit: 5 },
+    { 
+      enabled: !!token && !!user,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      // Add timeout to prevent hanging
+      staleTime: 30000, // 30 seconds
+      cacheTime: 60000 // 1 minute
+    }
+  );
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Dashboard Debug:', {
+      isAuthLoading: isLoading,
+      hasToken: !!token,
+      hasUser: !!user,
+      statsLoading,
+      activitiesLoading,
+      statsError: statsError?.message,
+      activitiesError: activitiesError?.message,
+      dashboardStats: dashboardStats?.success,
+      activitiesData: recentActivitiesData?.success
+    });
+  }, [isLoading, token, user, statsLoading, activitiesLoading, statsError, activitiesError, dashboardStats, recentActivitiesData]);
 
   useEffect(() => {
     console.log('ClientDashboard: Auth state changed', {
@@ -69,6 +111,38 @@ export default function ClientDashboard() {
     );
   }
 
+  // If there are tRPC errors, show them for debugging
+  if (statsError || activitiesError) {
+    console.error('tRPC Errors:', { statsError, activitiesError });
+  }
+
+  // Show error state if both queries failed
+  if (statsError && activitiesError) {
+    return (
+      <DashboardLayout 
+        title="Client Dashboard" 
+        userRole="CLIENT"
+        navigation={navigation}
+      >
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <AlertCircle className="h-12 w-12 mx-auto" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to Load Dashboard</h3>
+            <p className="text-gray-600 mb-4">There was an issue loading your dashboard data.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const navigation = [
     {
       name: 'Dashboard',
@@ -98,37 +172,41 @@ export default function ClientDashboard() {
     },
   ];
 
-  // Mock data - replace with real data from tRPC
-  const mockStats = {
-    totalClaims: 3,
-    pendingClaims: 1,
-    approvedClaims: 2,
-    activePolicies: 2
+  // Format the recent activities with relative timestamps
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return date.toLocaleDateString();
   };
 
-  const recentActivities = [
-    {
-      id: '1',
-      type: 'Claim Submission',
-      description: 'Auto accident claim submitted for review',
-      timestamp: '2 hours ago',
-      status: 'info' as const,
-    },
-    {
-      id: '2',
-      type: 'Policy Update',
-      description: 'Home insurance policy renewed successfully',
-      timestamp: '1 day ago',
-      status: 'success' as const,
-    },
-    {
-      id: '3',
-      type: 'Document Request',
-      description: 'Additional documents requested for claim #1234',
-      timestamp: '3 days ago',
-      status: 'warning' as const,
-    },
-  ];
+  const recentActivities = recentActivitiesData?.data?.map(activity => ({
+    ...activity,
+    timestamp: formatRelativeTime(new Date(activity.timestamp))
+  })) || [];
+
+  // Use real stats or show loading/default values
+  const stats = dashboardStats?.data || {
+    totalClaims: 0,
+    pendingClaims: 0,
+    approvedClaims: 0,
+    activePolicies: 0,
+    totalCoverage: 0
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   return (
     <DashboardLayout 
@@ -168,28 +246,28 @@ export default function ClientDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Total Claims"
-          value={mockStats.totalClaims}
+          value={statsLoading ? '...' : stats.totalClaims}
           icon={FileText}
           color="blue"
           subtitle="All time"
         />
         <StatCard
           title="Pending Claims"
-          value={mockStats.pendingClaims}
+          value={statsLoading ? '...' : stats.pendingClaims}
           icon={Clock}
           color="yellow"
           subtitle="Under review"
         />
         <StatCard
           title="Active Policies"
-          value={mockStats.activePolicies}
+          value={statsLoading ? '...' : stats.activePolicies}
           icon={Shield}
           color="green"
           subtitle="Currently covered"
         />
         <StatCard
           title="Total Coverage"
-          value="$150,000"
+          value={statsLoading ? '...' : formatCurrency(stats.totalCoverage)}
           icon={DollarSign}
           color="purple"
           subtitle="Combined policies"
@@ -227,7 +305,26 @@ export default function ClientDashboard() {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RecentActivity activities={recentActivities} />
+          {activitiesLoading ? (
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Activity</h3>
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <RecentActivity activities={recentActivities} />
+          )}
         </div>
         
         {/* Quick Info Panel */}
@@ -242,24 +339,34 @@ export default function ClientDashboard() {
                   <Calendar className="h-5 w-5 text-gray-400 mr-2" />
                   <span className="text-sm text-gray-600">Last Login</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900">Today</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {user?.lastLoginAt ? formatRelativeTime(new Date(user.lastLoginAt)) : 'Today'}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Shield className="h-5 w-5 text-gray-400 mr-2" />
                   <span className="text-sm text-gray-600">Coverage Status</span>
                 </div>
-                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                  Active
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  stats.activePolicies > 0 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {stats.activePolicies > 0 ? 'Active' : 'No Coverage'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <AlertCircle className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-600">Notifications</span>
+                  <span className="text-sm text-gray-600">Pending Claims</span>
                 </div>
-                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                  2 New
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  stats.pendingClaims > 0 
+                    ? 'bg-yellow-100 text-yellow-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {statsLoading ? '...' : `${stats.pendingClaims} Pending`}
                 </span>
               </div>
             </div>

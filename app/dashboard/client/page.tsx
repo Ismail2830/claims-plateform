@@ -1,12 +1,26 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
-import { FileText, Plus, Clock, CheckCircle, AlertCircle, User, Phone, Mail, MapPin } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
+import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
+import { 
+  PlusCircle, 
+  FileText, 
+  CheckCircle, 
+  Clock, 
+  AlertCircle,
+  Shield,
+  DollarSign,
+  Calendar
+} from 'lucide-react';
 
 export default function ClientDashboard() {
+  const [showSuccess, setShowSuccess] = useState(false);
+  const searchParams = useSearchParams();
+  
   const auth = useSimpleAuth();
   const router = useRouter();
   const { user, token, isLoading } = auth;
@@ -23,7 +37,12 @@ export default function ClientDashboard() {
       console.log('ClientDashboard: No token found, redirecting to login');
       router.push('/auth/login');
     }
-  }, [token, isLoading, router]);
+    
+    // Check for success message
+    if (searchParams.get('claim_created') === 'true') {
+      setShowSuccess(true);
+    }
+  }, [token, isLoading, router, searchParams]);
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -50,6 +69,35 @@ export default function ClientDashboard() {
     );
   }
 
+  const navigation = [
+    {
+      name: 'Dashboard',
+      href: '/dashboard/client',
+      icon: <Shield className="w-5 h-5" />,
+      current: true,
+    },
+    {
+      name: 'My Claims',
+      href: '/dashboard/client/claims',
+      icon: <FileText className="w-5 h-5" />,
+    },
+    {
+      name: 'My Policies',
+      href: '/dashboard/client/policies',
+      icon: <Shield className="w-5 h-5" />,
+    },
+    {
+      name: 'Create Claim',
+      href: '/claims/create',
+      icon: <PlusCircle className="w-5 h-5" />,
+    },
+    {
+      name: 'Profile',
+      href: '/dashboard/client/profile',
+      icon: <CheckCircle className="w-5 h-5" />,
+    },
+  ];
+
   // Mock data - replace with real data from tRPC
   const mockStats = {
     totalClaims: 3,
@@ -58,269 +106,166 @@ export default function ClientDashboard() {
     activePolicies: 2
   };
 
-  const mockRecentClaims = [
+  const recentActivities = [
     {
-      id: 'CLM-001',
-      type: 'Auto Accident',
-      status: 'Under Review',
-      submittedDate: '2026-01-28',
-      estimatedAmount: 15000
+      id: '1',
+      type: 'Claim Submission',
+      description: 'Auto accident claim submitted for review',
+      timestamp: '2 hours ago',
+      status: 'info' as const,
     },
     {
-      id: 'CLM-002',
-      type: 'Home Damage',
-      status: 'Approved',
-      submittedDate: '2026-01-15',
-      estimatedAmount: 8500
-    }
-  ];
-
-  const mockPolicies = [
-    {
-      id: 'POL-001',
-      type: 'Auto Insurance',
-      status: 'Active',
-      expiryDate: '2026-12-31',
-      premium: 2400
+      id: '2',
+      type: 'Policy Update',
+      description: 'Home insurance policy renewed successfully',
+      timestamp: '1 day ago',
+      status: 'success' as const,
     },
     {
-      id: 'POL-002',
-      type: 'Home Insurance',
-      status: 'Active',
-      expiryDate: '2026-10-15',
-      premium: 1800
-    }
+      id: '3',
+      type: 'Document Request',
+      description: 'Additional documents requested for claim #1234',
+      timestamp: '3 days ago',
+      status: 'warning' as const,
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Welcome back, {user?.firstName}!
-              </h1>
-              <p className="text-gray-600">Manage your insurance claims and policies</p>
+    <DashboardLayout 
+      title="Client Dashboard" 
+      userRole="CLIENT"
+      navigation={navigation}
+    >
+      {/* Success Alert */}
+      {showSuccess && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 bg-green-50 border-l-4 border-green-400 rounded-md"
+        >
+          <div className="flex">
+            <CheckCircle className="h-5 w-5 text-green-400" />
+            <div className="ml-3">
+              <p className="text-sm text-green-700">
+                Your claim has been successfully submitted! You will receive updates on your claim status.
+              </p>
             </div>
-            <div className="flex items-center gap-4">
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                <Plus className="w-4 h-4" />
-                New Claim
-              </button>
-              <button
-                onClick={() => auth.logout()}
-                className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Sign Out
-              </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Welcome Message */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Welcome back, {user?.firstName || 'Client'}!
+        </h2>
+        <p className="text-gray-600 mt-2">
+          Here's an overview of your insurance claims and policies.
+        </p>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard
+          title="Total Claims"
+          value={mockStats.totalClaims}
+          icon={FileText}
+          color="blue"
+          subtitle="All time"
+        />
+        <StatCard
+          title="Pending Claims"
+          value={mockStats.pendingClaims}
+          icon={Clock}
+          color="yellow"
+          subtitle="Under review"
+        />
+        <StatCard
+          title="Active Policies"
+          value={mockStats.activePolicies}
+          icon={Shield}
+          color="green"
+          subtitle="Currently covered"
+        />
+        <StatCard
+          title="Total Coverage"
+          value="$150,000"
+          icon={DollarSign}
+          color="purple"
+          subtitle="Combined policies"
+        />
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <ActionCard
+          title="Create New Claim"
+          description="Submit a new insurance claim for damage or loss"
+          icon={PlusCircle}
+          color="blue"
+          buttonText="Start New Claim"
+          onClick={() => router.push('/claims/create')}
+        />
+        <ActionCard
+          title="Track Claims"
+          description="View status and updates for your submitted claims"
+          icon={FileText}
+          color="green"
+          buttonText="View My Claims"
+          onClick={() => router.push('/dashboard/client/claims')}
+        />
+        <ActionCard
+          title="Manage Policies"
+          description="Review your current insurance policies and coverage"
+          icon={Shield}
+          color="purple"
+          buttonText="View Policies"
+          onClick={() => router.push('/dashboard/client/policies')}
+        />
+      </div>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <RecentActivity activities={recentActivities} />
+        </div>
+        
+        {/* Quick Info Panel */}
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+              Quick Info
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Calendar className="h-5 w-5 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-600">Last Login</span>
+                </div>
+                <span className="text-sm font-medium text-gray-900">Today</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Shield className="h-5 w-5 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-600">Coverage Status</span>
+                </div>
+                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                  Active
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-600">Notifications</span>
+                </div>
+                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                  2 New
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Claims</p>
-                <p className="text-2xl font-bold text-gray-900">{mockStats.totalClaims}</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Claims</p>
-                <p className="text-2xl font-bold text-gray-900">{mockStats.pendingClaims}</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Approved Claims</p>
-                <p className="text-2xl font-bold text-gray-900">{mockStats.approvedClaims}</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Policies</p>
-                <p className="text-2xl font-bold text-gray-900">{mockStats.activePolicies}</p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Claims */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100"
-          >
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Claims</h3>
-                <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  <Plus className="w-4 h-4" />
-                  Submit New Claim
-                </button>
-              </div>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {mockRecentClaims.map((claim, index) => (
-                <div key={claim.id} className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">{claim.id}</h4>
-                        <p className="text-sm text-gray-600">{claim.type}</p>
-                        <p className="text-xs text-gray-500">Submitted: {claim.submittedDate}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            claim.status === 'Approved'
-                              ? 'bg-green-100 text-green-800'
-                              : claim.status === 'Under Review'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {claim.status}
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium text-gray-900">
-                        MAD {claim.estimatedAmount.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Profile & Policies */}
-          <div className="space-y-6">
-            {/* Profile Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Information</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-medium text-gray-900">{user?.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-600">Phone</p>
-                    <p className="font-medium text-gray-900">{user?.phone}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-600">Location</p>
-                    <p className="font-medium text-gray-900">{user?.city}, {user?.province}</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Active Policies */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Policies</h3>
-              <div className="space-y-4">
-                {mockPolicies.map((policy) => (
-                  <div key={policy.id} className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium text-gray-900">{policy.type}</h4>
-                        <p className="text-sm text-gray-600">{policy.id}</p>
-                        <p className="text-xs text-gray-500">Expires: {policy.expiryDate}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {policy.status}
-                        </span>
-                        <p className="text-sm font-medium text-gray-900 mt-1">
-                          MAD {policy.premium}/year
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

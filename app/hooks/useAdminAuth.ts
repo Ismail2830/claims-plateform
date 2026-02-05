@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 
 interface User {
   userId: string;
-  username: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
   role: 'SUPER_ADMIN' | 'MANAGER_SENIOR' | 'MANAGER_JUNIOR' | 'EXPERT';
   currentWorkload: number;
   maxWorkload: number;
@@ -62,11 +61,10 @@ export function useAdminAuth() {
   };
 
   const register = async (data: {
-    username: string;
     email: string;
     password: string;
-    firstName?: string;
-    lastName?: string;
+    firstName: string;
+    lastName: string;
     role?: 'SUPER_ADMIN' | 'MANAGER_SENIOR' | 'MANAGER_JUNIOR' | 'EXPERT';
     maxWorkload?: number;
   }) => {
@@ -140,11 +138,10 @@ export function useAdminAuth() {
   };
 
   const createUser = async (userData: {
-    username: string;
     email: string;
     password: string;
-    firstName?: string;
-    lastName?: string;
+    firstName: string;
+    lastName: string;
     role: 'SUPER_ADMIN' | 'MANAGER_SENIOR' | 'MANAGER_JUNIOR' | 'EXPERT';
     maxWorkload?: number;
   }) => {

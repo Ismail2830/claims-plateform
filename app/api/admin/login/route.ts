@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
       where: { email },
       select: {
         userId: true,
-        username: true,
         email: true,
         passwordHash: true,
         firstName: true,
@@ -92,7 +91,7 @@ export async function POST(request: NextRequest) {
         entityType: 'USER',
         entityId: user.userId,
         action: 'LOGIN',
-        description: `Admin user logged in: ${user.username} (${user.email})`,
+        description: `Admin user logged in: ${user.firstName} ${user.lastName} (${user.email})`,
         userId: user.userId,
         ipAddress: request.headers.get('x-forwarded-for') || 
                   request.headers.get('x-real-ip') || 

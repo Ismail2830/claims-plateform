@@ -12,7 +12,6 @@ interface CreateUserModalProps {
 
 export default function CreateUserModal({ isOpen, onClose, onCreateUser }: CreateUserModalProps) {
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     firstName: '',
@@ -27,7 +26,7 @@ export default function CreateUserModal({ isOpen, onClose, onCreateUser }: Creat
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.username || !formData.email || !formData.password || !formData.role) {
+    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || !formData.role) {
       setErrorMessage('All required fields must be filled');
       return;
     }
@@ -40,7 +39,6 @@ export default function CreateUserModal({ isOpen, onClose, onCreateUser }: Creat
       
       // Reset form
       setFormData({
-        username: '',
         email: '',
         password: '',
         firstName: '',
@@ -108,25 +106,6 @@ export default function CreateUserModal({ isOpen, onClose, onCreateUser }: Creat
                 </div>
               )}
 
-              {/* Username */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Username *
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter username"
-                    required
-                  />
-                </div>
-              </div>
-
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -175,7 +154,7 @@ export default function CreateUserModal({ isOpen, onClose, onCreateUser }: Creat
               {/* First Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name
+                  First Name *
                 </label>
                 <input
                   type="text"
@@ -184,13 +163,14 @@ export default function CreateUserModal({ isOpen, onClose, onCreateUser }: Creat
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter first name"
+                  required
                 />
               </div>
 
               {/* Last Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Name
+                  Last Name *
                 </label>
                 <input
                   type="text"
@@ -199,6 +179,7 @@ export default function CreateUserModal({ isOpen, onClose, onCreateUser }: Creat
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter last name"
+                  required
                 />
               </div>
 

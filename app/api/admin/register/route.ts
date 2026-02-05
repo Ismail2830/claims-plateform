@@ -10,7 +10,6 @@ export async function POST(request: NextRequest) {
     console.log('Request body:', { ...body, password: '[HIDDEN]' });
     
     const { 
-      username,
       email, 
       password, 
       firstName, 
@@ -20,9 +19,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!username || !email || !password) {
+    if (!email || !password || !firstName || !lastName) {
       return NextResponse.json(
-        { success: false, message: 'Username, email and password are required' },
+        { success: false, message: 'Email, password, firstName and lastName are required' },
         { status: 400 }
       );
     }
@@ -39,16 +38,13 @@ export async function POST(request: NextRequest) {
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: email },
-          { username: username }
-        ]
+        email: email
       }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { success: false, message: 'User with this email or username already exists' },
+        { success: false, message: 'User with this email already exists' },
         { status: 409 }
       );
     }
@@ -59,7 +55,6 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        username,
         email,
         passwordHash,
         firstName,
@@ -72,7 +67,6 @@ export async function POST(request: NextRequest) {
       },
       select: {
         userId: true,
-        username: true,
         email: true,
         firstName: true,
         lastName: true,
@@ -88,14 +82,13 @@ export async function POST(request: NextRequest) {
         entityType: 'USER',
         entityId: user.userId,
         action: 'CREATE',
-        description: `New user account created: ${username} (${email}) with role ${role}`,
+        description: `New user account created: ${user.firstName} ${user.lastName} (${email}) with role ${role}`,
         userId: user.userId, // Self-creation for admin registration
         ipAddress: request.headers.get('x-forwarded-for') || 
                   request.headers.get('x-real-ip') || 
                   'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
         newValues: {
-          username: user.username,
           email: user.email,
           role: user.role,
           firstName: user.firstName,
@@ -119,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Handle Prisma unique constraint errors
     if (error.code === 'P2002') {
       return NextResponse.json(
-        { success: false, message: 'Username or email already exists' },
+        { success: false, message: 'Email already exists' },
         { status: 409 }
       );
     }

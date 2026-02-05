@@ -255,6 +255,155 @@ export const clientAuthRouter = createTRPCRouter({
       }
     }),
 
+  // Create New Claim (Protected)
+  createClaim: clientProtected
+    .input(
+      z.object({
+        policyId: z.string(),
+        incidentDate: z.string(),
+        incidentTime: z.string(),
+        incidentLocation: z.string(),
+        description: z.string(),
+        claimType: z.enum(['ACCIDENT', 'THEFT', 'FIRE', 'WATER_DAMAGE']),
+        claimedAmount: z.number().positive(),
+        damageDescription: z.string(),
+        witnesses: z.array(z.object({
+          name: z.string(),
+          phone: z.string().optional(),
+          email: z.string().email().optional()
+        })).optional(),
+        policeReport: z.boolean().default(false),
+        policeReportNumber: z.string().optional(),
+        emergencyServices: z.boolean().default(false),
+        emergencyServicesDetails: z.string().optional(),
+        additionalNotes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Verify that the policy belongs to this client and is active
+        const policy = await prisma.policy.findFirst({
+          where: {
+            policyId: input.policyId,
+            clientId: ctx.client.clientId,
+            status: 'ACTIVE'
+          }
+        });
+
+        if (!policy) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Policy not found or not active',
+          });
+        }
+
+        // Generate unique claim number
+        const claimNumber = `CLM-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+        
+        // Combine date and time for incident timestamp
+        const incidentDateTime = new Date(`${input.incidentDate}T${input.incidentTime}`);
+
+        // Create the claim in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+          // Create the claim
+          const newClaim = await tx.claim.create({
+            data: {
+              claimNumber,
+              policyId: input.policyId,
+              clientId: ctx.client.clientId,
+              claimType: input.claimType,
+              incidentDate: incidentDateTime,
+              declarationDate: new Date(),
+              incidentLocation: input.incidentLocation,
+              description: input.description,
+              claimedAmount: input.claimedAmount,
+              status: 'DECLARED',
+              priority: 'NORMAL',
+              declarationChannel: 'WEB',
+              damageDescription: input.damageDescription,
+              policeReport: input.policeReport,
+              policeReportNumber: input.policeReport ? input.policeReportNumber : null,
+              emergencyServices: input.emergencyServices,
+              emergencyServicesDetails: input.emergencyServices ? input.emergencyServicesDetails : null,
+              additionalNotes: input.additionalNotes || null
+            }
+          });
+
+          // Add witnesses if any
+          if (input.witnesses && input.witnesses.length > 0) {
+            const validWitnesses = input.witnesses.filter(w => w.name && w.name.trim());
+            
+            for (const witness of validWitnesses) {
+              await tx.claimWitness.create({
+                data: {
+                  claimId: newClaim.claimId,
+                  name: witness.name,
+                  phone: witness.phone || null,
+                  email: witness.email || null
+                }
+              });
+            }
+          }
+
+          // Create status history entry
+          await tx.claimStatusHistory.create({
+            data: {
+              claimId: newClaim.claimId,
+              fromStatus: null,
+              toStatus: 'DECLARED',
+              changedBy: ctx.client.clientId,
+              reason: 'Initial claim declaration',
+              notes: 'Claim created by client through web portal'
+            }
+          });
+
+          // Log the activity
+          await tx.auditLog.create({
+            data: {
+              entityType: 'CLAIM',
+              entityId: newClaim.claimId,
+              claimId: newClaim.claimId,
+              action: 'CREATE',
+              description: `Claim ${claimNumber} created by client`,
+              clientId: ctx.client.clientId,
+              metadata: {
+                claimNumber,
+                claimType: input.claimType,
+                claimedAmount: input.claimedAmount,
+                incidentDate: incidentDateTime.toISOString(),
+                incidentLocation: input.incidentLocation
+              }
+            }
+          });
+
+          return newClaim;
+        });
+
+        return {
+          success: true,
+          message: 'Claim created successfully',
+          data: {
+            claimId: result.claimId,
+            claimNumber: result.claimNumber,
+            status: result.status,
+            createdAt: result.createdAt
+          }
+        };
+
+      } catch (error) {
+        console.error('Error creating claim:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to create claim',
+        });
+      }
+    }),
+
   // Verify Email (Public but requires token in input)
   verifyEmail: publicProcedure
     .input(

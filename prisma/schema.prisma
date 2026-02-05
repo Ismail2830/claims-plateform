@@ -46,11 +46,10 @@ model Client {
 
 model User {
   userId        String   @id @default(uuid()) @map("user_id") @db.Uuid
-  username      String   @unique @db.VarChar(100)
   email         String   @unique @db.VarChar(255)
   passwordHash  String   @map("password_hash") @db.VarChar(255)
-  firstName     String?  @map("first_name") @db.VarChar(100)
-  lastName      String?  @map("last_name") @db.VarChar(100)
+  firstName     String   @map("first_name") @db.VarChar(100)
+  lastName      String   @map("last_name") @db.VarChar(100)
   role          UserRole
   currentWorkload Int    @default(0) @map("current_workload")
   maxWorkload   Int      @default(20) @map("max_workload")
@@ -113,6 +112,14 @@ model Claim {
   incidentLocation  String?     @map("incident_location") @db.Text
   description       String      @db.Text
   
+  // Additional incident details
+  damageDescription String?     @map("damage_description") @db.Text
+  policeReport      Boolean     @default(false) @map("police_report")
+  policeReportNumber String?    @map("police_report_number") @db.VarChar(100)
+  emergencyServices Boolean     @default(false) @map("emergency_services")
+  emergencyServicesDetails String? @map("emergency_services_details") @db.Text
+  additionalNotes   String?     @map("additional_notes") @db.Text
+  
   // Financial
   claimedAmount     Decimal?    @map("claimed_amount") @db.Decimal(12, 2)
   estimatedAmount   Decimal?    @map("estimated_amount") @db.Decimal(12, 2)
@@ -137,6 +144,7 @@ model Claim {
   documents     ClaimDocument[]
   statusHistory ClaimStatusHistory[]
   comments      ClaimComment[]
+  witnesses     ClaimWitness[]
   auditLogs     AuditLog[]
 
   @@index([clientId], map: "idx_claims_client")
@@ -236,6 +244,34 @@ model ClaimComment {
   @@index([parentCommentId], map: "idx_claim_comments_parent")
   @@index([createdAt], map: "idx_claim_comments_date")
   @@map("claim_comments")
+}
+
+model ClaimWitness {
+  witnessId     String      @id @default(uuid()) @map("witness_id") @db.Uuid
+  claimId       String      @map("claim_id") @db.Uuid
+  claim         Claim       @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+  
+  name          String      @db.VarChar(255)
+  phone         String?     @db.VarChar(20)
+  email         String?     @db.VarChar(255)
+  address       String?     @db.Text
+  relationship  String?     @db.VarChar(100) // e.g., "Passenger", "Bystander", "Other driver"
+  
+  statementGiven Boolean    @default(false) @map("statement_given")
+  statementText  String?    @db.Text @map("statement_text")
+  statementDate  DateTime?  @map("statement_date")
+  
+  isReachable    Boolean    @default(true) @map("is_reachable")
+  lastContactDate DateTime? @map("last_contact_date")
+  contactNotes   String?    @db.Text @map("contact_notes")
+  
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([claimId], map: "idx_claim_witnesses_claim")
+  @@index([name], map: "idx_claim_witnesses_name")
+  @@index([createdAt], map: "idx_claim_witnesses_date")
+  @@map("claim_witnesses")
 }
 
 model AuditLog {

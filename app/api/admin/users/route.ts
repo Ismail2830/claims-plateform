@@ -69,7 +69,6 @@ export async function GET(request: NextRequest) {
         where,
         select: {
           userId: true,
-          username: true,
           email: true,
           firstName: true,
           lastName: true,
@@ -136,7 +135,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { 
-      username,
       email, 
       password, 
       firstName, 
@@ -146,9 +144,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!username || !email || !password || !role) {
+    if (!email || !password || !firstName || !lastName || !role) {
       return NextResponse.json(
-        { success: false, message: 'Username, email, password and role are required' },
+        { success: false, message: 'Email, password, firstName, lastName and role are required' },
         { status: 400 }
       );
     }
@@ -165,16 +163,13 @@ export async function POST(request: NextRequest) {
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: email },
-          { username: username }
-        ]
+        email: email
       }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { success: false, message: 'User with this email or username already exists' },
+        { success: false, message: 'User with this email already exists' },
         { status: 409 }
       );
     }
@@ -185,7 +180,6 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        username,
         email,
         passwordHash,
         firstName,
@@ -198,7 +192,6 @@ export async function POST(request: NextRequest) {
       },
       select: {
         userId: true,
-        username: true,
         email: true,
         firstName: true,
         lastName: true,
@@ -215,14 +208,13 @@ export async function POST(request: NextRequest) {
         entityType: 'USER',
         entityId: user.userId,
         action: 'CREATE',
-        description: `User account created by admin: ${username} (${email}) with role ${role}`,
+        description: `User account created by admin: ${user.firstName} ${user.lastName} (${email}) with role ${role}`,
         userId: adminUser.userId,
         ipAddress: request.headers.get('x-forwarded-for') || 
                   request.headers.get('x-real-ip') || 
                   'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
         newValues: {
-          username: user.username,
           email: user.email,
           role: user.role,
           firstName: user.firstName,
@@ -243,7 +235,7 @@ export async function POST(request: NextRequest) {
     
     if (error.code === 'P2002') {
       return NextResponse.json(
-        { success: false, message: 'Username or email already exists' },
+        { success: false, message: 'Email already exists' },
         { status: 409 }
       );
     }

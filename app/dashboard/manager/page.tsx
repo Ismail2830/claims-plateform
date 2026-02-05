@@ -338,7 +338,7 @@ export default function ManagerDashboard() {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-4">
             <div 
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-4 rounded-full transition-all duration-500"
+              className="bg-linear-to-r from-indigo-500 to-purple-600 h-4 rounded-full transition-all duration-500"
               style={{ width: `${(mockStats.totalClaims / mockStats.monthlyTarget) * 100}%` }}
             ></div>
           </div>

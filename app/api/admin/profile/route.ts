@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       where: { userId: decoded.userId },
       select: {
         userId: true,
-        username: true,
+
         email: true,
         firstName: true,
         lastName: true,

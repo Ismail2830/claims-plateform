@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
 import { Navigation } from '@/app/components/Navigation';
 import { Hero } from '@/app/components/Hero';
 import { Stats } from '@/app/components/Stats';

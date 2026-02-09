@@ -461,7 +461,7 @@ export const clientAuthRouter = createTRPCRouter({
         const activities = await prisma.auditLog.findMany({
           where: { clientId },
           select: {
-            auditLogId: true,
+            logId: true,
             action: true,
             description: true,
             entityType: true,
@@ -508,7 +508,7 @@ export const clientAuthRouter = createTRPCRouter({
           }
 
           return {
-            id: activity.auditLogId,
+            id: activity.logId,
             type,
             description: activity.description,
             timestamp: activity.createdAt,

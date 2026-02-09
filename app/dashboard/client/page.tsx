@@ -86,63 +86,7 @@ export default function ClientDashboard() {
     }
   }, [token, isLoading, router, searchParams]);
 
-  // Show loading while checking authentication
-  if (isLoading) {
-    console.log('ClientDashboard: Showing loading state');
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!token || !user) {
-    console.log('ClientDashboard: Missing token or user, showing redirect message');
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting to login...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If there are tRPC errors, show them for debugging
-  if (statsError || activitiesError) {
-    console.error('tRPC Errors:', { statsError, activitiesError });
-  }
-
-  // Show error state if both queries failed
-  if (statsError && activitiesError) {
-    return (
-      <DashboardLayout 
-        title="Client Dashboard" 
-        userRole="CLIENT"
-        navigation={navigation}
-      >
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-red-600 mb-4">
-              <AlertCircle className="h-12 w-12 mx-auto" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to Load Dashboard</h3>
-            <p className="text-gray-600 mb-4">There was an issue loading your dashboard data.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Refresh Page
-            </button>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
+  // Navigation items for sidebar
   const navigation = [
     {
       name: 'Dashboard',
@@ -184,19 +128,114 @@ export default function ClientDashboard() {
     return date.toLocaleDateString();
   };
 
-  const recentActivities = recentActivitiesData?.data?.map(activity => ({
-    ...activity,
-    timestamp: formatRelativeTime(new Date(activity.timestamp))
-  })) || [];
+  // Show loading while checking authentication
+  if (isLoading) {
+    console.log('ClientDashboard: Showing loading state');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Use real stats or show loading/default values
-  const stats = dashboardStats?.data || {
+  if (!token || !user) {
+    console.log('ClientDashboard: Missing token or user, showing redirect message');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If there are tRPC errors, show them for debugging
+  if (statsError || activitiesError) {
+    console.error('tRPC Errors Details:', { 
+      statsError: {
+        message: statsError?.message,
+        code: (statsError as any)?.data?.code,
+        cause: (statsError as any)?.cause,
+        stack: (statsError as any)?.stack
+      }, 
+      activitiesError: {
+        message: activitiesError?.message,
+        code: (activitiesError as any)?.data?.code,
+        cause: (activitiesError as any)?.cause,
+        stack: (activitiesError as any)?.stack
+      }
+    });
+  }
+
+  // Prepare fallback data when queries fail
+  const fallbackStats = {
     totalClaims: 0,
     pendingClaims: 0,
     approvedClaims: 0,
+    rejectedClaims: 0,
     activePolicies: 0,
-    totalCoverage: 0
+    totalCoverage: 0,
   };
+
+  const fallbackActivities = [];
+
+  // Use actual data if available, otherwise use fallbacks
+  const stats = dashboardStats?.success ? dashboardStats.data : fallbackStats;
+  const activities = recentActivitiesData?.success ? recentActivitiesData.data : fallbackActivities;
+
+  // Show loading state if queries are still loading
+  if (statsLoading || activitiesLoading) {
+    return (
+      <DashboardLayout 
+        title="Client Dashboard" 
+        userRole="CLIENT"
+        navigation={navigation}
+      >
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading dashboard data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error state only if both queries failed AND we don't have any cached data
+  if (statsError && activitiesError && !dashboardStats && !recentActivitiesData) {
+    return (
+      <DashboardLayout 
+        title="Client Dashboard" 
+        userRole="CLIENT"
+        navigation={navigation}
+      >
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <AlertCircle className="h-12 w-12 mx-auto" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to Load Dashboard</h3>
+            <p className="text-gray-600 mb-4">There was an issue loading your dashboard data.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const formattedActivities = activities?.map((activity: any) => ({
+    ...activity,
+    timestamp: formatRelativeTime(new Date(activity.timestamp))
+  })) || [];
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -226,6 +265,24 @@ export default function ClientDashboard() {
             <div className="ml-3">
               <p className="text-sm text-green-700">
                 Your claim has been successfully submitted! You will receive updates on your claim status.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Data Loading Warning */}
+      {(statsError || activitiesError) && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-md"
+        >
+          <div className="flex">
+            <AlertCircle className="h-5 w-5 text-yellow-400" />
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                Some dashboard data may not be current. Please refresh the page if this persists.
               </p>
             </div>
           </div>
@@ -323,7 +380,7 @@ export default function ClientDashboard() {
               </div>
             </div>
           ) : (
-            <RecentActivity activities={recentActivities} />
+            <RecentActivity activities={formattedActivities} />
           )}
         </div>
         

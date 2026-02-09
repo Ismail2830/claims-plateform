@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       await prisma.auditLog.create({
         data: {
           entityType: 'CLIENT',
-          entityId: 'unknown',
+          entityId: null, // Use null instead of 'unknown' for UUID field
           action: 'LOGIN',
           description: `Failed login attempt for email: ${email} - Client not found`,
           ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',

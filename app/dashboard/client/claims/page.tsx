@@ -22,6 +22,8 @@ import {
   Eye
 } from 'lucide-react';
 
+type ClaimStatus = 'DECLARED' | 'ANALYZING' | 'DOCS_REQUIRED' | 'UNDER_EXPERTISE' | 'IN_DECISION' | 'APPROVED' | 'IN_PAYMENT' | 'CLOSED' | 'REJECTED';
+
 interface Claim {
   claimId: string;
   claimNumber: string;
@@ -30,7 +32,7 @@ interface Claim {
   declarationDate: string;
   incidentLocation: string;
   description: string;
-  claimedAmount: number;
+  claimedAmount: number | null;
   estimatedAmount: number | null;
   approvedAmount: number | null;
   status: string;
@@ -39,7 +41,7 @@ interface Claim {
   policy: {
     policyNumber: string;
     policyType: string;
-  };
+  } | null;
   createdAt: string;
 }
 
@@ -59,7 +61,7 @@ export default function ClientClaimsPage() {
     refetch: refetchClaims,
   } = trpc.clientAuth.getClaims.useQuery(
     {
-      status: filterStatus || undefined,
+      status: (filterStatus as ClaimStatus) || undefined,
       limit: 50,
       offset: 0,
     },
@@ -301,7 +303,7 @@ export default function ClientClaimsPage() {
                       <div className="space-y-2">
                         <div className="flex items-center text-sm text-gray-600">
                           <Shield className="w-4 h-4 mr-2" />
-                          Policy: {claim.policy.policyNumber} ({claim.policy.policyType})
+                          Policy: {claim.policy?.policyNumber || 'N/A'} ({claim.policy?.policyType || 'N/A'})
                         </div>
                         <div className="flex items-center text-sm text-gray-600">
                           <Calendar className="w-4 h-4 mr-2" />
@@ -319,7 +321,7 @@ export default function ClientClaimsPage() {
                         </div>
                         <div className="flex items-center text-sm text-gray-600">
                           <DollarSign className="w-4 h-4 mr-2" />
-                          Claimed: MAD {claim.claimedAmount.toLocaleString()}
+                          Claimed: MAD {claim.claimedAmount?.toLocaleString() || '0'}
                         </div>
                         {claim.approvedAmount && (
                           <div className="flex items-center text-sm text-green-600 font-medium">

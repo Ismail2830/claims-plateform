@@ -12,6 +12,7 @@ import {
   type Claim,
   type PaginatedResponse 
 } from '../../lib/api/superAdminAPI';
+import ClaimDetailsModal from './ClaimDetailsModal';
 import { useRealTimeUpdates } from '../../hooks/useRealTimeUpdates';
 import { 
   Users, 
@@ -50,6 +51,11 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('');
 
+  // Claim Details Modal
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [selectedClaim, setSelectedClaim] = useState<any>(null);
+  const [formData, setFormData] = useState<any>({});
+
   // Entity data states
   const [users, setUsers] = useState<PaginatedResponse<User> | null>(null);
   const [clients, setClients] = useState<PaginatedResponse<Client> | null>(null);
@@ -86,7 +92,11 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
 
       switch (activeEntityTab) {
         case 'users':
-          const usersData = await userAPI.list(options);
+          const userOptions = {
+            ...options,
+            status: filterStatus ? (filterStatus as 'active' | 'inactive') : undefined,
+          };
+          const usersData = await userAPI.list(userOptions);
           setUsers(usersData);
           break;
         case 'clients':
@@ -271,6 +281,41 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
     }
   };
 
+  // Claim Modal Handlers
+  const handleViewClaimDetails = (claim: any) => {
+    setSelectedClaim(claim);
+    setShowClaimModal(true);
+  };
+
+  const handleClaimUpdate = async (claimId: string, data: any) => {
+    try {
+      const result = await claimAPI.update(claimId, data);
+      if (result?.success) {
+        loadEntityData(); // Refresh the claims list
+        // Update the selected claim with new data
+        const updatedClaim = { ...selectedClaim, ...data };
+        setSelectedClaim(updatedClaim);
+      }
+    } catch (error) {
+      console.error('Error updating claim:', error);
+      throw error;
+    }
+  };
+
+  const handleClaimDelete = async (claimId: string) => {
+    try {
+      const result = await claimAPI.delete(claimId);
+      if (result?.success) {
+        loadEntityData(); // Refresh the claims list
+        setShowClaimModal(false);
+        setSelectedClaim(null);
+      }
+    } catch (error) {
+      console.error('Error deleting claim:', error);
+      throw error;
+    }
+  };
+
   const getCurrentData = () => {
     switch (activeEntityTab) {
       case 'users': return users?.data?.users || [];
@@ -343,13 +388,13 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
                   />
                 </th>
                 {renderTableHeaders()}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item: any) => renderTableRow(item))}
+              {data.map((item: any, index: number) => {
+                const uniqueId = `${item.userId || item.clientId || item.policyId || item.claimId}-${index}`;
+                return renderTableRow(item, uniqueId);
+              })}
             </tbody>
           </table>
         </div>
@@ -405,6 +450,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workload</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </>
         );
       case 'clients':
@@ -415,6 +461,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verification</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Policies</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk Score</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </>
         );
       case 'policies':
@@ -425,6 +472,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coverage</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </>
         );
       case 'claims':
@@ -436,6 +484,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </>
         );
       default:
@@ -443,11 +492,12 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
     }
   };
 
-  const renderTableRow = (item: any) => {
+  const renderTableRow = (item: any, uniqueId?: string) => {
     const id = item.userId || item.clientId || item.policyId || item.claimId;
+    const rowKey = uniqueId || id;
     
     return (
-      <tr key={id} className="hover:bg-gray-50">
+      <tr key={rowKey} className="hover:bg-gray-50">
         <td className="px-6 py-4 whitespace-nowrap">
           <input 
             type="checkbox" 
@@ -464,18 +514,46 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
         </td>
         {renderTableColumns(item)}
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-          <button 
-            onClick={() => handleEdit(item)}
-            className="text-blue-600 hover:text-blue-900"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => handleDelete(item)}
-            className="text-red-600 hover:text-red-900"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {activeEntityTab === 'claims' ? (
+            <div className="flex space-x-2">
+              <button 
+                onClick={() => handleViewClaimDetails(item)}
+                className="text-blue-600 hover:text-blue-900"
+                title="View Details"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => handleEdit(item)}
+                className="text-indigo-600 hover:text-indigo-900"
+                title="Quick Edit"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => handleDelete(item)}
+                className="text-red-600 hover:text-red-900"
+                title="Delete"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <button 
+                onClick={() => handleEdit(item)}
+                className="text-blue-600 hover:text-blue-900"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => handleDelete(item)}
+                className="text-red-600 hover:text-red-900"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </td>
       </tr>
     );
@@ -793,6 +871,20 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
           }}
         />
       )}
+
+      {/* Claim Details Modal */}
+      {showClaimModal && selectedClaim && (
+        <ClaimDetailsModal
+          claim={selectedClaim}
+          isOpen={showClaimModal}
+          onClose={() => {
+            setShowClaimModal(false);
+            setSelectedClaim(null);
+          }}
+          onUpdate={handleClaimUpdate}
+          onDelete={handleClaimDelete}
+        />
+      )}
     </div>
   );
 };
@@ -803,7 +895,7 @@ const CreateEntityModal: React.FC<{
   onClose: () => void;
   onSubmit: (data: any) => void;
 }> = ({ entityType, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -887,7 +979,7 @@ const CreateEntityModal: React.FC<{
                 type="password"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={formData.password || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, password: e.target.value }))}
                 required
                 minLength={8}
               />
@@ -1297,7 +1389,7 @@ const EditEntityModal: React.FC<{
   onClose: () => void;
   onSubmit: (data: any) => void;
 }> = ({ entityType, item, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState<any>(item);
+  const [formData, setFormData] = useState<Record<string, any>>(item);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

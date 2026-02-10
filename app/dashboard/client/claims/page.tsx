@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
+import ClaimDetailsModal from '@/app/components/dashboard/ClaimDetailsModal';
 import { trpc } from '@/app/lib/trpc-client';
 import { 
   FileText, 
@@ -48,6 +49,10 @@ interface Claim {
 export default function ClientClaimsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Claim Details Modal
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [selectedClaim, setSelectedClaim] = useState<any>(null);
 
   const auth = useSimpleAuth();
   const router = useRouter();
@@ -75,6 +80,46 @@ export default function ClientClaimsPage() {
   const claims = claimsResponse?.data?.claims || [];
   const loading = claimsLoading;
   const error = claimsError ? 'Failed to fetch claims' : null;
+
+  // Claim Modal Handlers
+  const handleViewClaimDetails = (claim: any) => {
+    // Ensure dates are converted to strings for the modal
+    const formattedClaim = {
+      ...claim,
+      incidentDate: claim.incidentDate instanceof Date ? claim.incidentDate.toISOString() : claim.incidentDate,
+      declarationDate: claim.declarationDate instanceof Date ? claim.declarationDate.toISOString() : claim.declarationDate,
+      createdAt: claim.createdAt instanceof Date ? claim.createdAt.toISOString() : claim.createdAt,
+    };
+    setSelectedClaim(formattedClaim);
+    setShowClaimModal(true);
+  };
+
+  const handleClaimUpdate = async (claimId: string, data: any) => {
+    try {
+      // For clients, we might want to use a different API endpoint or show a message
+      // that they need to contact support for updates
+      console.log('Client claim update requested:', claimId, data);
+      // You can implement client-specific claim update logic here
+      // For now, we'll just show a success message
+      alert('Your update request has been noted. A representative will contact you soon.');
+      refetchClaims();
+    } catch (error) {
+      console.error('Error updating claim:', error);
+      throw error;
+    }
+  };
+
+  const handleClaimDelete = async (claimId: string) => {
+    try {
+      // For clients, deletion might not be allowed or require approval
+      console.log('Client claim deletion requested:', claimId);
+      // You can implement client-specific claim deletion logic here
+      alert('Your deletion request has been noted. A representative will contact you soon.');
+    } catch (error) {
+      console.error('Error deleting claim:', error);
+      throw error;
+    }
+  };
 
   // Authentication redirect
   useEffect(() => {
@@ -343,7 +388,10 @@ export default function ClientClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <button className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                    <button 
+                      onClick={() => handleViewClaimDetails(claim)}
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
                       <Eye className="w-4 h-4 mr-2" />
                       View Details
                     </button>
@@ -354,6 +402,20 @@ export default function ClientClaimsPage() {
           </div>
         )}
       </div>
+
+      {/* Claim Details Modal */}
+      {showClaimModal && selectedClaim && (
+        <ClaimDetailsModal
+          claim={selectedClaim}
+          isOpen={showClaimModal}
+          onClose={() => {
+            setShowClaimModal(false);
+            setSelectedClaim(null);
+          }}
+          onUpdate={handleClaimUpdate}
+          onDelete={handleClaimDelete}
+        />
+      )}
     </DashboardLayout>
   );
 }

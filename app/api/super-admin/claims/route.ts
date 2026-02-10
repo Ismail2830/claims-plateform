@@ -25,9 +25,15 @@ const updateClaimSchema = z.object({
   incidentLocation: z.string().optional(),
   description: z.string().min(1).optional(),
   damageDescription: z.string().optional(),
-  claimedAmount: z.number().positive().optional(),
-  estimatedAmount: z.number().positive().optional(),
-  approvedAmount: z.number().positive().optional(),
+  claimedAmount: z.union([z.string(), z.number()]).transform((val) => 
+    typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
+  ).optional(),
+  estimatedAmount: z.union([z.string(), z.number()]).transform((val) => 
+    typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
+  ).optional(),
+  approvedAmount: z.union([z.string(), z.number()]).transform((val) => 
+    typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
+  ).optional(),
   status: z.enum(['DECLARED', 'ANALYZING', 'DOCS_REQUIRED', 'UNDER_EXPERTISE', 'IN_DECISION', 'APPROVED', 'IN_PAYMENT', 'CLOSED', 'REJECTED']).optional(),
   priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).optional(),
   assignedTo: z.string().uuid().nullable().optional(),

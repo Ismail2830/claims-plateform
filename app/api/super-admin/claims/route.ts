@@ -394,7 +394,7 @@ export async function POST(request: NextRequest) {
     console.error('Claims POST error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Validation failed', details: error.errors },
+        { success: false, error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }
@@ -554,9 +554,27 @@ export async function PUT(request: NextRequest) {
             fromStatus: existingClaim.status,
             toStatus: validatedData.status,
             changedBy: null, // Super Admin action, could be improved to track actual admin
-            reason: 'Super Admin override',
-            notes: `Status changed from ${existingClaim.status} to ${validatedData.status}`,
+            reason: 'Status updated by staff',
+            notes: `Status changed from ${existingClaim.status} to ${validatedData.status} by staff member`,
           },
+        });
+        
+        // Create separate audit log for status change to ensure it appears in Recent Activity
+        const statusAuditLog = await tx.auditLog.create({
+          data: {
+            entityType: 'CLAIM',
+            entityId: claimId,
+            claimId: claimId,
+            clientId: existingClaim.clientId,
+            action: 'STATUS_CHANGE',
+            description: `Claim ${existingClaim.claimNumber} status updated to ${validatedData.status}`,
+            metadata: {
+              claimNumber: existingClaim.claimNumber,
+              fromStatus: existingClaim.status,
+              toStatus: validatedData.status,
+              changedBy: 'STAFF'
+            }
+          }
         });
       }
 
@@ -564,16 +582,26 @@ export async function PUT(request: NextRequest) {
     });
 
     // Log audit trail
-    await prisma.auditLog.create({
+    const mainAuditLog = await prisma.auditLog.create({
       data: {
         entityType: 'CLAIM',
         entityId: claimId,
         claimId: claimId,
+        clientId: existingClaim.clientId, // Include client ID for Recent Activity
         action: 'UPDATE',
-        description: `Claim updated by Super Admin: ${updatedClaim.claimNumber}`,
+        description: validatedData.status && validatedData.status !== existingClaim.status
+          ? `Claim ${updatedClaim.claimNumber} status changed to ${validatedData.status}`
+          : `Claim ${updatedClaim.claimNumber} updated by staff`,
         oldValues: { claim: existingClaim },
         newValues: { claim: updatedClaim },
         riskLevel: 'HIGH', // Super Admin override is high risk
+        metadata: {
+          claimNumber: updatedClaim.claimNumber,
+          statusChanged: validatedData.status !== existingClaim.status,
+          oldStatus: existingClaim.status,
+          newStatus: validatedData.status,
+          changedFields: Object.keys(validatedData)
+        }
       },
     });
 
@@ -586,7 +614,7 @@ export async function PUT(request: NextRequest) {
     console.error('Claims PUT error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Validation failed', details: error.errors },
+        { success: false, error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }
@@ -725,7 +753,7 @@ export async function PATCH(request: NextRequest) {
       // Get current assignments
       const claims = await prisma.claim.findMany({
         where: { claimId: { in: claimIds } },
-        select: { claimId: true, claimNumber: true, assignedTo: true },
+        select: { claimId: true, claimNumber: true, clientId: true, assignedTo: true },
       });
 
       // Calculate workload changes
@@ -770,11 +798,32 @@ export async function PATCH(request: NextRequest) {
             data: {
               claimId: claim.claimId,
               fromStatus: null,
-              toStatus: null,
+              toStatus: null as any, // Assignment change, not status change
               changedBy: null, // Super Admin action
-              reason: newExpertId ? 'Claim reassigned' : 'Claim unassigned',
-              notes: `Reassigned by Super Admin`,
+              reason: newExpertId ? 'Claim reassigned to expert' : 'Claim unassigned from expert',
+              notes: `Reassigned by staff`,
             },
+          });
+          
+          // Create individual audit log for each claim assignment
+          await tx.auditLog.create({
+            data: {
+              entityType: 'CLAIM',
+              entityId: claim.claimId,
+              claimId: claim.claimId,
+              clientId: claim.clientId,
+              action: 'ASSIGN',
+              description: newExpertId 
+                ? `Your claim ${claim.claimNumber} was assigned to an expert for review`
+                : `Your claim ${claim.claimNumber} assignment was updated`,
+              metadata: {
+                claimNumber: claim.claimNumber,
+                newExpertId,
+                oldExpertId: claim.assignedTo,
+                reassignmentOperation: true
+              },
+              riskLevel: 'LOW'
+            }
           });
         }
       });
@@ -880,17 +929,47 @@ export async function PATCH(request: NextRequest) {
 
     // Create status history for status changes
     if (statusChange) {
+      // Get claim details for individual logging
+      const affectedClaims = await prisma.claim.findMany({
+        where: { claimId: { in: claimIds } },
+        select: { claimId: true, claimNumber: true, clientId: true, status: true }
+      });
+      
       const statusHistoryData = claimIds.map(claimId => ({
         claimId,
+        fromStatus: affectedClaims.find(c => c.claimId === claimId)?.status,
         toStatus: statusChange as any,
         changedBy: null, // Super Admin bulk action
-        reason: reason || `Bulk ${action} by Super Admin`,
+        reason: reason || `Bulk ${action} by staff`,
         notes: `Bulk operation performed on ${claimIds.length} claims`,
       }));
 
       await prisma.claimStatusHistory.createMany({
         data: statusHistoryData,
       });
+      
+      // Create individual audit logs for each claim so they appear in client feeds
+      const individualAuditLogsData = affectedClaims.map(claim => ({
+        entityType: 'CLAIM' as const,
+        entityId: claim.claimId,
+        claimId: claim.claimId,
+        clientId: claim.clientId,
+        action: 'STATUS_CHANGE' as const,
+        description: `Your claim ${claim.claimNumber} status was updated to ${statusChange}`,
+        metadata: {
+          claimNumber: claim.claimNumber,
+          fromStatus: claim.status,
+          toStatus: statusChange,
+          bulkOperation: true,
+          reason: reason || `Bulk ${action} by staff`
+        },
+        riskLevel: 'MEDIUM' as const
+      }));
+      
+      // Create all audit logs
+      for (const logData of individualAuditLogsData) {
+        await prisma.auditLog.create({ data: logData });
+      }
     }
 
     // Log bulk audit trail
@@ -919,7 +998,7 @@ export async function PATCH(request: NextRequest) {
     console.error('Claims PATCH error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Validation failed', details: error.errors },
+        { success: false, error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }

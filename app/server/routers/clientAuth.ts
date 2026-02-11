@@ -358,7 +358,7 @@ export const clientAuthRouter = createTRPCRouter({
           });
 
           // Log the activity
-          await tx.auditLog.create({
+          const claimAuditLog = await tx.auditLog.create({
             data: {
               entityType: 'CLAIM',
               entityId: newClaim.claimId,
@@ -457,70 +457,288 @@ export const clientAuthRouter = createTRPCRouter({
       try {
         const clientId = ctx.client.clientId;
         
-        // Get recent audit logs for this client
-        const activities = await prisma.auditLog.findMany({
-          where: { clientId },
-          select: {
-            logId: true,
-            action: true,
-            description: true,
-            entityType: true,
-            createdAt: true,
-            claim: {
-              select: {
-                claimNumber: true,
-                status: true,
+        // Get multiple types of activities in parallel
+        const [auditLogs, statusHistory, documentActivities] = await Promise.all([
+          // Get recent audit logs for this client
+          prisma.auditLog.findMany({
+            where: { clientId },
+            select: {
+              logId: true,
+              action: true,
+              description: true,
+              entityType: true,
+              entityId: true,
+              createdAt: true,
+              oldValues: true,
+              newValues: true,
+              metadata: true,
+              claim: {
+                select: {
+                  claimNumber: true,
+                  status: true,
+                  claimedAmount: true,
+                }
               }
             },
-            policy: {
-              select: {
-                policyNumber: true,
-                status: true,
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' },
-          take: input.limit,
-        });
+            orderBy: { createdAt: 'desc' },
+            take: Math.min(input.limit * 2, 100), // Get more to have options after filtering
+          }),
 
-        // Transform activities to user-friendly format
-        const formattedActivities = activities.map((activity) => {
-          let type = 'Unknown Activity';
+          // Get status changes for client's claims
+          prisma.claimStatusHistory.findMany({
+            where: {
+              claim: { clientId }
+            },
+            select: {
+              historyId: true,
+              fromStatus: true,
+              toStatus: true,
+              reason: true,
+              notes: true,
+              createdAt: true,
+              changedByUser: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                }
+              },
+              claim: {
+                select: {
+                  claimNumber: true,
+                  claimType: true,
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: Math.min(input.limit, 50),
+          }),
+
+          // Get document activities for client's claims  
+          prisma.claimDocument.findMany({
+            where: {
+              claim: { clientId },
+              createdAt: {
+                gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+              }
+            },
+            select: {
+              documentId: true,
+              fileName: true,
+              fileType: true,
+              status: true,
+              createdAt: true,
+              verifiedAt: true,
+              uploadedByClient: true,
+              uploadedByUser: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                }
+              },
+              verifiedByUser: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                }
+              },
+              claim: {
+                select: {
+                  claimNumber: true,
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: Math.min(input.limit, 30),
+          })
+        ]);
+
+        // Combine and format all activities
+        const allActivities: any[] = [];
+
+        // Process audit logs
+        auditLogs.forEach((activity) => {
+          let type = 'Activity';
+          let description = activity.description;
           let status: 'info' | 'success' | 'warning' | 'error' = 'info';
           
           if (activity.entityType === 'CLAIM') {
             if (activity.action === 'CREATE') {
-              type = 'Claim Submission';
+              type = 'Claim Created';
+              description = `Claim ${activity.claim?.claimNumber || 'new claim'} was submitted`;
               status = 'info';
             } else if (activity.action === 'UPDATE') {
-              type = 'Claim Update';
+              type = 'Claim Modified';
+              
+              // Try to extract specific changes from metadata or oldValues/newValues
+              if (activity.metadata && typeof activity.metadata === 'object') {
+                const meta = activity.metadata as any;
+                if (meta.claimedAmount || meta.estimatedAmount) {
+                  description = `Claim ${activity.claim?.claimNumber || ''} amounts updated`;
+                } else if (meta.assignedTo) {
+                  description = `Claim ${activity.claim?.claimNumber || ''} was assigned to an expert`;
+                } else {
+                  description = `Claim ${activity.claim?.claimNumber || ''} was updated`;
+                }
+              } else {
+                description = `Claim ${activity.claim?.claimNumber || ''} details were modified`;
+              }
+              
               status = activity.claim?.status === 'APPROVED' ? 'success' : 
-                     activity.claim?.status === 'REJECTED' ? 'error' : 'warning';
+                       activity.claim?.status === 'REJECTED' ? 'error' : 'warning';
+            } else if (activity.action === 'ASSIGN') {
+              type = 'Claim Assigned';
+              description = `Claim ${activity.claim?.claimNumber || ''} was assigned to an expert for review`;
+              status = 'info';
+            } else if (activity.action === 'STATUS_CHANGE') {
+              type = 'Status Updated';
+              description = `Claim ${activity.claim?.claimNumber || ''} status was updated`;
+              status = 'warning';
             }
           } else if (activity.entityType === 'POLICY') {
             if (activity.action === 'CREATE') {
               type = 'Policy Issued';
+              description = `New policy ${activity.policy?.policyNumber || ''} was issued`;
               status = 'success';
             } else if (activity.action === 'UPDATE') {
-              type = 'Policy Update';
+              type = 'Policy Updated';
+              description = `Policy ${activity.policy?.policyNumber || ''} was modified`;
               status = 'info';
+            }
+          } else if (activity.entityType === 'DOCUMENT') {
+            if (activity.action === 'UPLOAD') {
+              type = 'Document Uploaded';
+              description = activity.description || 'Document uploaded to your claim';
+              status = 'info';
+            } else if (activity.action === 'APPROVE') {
+              type = 'Document Approved';
+              description = activity.description || 'Your document was approved';
+              status = 'success';
+            } else if (activity.action === 'REJECT') {
+              type = 'Document Rejected';
+              description = activity.description || 'Document requires attention';
+              status = 'error';
             }
           }
 
-          return {
+          allActivities.push({
             id: activity.logId,
             type,
-            description: activity.description,
+            description,
             timestamp: activity.createdAt,
             status,
-          };
+            source: 'audit'
+          });
         });
+
+        // Process status history
+        statusHistory.forEach((statusChange) => {
+          const statusLabels: { [key: string]: string } = {
+            DECLARED: 'Submitted',
+            ANALYZING: 'Under Analysis',
+            DOCS_REQUIRED: 'Documents Required',
+            UNDER_EXPERTISE: 'Expert Review',
+            IN_DECISION: 'Decision Pending',
+            APPROVED: 'Approved',
+            IN_PAYMENT: 'Payment Processing',
+            CLOSED: 'Closed',
+            REJECTED: 'Rejected'
+          };
+
+          let description = `Claim ${statusChange.claim?.claimNumber || ''} status changed`;
+          if (statusChange.fromStatus && statusChange.toStatus) {
+            description = `Claim ${statusChange.claim?.claimNumber || ''} updated from ${statusLabels[statusChange.fromStatus] || statusChange.fromStatus} to ${statusLabels[statusChange.toStatus] || statusChange.toStatus}`;
+          } else if (statusChange.toStatus) {
+            description = `Claim ${statusChange.claim?.claimNumber || ''} status set to ${statusLabels[statusChange.toStatus] || statusChange.toStatus}`;
+          }
+
+          if (statusChange.reason) {
+            description += ` - ${statusChange.reason}`;
+          }
+
+          const status: 'info' | 'success' | 'warning' | 'error' = 
+            statusChange.toStatus === 'APPROVED' ? 'success' :
+            statusChange.toStatus === 'REJECTED' ? 'error' :
+            statusChange.toStatus === 'DOCS_REQUIRED' ? 'warning' :
+            'info';
+
+          allActivities.push({
+            id: statusChange.historyId,
+            type: 'Status Change',
+            description,
+            timestamp: statusChange.createdAt,
+            status,
+            source: 'status'
+          });
+        });
+
+        // Process document activities
+        documentActivities.forEach((doc) => {
+          const fileTypeLabels: { [key: string]: string } = {
+            PHOTO: 'Photo',
+            PDF: 'PDF Document',
+            INVOICE: 'Invoice',
+            ESTIMATE: 'Repair Estimate',
+            POLICE_REPORT: 'Police Report',
+            MEDICAL_REPORT: 'Medical Report',
+            IDENTITY_DOCUMENT: 'ID Document',
+            INSURANCE_CERTIFICATE: 'Insurance Certificate',
+            OTHER: 'Document'
+          };
+
+          // Document upload activity
+          if (doc.uploadedByClient === clientId) {
+            allActivities.push({
+              id: `${doc.documentId}_upload`,
+              type: 'Document Uploaded',
+              description: `${fileTypeLabels[doc.fileType] || 'Document'} uploaded for claim ${doc.claim?.claimNumber || ''}`,
+              timestamp: doc.createdAt,
+              status: 'info' as const,
+              source: 'document'
+            });
+          }
+
+          // Document verification activity
+          if (doc.verifiedAt && doc.status === 'VERIFIED') {
+            allActivities.push({
+              id: `${doc.documentId}_verified`,
+              type: 'Document Verified',
+              description: `${fileTypeLabels[doc.fileType] || 'Document'} verified for claim ${doc.claim?.claimNumber || ''}`,
+              timestamp: doc.verifiedAt,
+              status: 'success' as const,
+              source: 'document'
+            });
+          } else if (doc.status === 'REJECTED') {
+            allActivities.push({
+              id: `${doc.documentId}_rejected`,
+              type: 'Document Issue',
+              description: `${fileTypeLabels[doc.fileType] || 'Document'} for claim ${doc.claim?.claimNumber || ''} requires attention`,
+              timestamp: doc.createdAt,
+              status: 'error' as const,
+              source: 'document'
+            });
+          }
+        });
+
+        // Sort all activities by timestamp and take the requested limit
+        const sortedActivities = allActivities
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, input.limit)
+          .map(activity => ({
+            id: activity.id,
+            type: activity.type,
+            description: activity.description,
+            timestamp: activity.timestamp,
+            status: activity.status
+          }));
 
         return {
           success: true,
-          data: formattedActivities,
+          data: sortedActivities,
         };
       } catch (error) {
+        console.error('Error fetching recent activities:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: error instanceof Error ? error.message : 'Failed to fetch recent activities',

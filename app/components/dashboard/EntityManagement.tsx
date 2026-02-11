@@ -39,9 +39,10 @@ import {
 interface EntityManagementProps {
   activeEntityTab: string;
   setActiveEntityTab: (tab: string) => void;
+  systemStats?: any;
 }
 
-const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, setActiveEntityTab }) => {
+const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, setActiveEntityTab, systemStats }) => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -63,15 +64,43 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
   const [claims, setClaims] = useState<PaginatedResponse<Claim> | null>(null);
 
   // Real-time updates for current entity
+  const getEntityType = (tab: string): 'USER' | 'CLIENT' | 'POLICY' | 'CLAIM' => {
+    switch (tab) {
+      case 'users': return 'USER';
+      case 'clients': return 'CLIENT';
+      case 'policies': return 'POLICY';
+      case 'claims': return 'CLAIM';
+      default: return 'USER';
+    }
+  };
+  
   const { events: entityEvents } = useRealTimeUpdates({
-    entityTypes: [activeEntityTab.toUpperCase() as 'USER' | 'CLIENT' | 'POLICY' | 'CLAIM']
+    entityTypes: [getEntityType(activeEntityTab)]
   });
+
+  // Helper function to get count for each entity tab
+  const getEntityCount = (entityKey: string) => {
+    if (!systemStats) return 0;
+    
+    switch (entityKey) {
+      case 'users':
+        return systemStats.users?.total || 0;
+      case 'clients':
+        return systemStats.clients?.stats?.find((s: any) => s.status === 'ACTIVE')?._count || 0;
+      case 'policies':
+        return systemStats.policies?.stats?.filter((s: any) => s.status === 'ACTIVE').reduce((sum: number, s: any) => sum + s._count, 0) || 0;
+      case 'claims':
+        return systemStats.claims?.stats?.filter((s: any) => !['CLOSED', 'REJECTED'].includes(s.status)).reduce((sum: number, s: any) => sum + s._count, 0) || 0;
+      default:
+        return 0;
+    }
+  };
 
   const entityTabs = [
     { key: 'users', name: 'Users', icon: Users, color: 'blue' },
     { key: 'clients', name: 'Clients', icon: UserPlus, color: 'green' },
-    { key: 'policies', name: 'Policies', icon: Shield, color: 'purple' },
-    { key: 'claims', name: 'Claims', icon: FileText, color: 'orange' },
+    { key: 'policies', name: 'Policies', icon: Shield, color: 'indigo' },
+    { key: 'claims', name: 'Claims', icon: FileText, color: 'red' },
   ];
 
   // Load data based on active tab
@@ -724,13 +753,11 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             >
               <Icon className="w-4 h-4" />
               <span>{tab.name}</span>
-              {getCurrentData().length > 0 && (
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  activeEntityTab === tab.key ? 'bg-white/20' : 'bg-gray-200'
-                }`}>
-                  {getCurrentData().length}
-                </span>
-              )}
+              <span className={`px-2 py-1 text-xs rounded-full ${
+                activeEntityTab === tab.key ? 'bg-white/20' : 'bg-gray-200'
+              }`}>
+                {getEntityCount(tab.key)}
+              </span>
             </button>
           );
         })}

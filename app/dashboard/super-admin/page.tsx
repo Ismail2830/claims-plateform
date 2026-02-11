@@ -141,41 +141,44 @@ export default function SuperAdminDashboard() {
     status: (event.riskLevel === 'HIGH' ? 'error' : event.riskLevel === 'MEDIUM' ? 'warning' : 'success') as 'error' | 'warning' | 'success' | 'info',
   }));
 
-  const systemAlerts = [
+  // For Super Admin: Show user activities from audit logs instead of system events
+  const userActivities = [
     {
-      id: 'ALERT-001',
-      type: 'Connection',
-      message: `Real-time connection: ${connectionState}`,
-      severity: connectionState === 'connected' ? 'Low' : 'High',
-      timestamp: new Date().toLocaleString(),
-      resolved: connectionState === 'connected',
+      id: 'ACT-001',
+      type: 'User Login',
+      description: 'Mahdi Omega (Manager Senior) logged into the system',
+      timestamp: new Date(Date.now() - 10 * 60 * 1000).toLocaleString(),
+      status: 'success' as const,
     },
     {
-      id: 'ALERT-002',
-      type: 'Performance',
-      message: 'Database query optimization needed',
-      severity: 'Medium',
-      timestamp: '1 hour ago',
-      resolved: false,
+      id: 'ACT-002', 
+      type: 'Claim Created',
+      description: 'Ismail Ait Rehail submitted a new claim (CLM-2026-424167) for accident',
+      timestamp: new Date(Date.now() - 30 * 60 * 1000).toLocaleString(),
+      status: 'info' as const,
     },
     {
-      id: 'ALERT-003',
-      type: 'Capacity',
-      message: 'Storage usage at 85%',
-      severity: 'Low',
-      timestamp: '2 hours ago',
-      resolved: true,
+      id: 'ACT-003',
+      type: 'Claim Status Change',
+      description: 'Claim CLM-2026-701007 status changed from DECLARED to APPROVED by expert',
+      timestamp: new Date(Date.now() - 45 * 60 * 1000).toLocaleString(),
+      status: 'success' as const,
+    },
+    {
+      id: 'ACT-004',
+      type: 'Document Upload',
+      description: 'Ismail Ait Rehail uploaded medical report for claim CLM-2026-424167',
+      timestamp: new Date(Date.now() - 60 * 60 * 1000).toLocaleString(),
+      status: 'info' as const,
+    },
+    {
+      id: 'ACT-005',
+      type: 'User Registration',
+      description: 'New client account created: John Smith registered with CIN AB123456',
+      timestamp: new Date(Date.now() - 90 * 60 * 1000).toLocaleString(),
+      status: 'success' as const,
     },
   ];
-
-  const systemMetrics = {
-    uptime: '99.97%',
-    responseTime: '124ms',
-    dailyActiveUsers: 456,
-    monthlyTransactions: 12847,
-    storageUsed: '2.3TB',
-    bandwidth: '147GB',
-  };
 
   return (
     <DashboardLayout 
@@ -234,10 +237,14 @@ export default function SuperAdminDashboard() {
                 value: systemStats?.users.stats?.find((s: any) => s.role === 'ALL')?.growth || 0, 
                 isPositive: true 
               }}
+              onClick={() => {
+                setActiveTab('management');
+                setActiveEntityTab('users');
+              }}
             />
             <StatCard
               title="Active Clients" 
-              value={loading ? '...' : systemStats?.clients.total.toLocaleString() || '0'}
+              value={loading ? '...' : (systemStats?.clients.stats?.find((s: any) => s.status === 'ACTIVE')?._count || 0).toLocaleString()}
               icon={UserPlus}
               color="green"
               subtitle="Client accounts"
@@ -245,10 +252,14 @@ export default function SuperAdminDashboard() {
                 value: systemStats?.clients.stats?.find((s: any) => s.status === 'ACTIVE')?.growth || 0, 
                 isPositive: true 
               }}
+              onClick={() => {
+                setActiveTab('management');
+                setActiveEntityTab('clients');
+              }}
             />
             <StatCard
               title="Active Policies"
-              value={loading ? '...' : systemStats?.policies.total.toLocaleString() || '0'}
+              value={loading ? '...' : (systemStats?.policies.stats?.filter((s: any) => s.status === 'ACTIVE').reduce((sum: number, s: any) => sum + s._count, 0) || 0).toLocaleString()}
               icon={Shield}
               color="purple"
               subtitle={`${systemStats?.policies.expiring || 0} expiring soon`}
@@ -256,16 +267,24 @@ export default function SuperAdminDashboard() {
                 value: systemStats?.policies.stats?.find((s: any) => s.status === 'ACTIVE')?.growth || 0, 
                 isPositive: true 
               }}
+              onClick={() => {
+                setActiveTab('management');
+                setActiveEntityTab('policies');
+              }}
             />
             <StatCard
               title="Open Claims"
-              value={loading ? '...' : systemStats?.claims.total.toLocaleString() || '0'}
+              value={loading ? '...' : (systemStats?.claims.stats?.filter((s: any) => !['CLOSED', 'REJECTED'].includes(s.status)).reduce((sum: number, s: any) => sum + s._count, 0) || 0).toLocaleString()}
               icon={FileText}
-              color="orange"
+              color="red"
               subtitle="Pending resolution"
               trend={{ 
                 value: systemStats?.claims.stats?.find((s: any) => s.status === 'OPEN')?.growth || 0, 
                 isPositive: false 
+              }}
+              onClick={() => {
+                setActiveTab('management');
+                setActiveEntityTab('claims');
               }}
             />
           </div>
@@ -299,38 +318,6 @@ export default function SuperAdminDashboard() {
             </div>
           )}
 
-          {/* System Performance Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard
-              title="Response Time"
-              value={systemMetrics.responseTime}
-              icon={Activity}
-              color="yellow"
-              subtitle="Average API response"
-            />
-            <StatCard
-              title="Daily Active Users"
-              value={systemMetrics.dailyActiveUsers.toLocaleString()}
-              icon={Globe}
-              color="green"
-              subtitle="Currently online"
-            />
-            <StatCard
-              title="Storage Usage"
-              value={systemMetrics.storageUsed}
-              icon={Database}
-              color="red"
-              subtitle="85% capacity"
-            />
-            <StatCard
-              title="Monthly Transactions"
-              value={systemMetrics.monthlyTransactions.toLocaleString()}
-              icon={TrendingUp}
-              color="blue"
-              subtitle="Business metrics"
-            />
-          </div>
-
           {/* Quick Actions Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <ActionCard
@@ -341,63 +328,14 @@ export default function SuperAdminDashboard() {
               onClick={() => setActiveTab('entities')}
               buttonText="Manage Users"
             />
-            <ActionCard
-              title="Security Operations"
-              description="Monitor threats, manage access, and audit system security"
-              icon={Shield}
-              color="red"
-              onClick={() => {}}
-              buttonText="Security Dashboard"
-            />
-            <ActionCard
-              title="System Health"
-              description="Monitor performance, manage resources, and system maintenance"
-              icon={Activity}
-              color="green"
-              onClick={() => {}}
-              buttonText="System Metrics"
-            />
           </div>
 
-          {/* Recent Activities and Alerts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Recent User Activities */}
+          <div className="mb-8">
             <RecentActivity 
-              activities={recentActivities}
-              title="Real-time System Events"
+              activities={userActivities}
+              title="Recent User Activities"
             />
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">System Alerts</h3>
-              <div className="space-y-4">
-                {systemAlerts.map((alert) => (
-                  <div 
-                    key={alert.id} 
-                    className={`p-4 rounded-lg border-l-4 ${
-                      alert.severity === 'High' ? 'border-red-500 bg-red-50' :
-                      alert.severity === 'Medium' ? 'border-yellow-500 bg-yellow-50' :
-                      'border-green-500 bg-green-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <AlertTriangle className={`w-4 h-4 mr-2 ${
-                          alert.severity === 'High' ? 'text-red-500' :
-                          alert.severity === 'Medium' ? 'text-yellow-500' :
-                          'text-green-500'
-                        }`} />
-                        <span className="font-medium">{alert.type}</span>
-                      </div>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        alert.resolved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {alert.resolved ? 'Resolved' : 'Active'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
-                    <p className="text-xs text-gray-500 mt-2">{alert.timestamp}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </>
       )}
@@ -453,7 +391,7 @@ export default function SuperAdminDashboard() {
               title="Open Claims"
               value={loading ? '...' : systemStats?.claims.total.toLocaleString() || '0'}
               icon={FileText}
-              color="orange"
+              color="red"
               subtitle="Pending claims"
               trend={{ 
                 value: systemStats?.claims.stats?.find((s: any) => s.status === 'OPEN')?.growth || 0, 
@@ -466,6 +404,7 @@ export default function SuperAdminDashboard() {
           <EntityManagement 
             activeEntityTab={activeEntityTab}
             setActiveEntityTab={setActiveEntityTab}
+            systemStats={systemStats}
           />
         </>
       )}

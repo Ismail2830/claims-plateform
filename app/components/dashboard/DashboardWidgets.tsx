@@ -1,7 +1,20 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { LucideIcon } from 'lucide-react';
+import { 
+  LucideIcon, 
+  FileText, 
+  Upload, 
+  CheckCircle, 
+  AlertTriangle, 
+  XCircle, 
+  Clock, 
+  User, 
+  Shield,
+  FileCheck,
+  TrendingUp,
+  Info
+} from 'lucide-react';
 
 interface StatCardProps {
   title: string;
@@ -13,9 +26,10 @@ interface StatCardProps {
     value: number;
     isPositive: boolean;
   };
+  onClick?: () => void;
 }
 
-export function StatCard({ title, value, icon: Icon, color, subtitle, trend }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, color, subtitle, trend, onClick }: StatCardProps) {
   const colorClasses = {
     blue: 'bg-blue-500',
     green: 'bg-green-500',
@@ -35,7 +49,12 @@ export function StatCard({ title, value, icon: Icon, color, subtitle, trend }: S
   };
 
   return (
-    <div className={`${bgColorClasses[color]} overflow-hidden rounded-lg p-6 shadow`}>
+    <div 
+      className={`${bgColorClasses[color]} overflow-hidden rounded-lg p-6 shadow ${
+        onClick ? 'cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105' : ''
+      }`}
+      onClick={onClick}
+    >
       <div className="flex items-center">
         <div className="shrink-0">
           <div className={`${colorClasses[color]} rounded-md p-3`}>
@@ -117,45 +136,122 @@ interface RecentActivityProps {
     timestamp: string;
     status: 'success' | 'warning' | 'error' | 'info';
   }>;
+  title?: string;
 }
 
-export function RecentActivity({ activities }: RecentActivityProps) {
+export function RecentActivity({ activities, title = "Recent Activity" }: RecentActivityProps) {
   const statusColors = {
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    error: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
+    success: 'bg-green-100 text-green-800 border-green-200',
+    warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    error: 'bg-red-100 text-red-800 border-red-200',
+    info: 'bg-blue-100 text-blue-800 border-blue-200',
   };
+
+  const getActivityIcon = (type: string, status: string) => {
+    const iconClass = "h-4 w-4";
+    
+    switch (type.toLowerCase()) {
+      case 'claim created':
+      case 'claim submission':
+        return <FileText className={iconClass} />;
+      case 'document uploaded':
+        return <Upload className={iconClass} />;
+      case 'document verified':
+      case 'document approved':
+        return <FileCheck className={iconClass} />;
+      case 'status change':
+      case 'status updated':
+        return (
+          status === 'success' ? <CheckCircle className={iconClass} /> :
+          status === 'error' ? <XCircle className={iconClass} /> :
+          <Clock className={iconClass} />
+        );
+      case 'claim assigned':
+        return <User className={iconClass} />;
+      case 'policy issued':
+      case 'policy updated':
+        return <Shield className={iconClass} />;
+      case 'claim modified':
+      case 'claim update':
+        return <TrendingUp className={iconClass} />;
+      case 'document issue':
+      case 'document rejected':
+        return <AlertTriangle className={iconClass} />;
+      default:
+        return <Info className={iconClass} />;
+    }
+  };
+
+  if (!activities || activities.length === 0) {
+    return (
+      <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+            {title}
+          </h3>
+          <div className="text-center py-8">
+            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-sm">
+              No recent activity to display. Your claim updates and policy changes will appear here.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white overflow-hidden shadow rounded-lg">
       <div className="px-4 py-5 sm:p-6">
-        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-          Recent Activity
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            {title}
+          </h3>
+          <span className="text-xs text-gray-500">
+            {activities.length} recent {activities.length === 1 ? 'activity' : 'activities'}
+          </span>
+        </div>
         <div className="flow-root">
           <ul className="-mb-8">
             {activities.map((activity, activityIdx) => (
               <li key={activity.id}>
                 <div className="relative pb-8">
                   {activityIdx !== activities.length - 1 ? (
-                    <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" />
+                    <span className="absolute top-5 left-5 -ml-px h-full w-0.5 bg-gray-200" />
                   ) : null}
-                  <div className="relative flex space-x-3">
+                  <div className="relative flex items-start space-x-3">
                     <div>
-                      <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${statusColors[activity.status]}`}>
-                        <span className="h-2 w-2 rounded-full bg-current" />
-                      </span>
+                      <div className={`relative px-1.5 py-1.5 bg-white rounded-full ring-8 ring-white border ${statusColors[activity.status]} flex items-center justify-center`}>
+                        {getActivityIcon(activity.type, activity.status)}
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                      <div>
-                        <p className="text-sm text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-900">
+                            {activity.type}
+                          </span>
+                          <div className="text-right text-xs text-gray-500">
+                            {activity.timestamp}
+                          </div>
+                        </div>
+                        <p className="mt-1 text-sm text-gray-600 leading-relaxed">
                           {activity.description}
                         </p>
-                        <p className="text-xs text-gray-500">{activity.type}</p>
                       </div>
-                      <div className="text-right text-xs text-gray-500">
-                        {activity.timestamp}
+                      {/* Activity priority/status indicator */}
+                      <div className="mt-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${
+                          activity.status === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
+                          activity.status === 'error' ? 'bg-red-50 text-red-700 border-red-200' :
+                          activity.status === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                          'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}>
+                          {activity.status === 'success' && 'Completed'}
+                          {activity.status === 'error' && 'Attention Required'}
+                          {activity.status === 'warning' && 'In Progress'}
+                          {activity.status === 'info' && 'Updated'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -164,6 +260,14 @@ export function RecentActivity({ activities }: RecentActivityProps) {
             ))}
           </ul>
         </div>
+        
+        {activities.length >= 10 && (
+          <div className="mt-6 text-center border-t border-gray-200 pt-4">
+            <button className="text-sm text-blue-600 hover:text-blue-500 font-medium">
+              View all activities
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
 import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
+import { useClaimUpdates } from '@/app/hooks/useRealTimeUpdates';
 import { trpc } from '@/app/lib/trpc-client';
 import { 
   PlusCircle, 
@@ -15,16 +16,23 @@ import {
   AlertCircle,
   Shield,
   DollarSign,
-  Calendar
+  Calendar,
+  XCircle
 } from 'lucide-react';
 
 export default function ClientDashboard() {
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showRealTimeNotification, setShowRealTimeNotification] = useState(false);
+  const [lastActivity, setLastActivity] = useState<string>('');
   const searchParams = useSearchParams();
   
   const auth = useSimpleAuth();
   const router = useRouter();
   const { user, token, isLoading } = auth;
+
+  // Set up real-time updates for claim activities
+  const realTimeUpdates = useClaimUpdates();
+  const trpcUtils = trpc.useUtils();
 
   // Always call hooks in the same order - before any early returns
   // Fetch real data from tRPC
@@ -36,7 +44,7 @@ export default function ClientDashboard() {
       retry: 1,
       // Add timeout to prevent hanging
       staleTime: 30000, // 30 seconds
-      cacheTime: 60000 // 1 minute
+      gcTime: 60000 // 1 minute (renamed from cacheTime)
     }
   );
 
@@ -48,9 +56,37 @@ export default function ClientDashboard() {
       retry: 1,
       // Add timeout to prevent hanging
       staleTime: 30000, // 30 seconds
-      cacheTime: 60000 // 1 minute
+      gcTime: 60000 // 1 minute (renamed from cacheTime)
     }
   );
+
+  // Handle real-time updates
+  useEffect(() => {
+    if (realTimeUpdates.lastEvent && user?.clientId) {
+      const event = realTimeUpdates.lastEvent;
+      
+      // Only process events related to this client's claims
+      if (event.entityType === 'CLAIM' && 
+          event.data && 
+          (event.data.clientId === user.clientId || event.data.client?.clientId === user.clientId)) {
+        
+        console.log('Received claim update for client:', event);
+        
+        // Show notification for new activity
+        if (event.type === 'status_changed' || event.type === 'entity_updated') {
+          setLastActivity(event.data.description || 'Your claim was updated');
+          setShowRealTimeNotification(true);
+          
+          // Auto-hide notification after 5 seconds
+          setTimeout(() => setShowRealTimeNotification(false), 5000);
+        }
+        
+        // Refresh recent activities and stats
+        trpcUtils.clientAuth.getRecentActivities.invalidate();
+        trpcUtils.clientAuth.getDashboardStats.invalidate();
+      }
+    }
+  }, [realTimeUpdates.lastEvent, user?.clientId, trpcUtils]);
 
   // Debug logging
   useEffect(() => {
@@ -63,9 +99,10 @@ export default function ClientDashboard() {
       statsError: statsError?.message,
       activitiesError: activitiesError?.message,
       dashboardStats: dashboardStats?.success,
-      activitiesData: recentActivitiesData?.success
+      activitiesData: recentActivitiesData?.success,
+      realTimeConnected: realTimeUpdates.connected
     });
-  }, [isLoading, token, user, statsLoading, activitiesLoading, statsError, activitiesError, dashboardStats, recentActivitiesData]);
+  }, [isLoading, token, user, statsLoading, activitiesLoading, statsError, activitiesError, dashboardStats, recentActivitiesData, realTimeUpdates.connected]);
 
   useEffect(() => {
     console.log('ClientDashboard: Auth state changed', {
@@ -181,7 +218,13 @@ export default function ClientDashboard() {
     totalCoverage: 0,
   };
 
-  const fallbackActivities = [];
+  const fallbackActivities: Array<{
+    id: string;
+    type: string;
+    description: string;
+    timestamp: string;
+    status: 'success' | 'warning' | 'error' | 'info';
+  }> = [];
 
   // Use actual data if available, otherwise use fallbacks
   const stats = dashboardStats?.success ? dashboardStats.data : fallbackStats;
@@ -239,12 +282,13 @@ export default function ClientDashboard() {
 
   // Format currency
   const formatCurrency = (amount: number) => {
+    const numAmount = typeof amount === 'number' ? amount : Number(amount) || 0;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(numAmount);
   };
 
   return (
@@ -267,6 +311,58 @@ export default function ClientDashboard() {
                 Your claim has been successfully submitted! You will receive updates on your claim status.
               </p>
             </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Real-time Activity Notification */}
+      {showRealTimeNotification && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-md"
+        >
+          <div className="flex justify-between items-start">
+            <div className="flex">
+              <CheckCircle className="h-5 w-5 text-blue-400" />
+              <div className="ml-3">
+                <p className="text-sm text-blue-700 font-medium">
+                  New Activity Update
+                </p>
+                <p className="text-sm text-blue-600 mt-1">
+                  {lastActivity}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowRealTimeNotification(false)}
+              className="text-blue-400 hover:text-blue-600"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Real-time Connection Status (only show if disconnected) */}
+      {!realTimeUpdates.connected && !realTimeUpdates.connecting && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md"
+        >
+          <div className="flex items-center">
+            <AlertCircle className="h-4 w-4 text-yellow-500 mr-2" />
+            <p className="text-sm text-yellow-700">
+              Real-time updates are currently unavailable. 
+              <button 
+                onClick={realTimeUpdates.reconnect} 
+                className="text-yellow-800 underline hover:no-underline ml-1"
+              >
+                Reconnect
+              </button>
+            </p>
           </div>
         </motion.div>
       )}
@@ -324,7 +420,7 @@ export default function ClientDashboard() {
         />
         <StatCard
           title="Total Coverage"
-          value={statsLoading ? '...' : formatCurrency(stats.totalCoverage)}
+          value={statsLoading ? '...' : formatCurrency(Number(stats.totalCoverage) || 0)}
           icon={DollarSign}
           color="purple"
           subtitle="Combined policies"

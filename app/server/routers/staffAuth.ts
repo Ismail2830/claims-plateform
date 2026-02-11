@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, staffProtected, managerOnly, adminOnly, expertAndAbove } from '../../lib/trpc';
 import { authenticateStaff, registerStaff } from '../../lib/auth';
+import { EventBroadcaster } from '../../api/real-time/route';
 import { prisma } from '../../lib/prisma';
 
 export const staffAuthRouter = createTRPCRouter({
@@ -345,16 +346,51 @@ export const staffAuthRouter = createTRPCRouter({
         }
 
         // Update claim assignment and user workload
-        await prisma.$transaction([
-          prisma.claim.update({
+        const result = await prisma.$transaction(async (tx) => {
+          // Get claim details for logging
+          const claim = await tx.claim.findUnique({
+            where: { claimId: input.claimId },
+            select: { claimNumber: true, clientId: true, assignedTo: true }
+          });
+          
+          if (!claim) {
+            throw new Error('Claim not found');
+          }
+          
+          // Update claim assignment
+          await tx.claim.update({
             where: { claimId: input.claimId },
             data: { assignedTo: input.assignToUserId },
-          }),
-          prisma.user.update({
+          });
+          
+          // Update user workload
+          await tx.user.update({
             where: { userId: input.assignToUserId },
             data: { currentWorkload: { increment: 1 } },
-          }),
-        ]);
+          });
+          
+          // Log assignment activity for client feed
+          const assignmentAuditLog = await tx.auditLog.create({
+            data: {
+              entityType: 'CLAIM',
+              entityId: input.claimId,
+              claimId: input.claimId,
+              clientId: claim.clientId,
+              userId: ctx.staff.userId,
+              action: 'ASSIGN',
+              description: `Your claim ${claim.claimNumber} was assigned to an expert for review`,
+              metadata: {
+                claimNumber: claim.claimNumber,
+                assignedTo: input.assignToUserId,
+                assignedBy: ctx.staff.userId,
+                oldAssignment: claim.assignedTo
+              },
+              riskLevel: 'LOW'
+            }
+          });
+          
+          return claim;
+        });
 
         return {
           success: true,

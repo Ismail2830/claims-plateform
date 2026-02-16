@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { userAPI } from '../../lib/api/superAdminAPI';
 import { 
   X, 
   User, 
@@ -35,6 +36,8 @@ export default function ClaimDetailsModal({
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
     if (claim && isOpen) {
@@ -48,10 +51,38 @@ export default function ClaimDetailsModal({
         approvedAmount: claim.approvedAmount || '',
         status: claim.status || '',
         priority: claim.priority || '',
+        assignedTo: claim.assignedTo || '',
         additionalNotes: claim.additionalNotes || ''
       });
+      
+      // Load users for assignment dropdown
+      loadUsers();
     }
   }, [claim, isOpen]);
+
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await userAPI.list({ 
+        page: 1, 
+        limit: 100,
+        status: 'active'
+      });
+      
+      // Filter out SUPER_ADMIN and CLIENT roles, and inactive users
+      const assignableUsers = response.data?.users?.filter((user: any) => 
+        user.isActive && 
+        ['EXPERT', 'MANAGER', 'MANAGER_JUNIOR', 'MANAGER_SENIOR'].includes(user.role)
+      ) || [];
+      
+      setUsers(assignableUsers);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   if (!isOpen || !claim) return null;
 
@@ -260,12 +291,28 @@ export default function ClaimDetailsModal({
 
                   <div>
                     <p className="text-sm font-medium text-gray-900 mb-1">Assigned To</p>
-                    <p className="text-sm text-gray-600">
-                      {claim.assignedUser ? 
-                        `${claim.assignedUser.firstName} ${claim.assignedUser.lastName}` : 
-                        'Unassigned'
-                      }
-                    </p>
+                    {isEditing ? (
+                      <select
+                        value={editData.assignedTo}
+                        onChange={(e) => setEditData({ ...editData, assignedTo: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loadingUsers}
+                      >
+                        <option value="">Unassigned</option>
+                        {users.map((user) => (
+                          <option key={user.userId} value={user.userId}>
+                            {user.firstName} {user.lastName} ({user.role})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        {claim.assignedUser ? 
+                          `${claim.assignedUser.firstName} ${claim.assignedUser.lastName} (${claim.assignedUser.role})` : 
+                          'Unassigned'
+                        }
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -461,6 +508,7 @@ export default function ClaimDetailsModal({
                     approvedAmount: claim.approvedAmount || '',
                     status: claim.status || '',
                     priority: claim.priority || '',
+                    assignedTo: claim.assignedTo || '',
                     additionalNotes: claim.additionalNotes || ''
                   });
                 }}

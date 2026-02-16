@@ -33,10 +33,10 @@ export default function AdminLoginForm() {
     try {
       console.log('AdminLoginForm: Calling auth.login');
       await auth.login(formData.email, formData.password);
-      console.log('AdminLoginForm: Login successful, redirecting');
+      console.log('AdminLoginForm: Login successful, redirecting to super admin dashboard');
       
       // Use replace instead of push to prevent back button issues
-      router.replace('/dashboard/admin');
+      router.replace('/dashboard/super-admin');
       
     } catch (error: any) {
       console.error('AdminLoginForm: Login error:', error);
@@ -54,7 +54,7 @@ export default function AdminLoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

@@ -41,7 +41,10 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Real-time updates
-  const { events, connectionState } = useRealTimeUpdates(['USER', 'CLIENT', 'POLICY', 'CLAIM']);
+  const { events, connected, connecting, error } = useRealTimeUpdates({
+    entityTypes: ['USER', 'CLIENT', 'POLICY', 'CLAIM'],
+    autoReconnect: true
+  });
 
   // Load system stats
   const loadSystemStats = useCallback(async () => {
@@ -185,8 +188,6 @@ export default function SuperAdminDashboard() {
       title="Super Admin Dashboard" 
       userRole="SUPER_ADMIN"
       navigation={navigation}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
     >
       {activeTab === 'overview' && (
         <>
@@ -204,12 +205,12 @@ export default function SuperAdminDashboard() {
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className={`w-3 h-3 rounded-full ${
-                connectionState === 'connected' ? 'bg-green-500 animate-pulse' : 
-                connectionState === 'connecting' ? 'bg-yellow-500 animate-spin' : 
+                connected ? 'bg-green-500 animate-pulse' : 
+                connecting ? 'bg-yellow-500 animate-spin' : 
                 'bg-red-500'
               }`}></div>
               <span className="text-sm text-gray-600">
-                Real-time Updates: {connectionState}
+                Real-time Updates: {connected ? 'connected' : connecting ? 'connecting' : 'disconnected'}
               </span>
               <span className="text-xs text-gray-400">
                 ({events.length} events received)
@@ -294,23 +295,27 @@ export default function SuperAdminDashboard() {
             <div className="bg-white rounded-lg shadow p-6 mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Expert Workload Distribution</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {systemStats.claims.workload.map((expert: any) => (
-                  <div key={expert.userId} className="bg-gray-50 rounded-lg p-4">
+                {systemStats.claims.workload.map((workloadItem: any, index: number) => (
+                  <div key={workloadItem.expertId || `workload-${index}`} className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-900">
-                        {expert.firstName} {expert.lastName}
+                        {workloadItem.expert?.firstName} {workloadItem.expert?.lastName}
                       </span>
                       <span className={`text-xs px-2 py-1 rounded-full ${
-                        expert.workloadPercentage > 90 ? 'bg-red-100 text-red-800' :
-                        expert.workloadPercentage > 70 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
+                        workloadItem.expert?.currentWorkload && workloadItem.expert?.maxWorkload
+                          ? (workloadItem.expert.currentWorkload / workloadItem.expert.maxWorkload * 100) > 90 ? 'bg-red-100 text-red-800' :
+                            (workloadItem.expert.currentWorkload / workloadItem.expert.maxWorkload * 100) > 70 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {expert.workloadPercentage}%
+                        {workloadItem.expert?.currentWorkload && workloadItem.expert?.maxWorkload
+                          ? Math.round(workloadItem.expert.currentWorkload / workloadItem.expert.maxWorkload * 100)
+                          : 0}%
                       </span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>{expert.currentWorkload} / {expert.maxWorkload}</span>
-                      <span>{expert.role}</span>
+                      <span>{workloadItem.activeClaims || 0} / {workloadItem.expert?.maxWorkload || 0}</span>
+                      <span>Expert</span>
                     </div>
                   </div>
                 ))}

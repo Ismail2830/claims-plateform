@@ -552,20 +552,6 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
               >
                 <Eye className="w-4 h-4" />
               </button>
-              <button 
-                onClick={() => handleEdit(item)}
-                className="text-indigo-600 hover:text-indigo-900"
-                title="Quick Edit"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => handleDelete(item)}
-                className="text-red-600 hover:text-red-900"
-                title="Delete"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
             </div>
           ) : (
             <>

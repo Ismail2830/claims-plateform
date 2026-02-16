@@ -137,7 +137,7 @@ export function useRealTimeUpdates(options: UseRealTimeOptions = {}) {
         onEventRef.current?.(realTimeEvent);
       } catch (error) {
         console.error('Error parsing real-time event:', {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           data: event.data,
           eventType: typeof event.data
         });

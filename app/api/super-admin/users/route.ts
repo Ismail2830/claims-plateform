@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     console.error('Users POST error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Validation failed', details: error.errors },
+        { success: false, error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }
@@ -276,7 +276,7 @@ export async function PUT(request: NextRequest) {
     console.error('Users PUT error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Validation failed', details: error.errors },
+        { success: false, error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }
@@ -365,11 +365,15 @@ export async function DELETE(request: NextRequest) {
 
 // PATCH - Bulk operations
 export async function PATCH(request: NextRequest) {
+  let action = 'unknown';
+  
   try {
     const body = await request.json();
-    const { userIds, action } = bulkActionSchema.parse(body);
+    const parsed = bulkActionSchema.parse(body);
+    const userIds = parsed.userIds;
+    action = parsed.action;
 
-    let result;
+    let result: { count: number };
     
     switch (action) {
       case 'activate':
@@ -409,6 +413,8 @@ export async function PATCH(request: NextRequest) {
           where: { userId: { in: userIds } },
         });
         break;
+      default:
+        throw new Error(`Invalid action: ${action}`);
     }
 
     // Log bulk audit trail
@@ -432,12 +438,12 @@ export async function PATCH(request: NextRequest) {
     console.error('Users PATCH error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Validation failed', details: error.errors },
+        { success: false, error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }
     return NextResponse.json(
-      { success: false, error: `Failed to perform bulk ${body?.action}` },
+      { success: false, error: `Failed to perform bulk ${action}` },
       { status: 500 }
     );
   }

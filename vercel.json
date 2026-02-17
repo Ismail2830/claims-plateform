@@ -1,0 +1,59 @@
+{
+  "buildCommand": "prisma generate && npm run build",
+  "framework": "nextjs",
+  "installCommand": "npm ci",
+  "regions": ["cle1"],
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    },
+    "app/api/logs/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "envs": [
+    {
+      "targets": ["production"],
+      "DATABASE_URL": "@database_url",
+      "JWT_SECRET": "@jwt_secret"
+    },
+    {
+      "targets": ["preview", "development"],
+      "DATABASE_URL": "@database_url_dev",
+      "JWT_SECRET": "@jwt_secret_dev"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://*.vercel.app"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/dashboard",
+      "permanent": false,
+      "statusCode": 302
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/trpc/:path*",
+      "destination": "/api/trpc/:path*"
+    }
+  ]
+}

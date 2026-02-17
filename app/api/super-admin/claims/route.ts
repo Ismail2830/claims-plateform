@@ -937,9 +937,9 @@ export async function PATCH(request: NextRequest) {
         select: { claimId: true, claimNumber: true, clientId: true, status: true }
       });
       
-      const statusHistoryData = claimIds.map(claimId => ({
+      const statusHistoryData = claimIds.map((claimId: string) => ({
         claimId,
-        fromStatus: affectedClaims.find(c => c.claimId === claimId)?.status,
+        fromStatus: affectedClaims.find((c: any) => c.claimId === claimId)?.status,
         toStatus: statusChange as any,
         changedBy: null, // Super Admin bulk action
         reason: reason || `Bulk ${action} by staff`,

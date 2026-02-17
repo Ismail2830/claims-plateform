@@ -1,7 +1,7 @@
 // Super Admin Entity Management API - Claims
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import { z } from 'zod';
+import { any, z } from 'zod';
 
 // Validation schemas
 const createClaimSchema = z.object({
@@ -321,7 +321,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create claim with transaction
-    const claim = await prisma.$transaction(async (tx) => {
+    const claim = await prisma.$transaction(async (tx: any) => {
       const newClaim = await tx.claim.create({
         data: {
           ...validatedData,
@@ -505,7 +505,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update claim with transaction
-    const updatedClaim = await prisma.$transaction(async (tx) => {
+    const updatedClaim = await prisma.$transaction(async (tx: any) => {
       const updated = await tx.claim.update({
         where: { claimId },
         data: validatedData,
@@ -661,7 +661,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete claim and handle workload
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Reduce expert workload if assigned
       if (existingClaim.assignedTo) {
         await tx.user.update({
@@ -773,7 +773,7 @@ export async function PATCH(request: NextRequest) {
         workloadChanges.set(newExpertId, (workloadChanges.get(newExpertId) || 0) + claimIds.length);
       }
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         // Reassign claims
         await tx.claim.updateMany({
           where: { claimId: { in: claimIds } },
@@ -900,7 +900,7 @@ export async function PATCH(request: NextRequest) {
           select: { claimId: true, claimNumber: true, assignedTo: true },
         });
 
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
           // Reduce workload for assigned experts
           const expertWorkload = new Map();
           for (const claim of claimsToDelete) {

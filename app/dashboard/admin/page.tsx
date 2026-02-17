@@ -135,7 +135,7 @@ export default function AdminDashboard() {
                 Admin Dashboard
               </h1>
               <p className="text-gray-600">
-                Welcome back, {user.firstName || user.username}! 
+                Welcome back, {user.firstName}! 
                 <span className={`ml-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getRoleBadgeColor(user.role)}`}>
                   {getRoleIcon(user.role)}
                   {user.role.replace('_', ' ')}

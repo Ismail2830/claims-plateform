@@ -17,7 +17,6 @@ export interface ClientTokenPayload {
 export interface StaffTokenPayload {
   userId: string;
   email: string;
-  username: string;
   role: 'SUPER_ADMIN' | 'MANAGER_SENIOR' | 'MANAGER_JUNIOR' | 'EXPERT';
   type: 'STAFF';
 }
@@ -117,7 +116,6 @@ export const authenticateStaff = async (email: string, password: string) => {
     where: { email },
     select: {
       userId: true,
-      username: true,
       email: true,
       passwordHash: true,
       firstName: true,
@@ -150,7 +148,6 @@ export const authenticateStaff = async (email: string, password: string) => {
   // Log successful login
   await logStaffAuth('LOGIN', user.userId, undefined, undefined, {
     email: user.email,
-    username: user.username,
     role: user.role,
     loginTime: new Date(),
     success: true
@@ -159,7 +156,6 @@ export const authenticateStaff = async (email: string, password: string) => {
   const tokenPayload: StaffTokenPayload = {
     userId: user.userId,
     email: user.email,
-    username: user.username,
     role: user.role,
     type: 'STAFF'
   };
@@ -170,7 +166,6 @@ export const authenticateStaff = async (email: string, password: string) => {
     token,
     user: {
       userId: user.userId,
-      username: user.username,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -251,7 +246,6 @@ export const registerClient = async (data: {
 };
 
 export const registerStaff = async (data: {
-  username: string;
   email: string;
   password: string;
   firstName?: string;
@@ -267,26 +261,19 @@ export const registerStaff = async (data: {
     throw new Error('Email already registered');
   }
 
-  // Check for duplicate username
-  const existingUsernameUser = await prisma.user.findUnique({
-    where: { username: data.username }
-  });
-  
-  if (existingUsernameUser) {
-    throw new Error('Username already taken');
-  }
-
   const hashedPassword = await hashPassword(data.password);
 
   const user = await prisma.user.create({
     data: {
-      ...data,
+      email: data.email,
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
+      role: data.role,
       passwordHash: hashedPassword,
       isActive: true
     },
     select: {
       userId: true,
-      username: true,
       email: true,
       firstName: true,
       lastName: true,

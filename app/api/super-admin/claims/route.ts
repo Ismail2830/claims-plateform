@@ -172,7 +172,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Get expert details for workload
-    const expertIds = workloadStats.map(stat => stat.assignedTo).filter(Boolean);
+    const expertIds = workloadStats
+      .map(stat => stat.assignedTo)
+      .filter((id): id is string => id !== null);
     const experts = await prisma.user.findMany({
       where: { userId: { in: expertIds } },
       select: {

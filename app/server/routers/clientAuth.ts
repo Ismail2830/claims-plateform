@@ -599,11 +599,11 @@ export const clientAuthRouter = createTRPCRouter({
           } else if (activity.entityType === 'POLICY') {
             if (activity.action === 'CREATE') {
               type = 'Policy Issued';
-              description = `New policy ${activity.policy?.policyNumber || ''} was issued`;
+              description = `New policy was issued`;
               status = 'success';
             } else if (activity.action === 'UPDATE') {
               type = 'Policy Updated';
-              description = `Policy ${activity.policy?.policyNumber || ''} was modified`;
+              description = `Policy was modified`;
               status = 'info';
             }
           } else if (activity.entityType === 'DOCUMENT') {

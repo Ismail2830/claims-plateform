@@ -1,7 +1,16 @@
 'use client';
 
+import { Suspense } from 'react';
 import UnifiedLoginForm from '@/app/components/auth/ClientLoginForm';
 
-export default function LoginPage() {
+function LoginFormWithSuspense() {
   return <UnifiedLoginForm />;
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginFormWithSuspense />
+    </Suspense>
+  );
 }

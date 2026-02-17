@@ -2,6 +2,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 
+// Type for the claim with included client data
+type ClaimWithClient = {
+  claimId: string;
+  createdAt: Date;
+  status: string;
+  client: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+};
+
 export async function GET(request: NextRequest) {
   try {
     console.log('Checking for duplicate claims...');
@@ -43,7 +55,7 @@ export async function GET(request: NextRequest) {
         detailedDuplicates.push({
           claimNumber: duplicate.claimNumber,
           count: duplicate._count.claimNumber,
-          claims: claims.map(claim => ({
+          claims: claims.map((claim: ClaimWithClient) => ({
             id: claim.claimId,
             createdAt: claim.createdAt,
             client: claim.client ? `${claim.client.firstName} ${claim.client.lastName}` : 'N/A',

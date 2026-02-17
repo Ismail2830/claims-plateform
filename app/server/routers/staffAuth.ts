@@ -36,7 +36,6 @@ export const staffAuthRouter = createTRPCRouter({
   register: adminOnly
     .input(
       z.object({
-        username: z.string().min(3, 'Username must be at least 3 characters'),
         email: z.string().email('Invalid email address'),
         password: z.string().min(6, 'Password must be at least 6 characters'),
         firstName: z.string().optional(),
@@ -69,7 +68,6 @@ export const staffAuthRouter = createTRPCRouter({
           where: { userId: ctx.staff.userId },
           select: {
             userId: true,
-            username: true,
             email: true,
             firstName: true,
             lastName: true,
@@ -118,7 +116,6 @@ export const staffAuthRouter = createTRPCRouter({
           data: input,
           select: {
             userId: true,
-            username: true,
             email: true,
             firstName: true,
             lastName: true,
@@ -318,7 +315,7 @@ export const staffAuthRouter = createTRPCRouter({
         assignToUserId: z.string(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
         // Check if target user exists and is active
         const targetUser = await prisma.user.findUnique({
@@ -412,7 +409,6 @@ export const staffAuthRouter = createTRPCRouter({
           where: { isActive: true },
           select: {
             userId: true,
-            username: true,
             firstName: true,
             lastName: true,
             role: true,

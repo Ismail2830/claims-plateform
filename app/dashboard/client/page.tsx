@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -20,7 +20,7 @@ import {
   XCircle
 } from 'lucide-react';
 
-export default function ClientDashboard() {
+function ClientDashboardContent() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showRealTimeNotification, setShowRealTimeNotification] = useState(false);
   const [lastActivity, setLastActivity] = useState<string>('');
@@ -527,5 +527,13 @@ export default function ClientDashboard() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function ClientDashboard() {
+  return (
+    <Suspense fallback={<div>Loading dashboard...</div>}>
+      <ClientDashboardContent />
+    </Suspense>
   );
 }

@@ -172,7 +172,6 @@ export const loggingRouter = createTRPCRouter({
               userRef: {
                 select: {
                   userId: true,
-                  username: true,
                   email: true,
                   role: true,
                 }
@@ -250,7 +249,6 @@ export const loggingRouter = createTRPCRouter({
               userRef: {
                 select: {
                   userId: true,
-                  username: true,
                   email: true,
                   role: true,
                 }

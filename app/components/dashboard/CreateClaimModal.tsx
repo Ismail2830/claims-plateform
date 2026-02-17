@@ -213,7 +213,7 @@ export function CreateClaimModal({ isOpen, onClose, onSuccess }: CreateClaimModa
                         <option value="">Choose a policy...</option>
                         {policies.map(policy => (
                           <option key={policy.policyId} value={policy.policyId}>
-                            {policy.policyNumber} - {policy.policyType} (${policy.insuredAmount})
+                            {policy.policyNumber} - {policy.policyType} (${policy.insuredAmount.toString()})
                           </option>
                         ))}
                       </select>

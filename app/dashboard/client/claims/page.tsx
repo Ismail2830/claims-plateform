@@ -154,7 +154,7 @@ export default function ClientClaimsPage() {
   ];
 
   // Filter claims based on search term
-  const filteredClaims = claims.filter(claim =>
+  const filteredClaims = claims.filter((claim: any) =>
     claim.claimNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     claim.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     claim.claimType.toLowerCase().includes(searchTerm.toLowerCase())

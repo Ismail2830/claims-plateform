@@ -137,7 +137,7 @@ export function CreateClaimModal({ isOpen, onClose, onSuccess }: CreateClaimModa
       await createClaimMutation.mutateAsync({
         ...formData,
         claimedAmount: parseFloat(formData.claimedAmount),
-        witnesses: witnesses.filter(w => w.name.trim()),
+        witnesses: witnesses.filter((w: any) => w.name.trim()),
         policeReportNumber: formData.policeReport ? formData.policeReportNumber : undefined,
         emergencyServicesDetails: formData.emergencyServices ? formData.emergencyServicesDetails : undefined,
       });
@@ -211,7 +211,7 @@ export function CreateClaimModal({ isOpen, onClose, onSuccess }: CreateClaimModa
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Choose a policy...</option>
-                        {policies.map(policy => (
+                        {policies.map((policy: any) => (
                           <option key={policy.policyId} value={policy.policyId}>
                             {policy.policyNumber} - {policy.policyType} (${policy.insuredAmount.toString()})
                           </option>

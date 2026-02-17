@@ -226,7 +226,7 @@ export default function CreateClaimPage() {
   };
 
   const handleFileUpload = (files: FileList) => {
-    const newDocuments = Array.from(files).map(file => ({
+    const newDocuments = Array.from(files).map((file: File) => ({
       file,
       type: 'PHOTO', // Default type
       description: file.name

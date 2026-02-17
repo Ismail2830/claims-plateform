@@ -536,7 +536,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
               if (e.target.checked) {
                 setSelectedItems([...selectedItems, id]);
               } else {
-                setSelectedItems(selectedItems.filter(selectedId => selectedId !== id));
+                setSelectedItems(selectedItems.filter((selectedId: string) => selectedId !== id));
               }
             }}
           />
@@ -1273,7 +1273,7 @@ const CreateEntityModal: React.FC<{
                    'Select Policy'}
                 </option>
                 {policies
-                  .filter(policy => !formData.clientId || policy.clientId === formData.clientId)
+                  .filter((policy: any) => !formData.clientId || policy.clientId === formData.clientId)
                   .map((policy) => (
                     <option key={policy.policyId} value={policy.policyId}>
                       {policy.policyNumber} - {policy.policyType}

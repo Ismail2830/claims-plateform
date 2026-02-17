@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
         });
 
         const lifetimeValue = policies
-          .filter(p => p.status === 'ACTIVE')
+          .filter((p: any) => p.status === 'ACTIVE')
           .reduce((sum, policy) => sum + Number(policy.premiumAmount), 0);
 
         // Calculate risk score based on claims
@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
         });
 
         const totalClaims = claims.length;
-        const rejectedClaims = claims.filter(c => c.status === 'REJECTED').length;
+        const rejectedClaims = claims.filter((c: any) => c.status === 'REJECTED').length;
         const avgFraudScore = claims.reduce((sum, claim) => sum + Number(claim.fraudScore || 0), 0) / (totalClaims || 1);
         
         let riskScore = 'Low';
@@ -298,7 +298,7 @@ export async function PUT(request: NextRequest) {
                 validatedData.email ? { email: validatedData.email } : {},
                 validatedData.cin ? { cin: validatedData.cin } : {},
                 validatedData.phone ? { phone: validatedData.phone } : {},
-              ].filter(obj => Object.keys(obj).length > 0),
+              ].filter((obj: any) => Object.keys(obj).length > 0),
             },
           ],
         },
@@ -394,8 +394,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check for active policies and claims
-    const activePolicies = existingClient.policies.filter(p => p.status === 'ACTIVE');
-    const activeClaims = existingClient.claims.filter(c => !['CLOSED', 'REJECTED'].includes(c.status));
+    const activePolicies = existingClient.policies.filter((p: any) => p.status === 'ACTIVE');
+    const activeClaims = existingClient.claims.filter((c: any) => !['CLOSED', 'REJECTED'].includes(c.status));
 
     if (hard) {
       if (activePolicies.length > 0 || activeClaims.length > 0) {

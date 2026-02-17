@@ -205,7 +205,7 @@ export default function CreateUserModal({ isOpen, onClose, onCreateUser }: Creat
                   </select>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {roles.find(r => r.value === formData.role)?.description}
+                  {roles.find((r: any) => r.value === formData.role)?.description}
                 </p>
               </div>
 

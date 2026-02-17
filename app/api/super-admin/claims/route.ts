@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
     // Get expert details for workload
     const expertIds = workloadStats
       .map((stat: any) => stat.assignedTo)
-      .filter((id): id is string => id !== null);
+      .filter((id: any): id is string => id !== null);
     const experts = await prisma.user.findMany({
       where: { userId: { in: expertIds } },
       select: {
@@ -186,10 +186,10 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const expertWorkload = workloadStats.map(stat => ({
+    const expertWorkload = workloadStats.map((stat: any) => ({
       expertId: stat.assignedTo,
       activeClaims: stat._count,
-      expert: experts.find(e => e.userId === stat.assignedTo),
+      expert: experts.find((e: any) => e.userId === stat.assignedTo),
     }));
 
     return NextResponse.json({
@@ -759,12 +759,12 @@ export async function PATCH(request: NextRequest) {
       });
 
       // Calculate workload changes
-      const oldExperts = [...new Set(claims.map(c => c.assignedTo).filter(Boolean))];
+      const oldExperts = [...new Set(claims.map((c: any) => c.assignedTo).filter(Boolean))];
       const workloadChanges = new Map();
 
       // Decrease old experts' workload
       for (const expertId of oldExperts) {
-        const claimCount = claims.filter(c => c.assignedTo === expertId).length;
+        const claimCount = claims.filter((c: any) => c.assignedTo === expertId).length;
         workloadChanges.set(expertId, (workloadChanges.get(expertId) || 0) - claimCount);
       }
 
@@ -951,7 +951,7 @@ export async function PATCH(request: NextRequest) {
       });
       
       // Create individual audit logs for each claim so they appear in client feeds
-      const individualAuditLogsData = affectedClaims.map(claim => ({
+      const individualAuditLogsData = affectedClaims.map((claim: any) => ({
         entityType: 'CLAIM' as const,
         entityId: claim.claimId,
         claimId: claim.claimId,

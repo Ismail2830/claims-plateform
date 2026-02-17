@@ -331,7 +331,7 @@ export const clientAuthRouter = createTRPCRouter({
 
           // Add witnesses if any
           if (input.witnesses && input.witnesses.length > 0) {
-            const validWitnesses = input.witnesses.filter(w => w.name && w.name.trim());
+            const validWitnesses = input.witnesses.filter((w: any) => w.name && w.name.trim());
             
             for (const witness of validWitnesses) {
               await tx.claimWitness.create({
@@ -725,7 +725,7 @@ export const clientAuthRouter = createTRPCRouter({
         const sortedActivities = allActivities
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
           .slice(0, input.limit)
-          .map(activity => ({
+          .map((activity: any) => ({
             id: activity.id,
             type: activity.type,
             description: activity.description,

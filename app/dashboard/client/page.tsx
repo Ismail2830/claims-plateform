@@ -463,7 +463,7 @@ function ClientDashboardContent() {
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Activity</h3>
                 <div className="space-y-4">
-                  {[1, 2, 3].map(i => (
+                  {[1, 2, 3].map((i: number) => (
                     <div key={i} className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
                       <div className="flex-1 space-y-2">

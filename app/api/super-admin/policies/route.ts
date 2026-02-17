@@ -407,7 +407,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check for active claims
-    const activeClaims = existingPolicy.claims.filter(c => !['CLOSED', 'REJECTED'].includes(c.status));
+    const activeClaims = existingPolicy.claims.filter((c: any) => !['CLOSED', 'REJECTED'].includes(c.status));
     
     if (activeClaims.length > 0) {
       return NextResponse.json(
@@ -496,7 +496,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       // Check for active claims
-      const activeClaims = policy.claims.filter(c => !['CLOSED', 'REJECTED'].includes(c.status));
+      const activeClaims = policy.claims.filter((c: any) => !['CLOSED', 'REJECTED'].includes(c.status));
       
       if (activeClaims.length > 0) {
         return NextResponse.json(

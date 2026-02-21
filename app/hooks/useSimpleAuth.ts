@@ -114,39 +114,59 @@ export function useSimpleAuth() {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
       const result = await response.json();
       console.log('login: Response received, success:', result.success);
-      
+
       if (!response.ok) {
         throw new Error(result.message || 'Login failed');
       }
 
+      // 2FA required — return info for the form to show OTP step
+      if (result.requires2FA) {
+        return {
+          requires2FA: true as const,
+          pendingToken: result.pendingToken as string,
+          method: result.method as 'email' | 'phone',
+          maskedContact: result.maskedContact as string,
+        };
+      }
+
+      // Normal login — store token and update state
       const { token: newToken, client } = result.data;
       console.log('login: Token received:', !!newToken);
-      console.log('login: Client data received:', !!client);
-      
-      // Set token first in localStorage
       localStorage.setItem('clientToken', newToken);
-      console.log('login: Token stored in localStorage');
-      
-      // Then set state
       setToken(newToken);
       setUser(client);
-      setIsLoading(false); // Ensure loading is false
-      
+      setIsLoading(false);
       console.log('login: State updated successfully');
-      
-      return result;
+
+      return { requires2FA: false as const };
     } catch (error) {
       console.error('login: Login error:', error);
       throw error;
     }
+  };
+
+  const verify2FA = async (pendingToken: string, otp: string) => {
+    const response = await fetch('/api/auth/login/verify-2fa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pendingToken, otp }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Verification failed');
+
+    const { token: newToken, client } = result.data;
+    localStorage.setItem('clientToken', newToken);
+    setToken(newToken);
+    setUser(client);
+    setIsLoading(false);
+    return result;
   };
 
   const logout = () => {
@@ -187,6 +207,7 @@ export function useSimpleAuth() {
     isAuthenticated: !!token && !!user && !isLoading,
     register,
     login,
+    verify2FA,
     logout,
     fetchActivityLogs,
   };

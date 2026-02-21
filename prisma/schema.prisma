@@ -32,6 +32,10 @@ model Client {
   phoneVerified   Boolean @default(false)
   documentVerified Boolean @default(false)
 
+  // Two-Factor Authentication
+  twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
+  twoFactorMethod  String?  @map("two_factor_method") // "email" | "phone"
+
   createdAt   DateTime @default(now())
   lastLoginAt DateTime?
   updatedAt   DateTime @updatedAt

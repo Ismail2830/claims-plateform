@@ -1,17 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { generateOtp, storeOtp, sendEmailOtp } from '@/app/lib/otp';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+const JWT_SECRET    = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 const JWT_EXPIRES_IN = '7d';
+
+/** Mask email - show first 3 chars and domain */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  const visible = local.slice(0, Math.min(3, local.length));
+  return `${visible}***@${domain}`;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, password } = body;
 
-    // Validate required fields
     if (!email || !password) {
       return NextResponse.json(
         { success: false, message: 'Email and password are required' },
@@ -19,7 +26,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find client by email
     const client = await prisma.client.findUnique({
       where: { email },
       select: {
@@ -31,46 +37,35 @@ export async function POST(request: NextRequest) {
         password: true,
         status: true,
         emailVerified: true,
-      }
+        phone: true,
+        twoFactorEnabled: true,
+        twoFactorMethod: true,
+      },
     });
 
     if (!client) {
-      // Log failed login attempt
       await prisma.auditLog.create({
         data: {
           entityType: 'CLIENT',
-          entityId: '00000000-0000-0000-0000-000000000000', // Placeholder UUID for unknown entity
+          entityId: '00000000-0000-0000-0000-000000000000',
           action: 'LOGIN',
           description: `Failed login attempt for email: ${email} - Client not found`,
-          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
           userAgent: request.headers.get('user-agent') || 'unknown',
           riskLevel: 'MEDIUM',
           isSuspicious: true,
-          metadata: {
-            email,
-            reason: 'Client not found',
-            success: false
-          }
-        }
+          metadata: { email, reason: 'Client not found', success: false },
+        },
       });
-
-      return NextResponse.json(
-        { success: false, message: 'Invalid credentials' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Invalid credentials' }, { status: 401 });
     }
 
     if (client.status !== 'ACTIVE') {
-      return NextResponse.json(
-        { success: false, message: 'Account is not active' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Account is not active' }, { status: 401 });
     }
 
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, client.password);
     if (!isValidPassword) {
-      // Log failed login attempt
       await prisma.auditLog.create({
         data: {
           entityType: 'CLIENT',
@@ -78,80 +73,38 @@ export async function POST(request: NextRequest) {
           action: 'LOGIN',
           description: `Failed login attempt for client: ${client.firstName} ${client.lastName} - Invalid password`,
           clientId: client.clientId,
-          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
           userAgent: request.headers.get('user-agent') || 'unknown',
           riskLevel: 'MEDIUM',
           isSuspicious: true,
-          metadata: {
-            email: client.email,
-            reason: 'Invalid password',
-            success: false
-          }
-        }
+          metadata: { email: client.email, reason: 'Invalid password', success: false },
+        },
       });
-
-      return NextResponse.json(
-        { success: false, message: 'Invalid credentials' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Update last login time
-    await prisma.client.update({
-      where: { clientId: client.clientId },
-      data: { lastLoginAt: new Date() }
-    });
+    // Always send email OTP on every login
+    const code = generateOtp();
+    storeOtp('2fa', client.clientId, code);
+    await sendEmailOtp(client.email, code, '2fa');
 
-    // Create JWT token
-    const tokenPayload = {
-      clientId: client.clientId,
-      email: client.email,
-      cin: client.cin,
-      type: 'CLIENT'
-    };
-
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-
-    // Log successful login
-    await prisma.auditLog.create({
-      data: {
-        entityType: 'CLIENT',
-        entityId: client.clientId,
-        action: 'LOGIN',
-        description: `Successful login: ${client.firstName} ${client.lastName}`,
-        clientId: client.clientId,
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
-        metadata: {
-          email: client.email,
-          loginTime: new Date(),
-          success: true
-        }
-      }
-    });
+    // Short-lived pending token (5 min) - carries clientId only
+    const pendingToken = jwt.sign(
+      { clientId: client.clientId, type: 'PENDING_2FA' },
+      JWT_SECRET,
+      { expiresIn: '5m' }
+    );
 
     return NextResponse.json({
       success: true,
-      message: 'Login successful',
-      data: {
-        token,
-        client: {
-          clientId: client.clientId,
-          email: client.email,
-          cin: client.cin,
-          firstName: client.firstName,
-          lastName: client.lastName,
-          status: client.status,
-          emailVerified: client.emailVerified
-        }
-      }
+      requires2FA: true,
+      method: 'email' as const,
+      maskedContact: maskEmail(client.email),
+      pendingToken,
     });
 
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Login failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: 'Login failed' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, clientProtected } from '../../lib/trpc';
 import { authenticateClient, registerClient } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
+import { generateOtp, storeOtp, verifyOtp, sendEmailOtp } from '../../lib/otp';
 
 export const clientAuthRouter = createTRPCRouter({
   // Client Login
@@ -68,7 +69,6 @@ export const clientAuthRouter = createTRPCRouter({
   // Get Client Profile (Protected)
   getProfile: clientProtected
     .query(async ({ ctx }) => {
-      try {
         const client = await prisma.client.findUnique({
           where: { clientId: ctx.client.clientId },
           select: {
@@ -87,6 +87,8 @@ export const clientAuthRouter = createTRPCRouter({
             emailVerified: true,
             phoneVerified: true,
             documentVerified: true,
+            twoFactorEnabled: true,
+            twoFactorMethod: true,
             createdAt: true,
             lastLoginAt: true,
           },
@@ -103,43 +105,88 @@ export const clientAuthRouter = createTRPCRouter({
           success: true,
           data: client,
         };
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to fetch profile',
-        });
-      }
     }),
 
   // Update Client Profile (Protected)
   updateProfile: clientProtected
     .input(
       z.object({
-        firstName: z.string().min(1).optional(),
-        lastName: z.string().min(1).optional(),
-        phone: z.string().min(1).optional(),
-        address: z.string().min(1).optional(),
-        city: z.string().min(1).optional(),
-        province: z.string().min(1).optional(),
-        postalCode: z.string().optional(),
+        firstName:   z.string().min(1).max(100).optional(),
+        lastName:    z.string().min(1).max(100).optional(),
+        email:       z.string().email().optional(),
+        phone:       z.string().min(1).optional(),
+        dateOfBirth: z.string().optional(), // ISO date string YYYY-MM-DD
+        cin:         z.string().min(4).optional(),
+        street:      z.string().min(1).optional(), // maps to address column
+        city:        z.string().min(1).optional(),
+        province:    z.string().min(1).optional(),
+        postalCode:  z.string().optional(),
+        // country is not yet in the DB schema — ignored until a migration adds it
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const clientId = ctx.client.clientId;
+
+      // ── Uniqueness checks for fields that have @unique constraints ──
+      if (input.email) {
+        const existing = await prisma.client.findUnique({ where: { email: input.email } });
+        if (existing && existing.clientId !== clientId) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Email is already in use by another account.' });
+        }
+      }
+      if (input.phone) {
+        const existing = await prisma.client.findUnique({ where: { phone: input.phone } });
+        if (existing && existing.clientId !== clientId) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Phone number is already in use by another account.' });
+        }
+      }
+      if (input.cin) {
+        const existing = await prisma.client.findUnique({ where: { cin: input.cin } });
+        if (existing && existing.clientId !== clientId) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'National ID (CIN) is already in use by another account.' });
+        }
+      }
+
+      // ── Build update payload (map street → address, parse dateOfBirth) ──
+      const updateData: Record<string, unknown> = {};
+      if (input.firstName   !== undefined) updateData.firstName   = input.firstName;
+      if (input.lastName    !== undefined) updateData.lastName    = input.lastName;
+      if (input.email       !== undefined) updateData.email       = input.email;
+      if (input.phone       !== undefined) updateData.phone       = input.phone;
+      if (input.cin         !== undefined) updateData.cin         = input.cin;
+      if (input.street      !== undefined) updateData.address     = input.street; // street → address
+      if (input.city        !== undefined) updateData.city        = input.city;
+      if (input.province    !== undefined) updateData.province    = input.province;
+      if (input.postalCode  !== undefined) updateData.postalCode  = input.postalCode;
+      if (input.dateOfBirth !== undefined) {
+        const parsed = new Date(input.dateOfBirth);
+        if (isNaN(parsed.getTime())) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid date of birth.' });
+        }
+        updateData.dateOfBirth = parsed;
+      }
+
       try {
         const updatedClient = await prisma.client.update({
-          where: { clientId: ctx.client.clientId },
-          data: input,
+          where: { clientId },
+          data: updateData,
           select: {
-            clientId: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            address: true,
-            city: true,
-            province: true,
-            postalCode: true,
-            updatedAt: true,
+            clientId:       true,
+            firstName:      true,
+            lastName:       true,
+            email:          true,
+            phone:          true,
+            cin:            true,
+            dateOfBirth:    true,
+            address:        true,
+            city:           true,
+            province:       true,
+            postalCode:     true,
+            emailVerified:  true,
+            phoneVerified:  true,
+            documentVerified: true,
+            status:         true,
+            updatedAt:      true,
           },
         });
 
@@ -153,6 +200,94 @@ export const clientAuthRouter = createTRPCRouter({
           code: 'INTERNAL_SERVER_ERROR',
           message: error instanceof Error ? error.message : 'Failed to update profile',
         });
+      }
+    }),
+
+  // ─── Send Verification OTP (email or phone) ─────────────────────
+  sendVerificationOtp: clientProtected
+    .input(z.object({ type: z.enum(['email', 'phone']) }))
+    .mutation(async ({ ctx, input }) => {
+      const client = await prisma.client.findUnique({
+        where: { clientId: ctx.client.clientId },
+        select: { email: true, phone: true, emailVerified: true, phoneVerified: true },
+      });
+      if (!client) throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+
+      if (input.type === 'email' && client.emailVerified)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Email is already verified' });
+      if (input.type === 'phone' && client.phoneVerified)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Phone is already verified' });
+
+      const code = generateOtp();
+      const purpose = input.type === 'email' ? 'email_verify' : 'phone_verify';
+      const identifier = input.type === 'email' ? client.email : client.phone;
+      storeOtp(purpose, identifier, code);
+
+      if (input.type === 'email') {
+        await sendEmailOtp(client.email, code, purpose);
+      } else {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Phone OTP is not available. Please use email verification.' });
+      }
+
+      return { success: true, message: `OTP sent to your ${input.type}` };
+    }),
+
+  // ─── Verify Contact OTP (email or phone) ────────────────────────
+  verifyContactOtp: clientProtected
+    .input(z.object({ type: z.enum(['email', 'phone']), code: z.string().length(6) }))
+    .mutation(async ({ ctx, input }) => {
+      const client = await prisma.client.findUnique({
+        where: { clientId: ctx.client.clientId },
+        select: { email: true, phone: true },
+      });
+      if (!client) throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+
+      const purpose = input.type === 'email' ? 'email_verify' : 'phone_verify';
+      const identifier = input.type === 'email' ? client.email : client.phone;
+      const valid = verifyOtp(purpose, identifier, input.code);
+
+      if (!valid)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid or expired OTP' });
+
+      const updateField = input.type === 'email' ? { emailVerified: true } : { phoneVerified: true };
+      await prisma.client.update({ where: { clientId: ctx.client.clientId }, data: updateField });
+
+      return { success: true, message: `${input.type === 'email' ? 'Email' : 'Phone'} verified successfully` };
+    }),
+
+  // ─── Update 2FA Preference ───────────────────────────────────────
+  update2FAPreference: clientProtected
+    .input(
+      z.object({
+        enabled: z.boolean(),
+        method: z.enum(['email', 'phone']).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const client = await prisma.client.findUnique({
+        where: { clientId: ctx.client.clientId },
+        select: { emailVerified: true, phoneVerified: true },
+      });
+      if (!client) throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+
+      if (input.enabled) {
+        const method = input.method ?? 'email';
+        if (method === 'email' && !client.emailVerified)
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Please verify your email before enabling 2FA via email' });
+        if (method === 'phone' && !client.phoneVerified)
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Please verify your phone before enabling 2FA via phone' });
+
+        await prisma.client.update({
+          where: { clientId: ctx.client.clientId },
+          data: { twoFactorEnabled: true, twoFactorMethod: method },
+        });
+        return { success: true, message: `2FA enabled via ${method}` };
+      } else {
+        await prisma.client.update({
+          where: { clientId: ctx.client.clientId },
+          data: { twoFactorEnabled: false, twoFactorMethod: null },
+        });
+        return { success: true, message: '2FA disabled' };
       }
     }),
 

@@ -7,11 +7,10 @@ import { Button } from '@/components/ui/button';
 import { 
   LogOut, 
   User, 
-  Bell, 
-  Settings,
   Menu,
   X
 } from 'lucide-react';
+import { NotificationDropdown } from './NotificationDropdown';
 import { useState } from 'react';
 import Link from 'next/link';
 
@@ -83,7 +82,7 @@ export function DashboardLayout({ children, title, userRole, navigation }: Dashb
         <div className="flex min-h-0 flex-1 flex-col bg-white border-r border-gray-200">
           <div className="flex flex-1 flex-col pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center shrink-0 px-4">
-              <div className="text-xl font-bold text-blue-600">Claims Platform</div>
+              <div className="text-xl font-bold text-blue-600">ISM Assurance</div>
             </div>
             <nav className="mt-5 flex-1 px-2 space-y-1">
               {navigation.map((item) => (
@@ -148,12 +147,7 @@ export function DashboardLayout({ children, title, userRole, navigation }: Dashb
           <div className="flex-1 px-4 flex justify-between items-center">
             <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
             <div className="ml-4 flex items-center md:ml-6 space-x-3">
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
-                <Bell className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
-                <Settings className="h-5 w-5" />
-              </Button>
+              <NotificationDropdown />
             </div>
           </div>
         </div>

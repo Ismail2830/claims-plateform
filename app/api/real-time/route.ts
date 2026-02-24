@@ -10,6 +10,7 @@ const activeConnections = new Map<string, {
     entityTypes?: string[];
     actions?: string[];
     riskLevels?: string[];
+    clientId?: string;
   };
 }>();
 
@@ -139,6 +140,8 @@ export class EventBroadcaster {
           claim: auditLog.claim,
           user: auditLog.userRef,
           client: auditLog.clientRef,
+          // Always include clientId so clients can filter their own events
+          clientId: auditLog.clientId ?? undefined,
         },
         timestamp: auditLog.createdAt.toISOString(),
         riskLevel: auditLog.riskLevel as any,
@@ -171,11 +174,13 @@ export async function GET(request: NextRequest) {
   const entityTypes = searchParams.get('entityTypes')?.split(',');
   const actions = searchParams.get('actions')?.split(',');
   const riskLevels = searchParams.get('riskLevels')?.split(',');
+  const clientId = searchParams.get('clientId') || undefined;
 
   const filters = {
     entityTypes,
     actions,
     riskLevels,
+    clientId,
   };
 
   // Create readable stream for SSE

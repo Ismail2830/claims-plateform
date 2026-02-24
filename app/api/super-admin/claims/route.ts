@@ -1,6 +1,7 @@
 // Super Admin Entity Management API - Claims
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import { EventBroadcaster } from '@/app/api/real-time/route';
 import { any, z } from 'zod';
 
 // Validation schemas
@@ -505,6 +506,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update claim with transaction
+    let statusAuditLogId: string | undefined;
     const updatedClaim = await prisma.$transaction(async (tx: any) => {
       const updated = await tx.claim.update({
         where: { claimId },
@@ -569,15 +571,18 @@ export async function PUT(request: NextRequest) {
             claimId: claimId,
             clientId: existingClaim.clientId,
             action: 'STATUS_CHANGE',
-            description: `Claim ${existingClaim.claimNumber} status updated to ${validatedData.status}`,
+            description: `Your claim ${existingClaim.claimNumber} status was updated to ${validatedData.status}`,
             metadata: {
               claimNumber: existingClaim.claimNumber,
               fromStatus: existingClaim.status,
               toStatus: validatedData.status,
+              clientId: existingClaim.clientId,
               changedBy: 'STAFF'
             }
           }
         });
+        // Capture outside transaction so we can broadcast after commit
+        statusAuditLogId = statusAuditLog.logId;
       }
 
       return updated;
@@ -606,6 +611,16 @@ export async function PUT(request: NextRequest) {
         }
       },
     });
+
+    // Broadcast exactly one real-time event per update
+    const broadcaster = EventBroadcaster.getInstance();
+    if (statusAuditLogId) {
+      // Status changed: broadcast only the STATUS_CHANGE log (client-friendly message)
+      await broadcaster.broadcastFromAuditLog(statusAuditLogId);
+    } else {
+      // No status change: broadcast the general UPDATE log
+      await broadcaster.broadcastFromAuditLog(mainAuditLog.logId);
+    }
 
     return NextResponse.json({
       success: true,
@@ -972,7 +987,24 @@ export async function PATCH(request: NextRequest) {
       for (const logData of individualAuditLogsData) {
         await prisma.auditLog.create({ data: logData });
       }
-    }
+
+      // Broadcast individual STATUS_CHANGE events so clients get real-time notifications
+      const broadcaster = EventBroadcaster.getInstance();
+      // Re-fetch the just-created logs to get their IDs and broadcast them
+      const broadcastLogs = await prisma.auditLog.findMany({
+        where: {
+          claimId: { in: claimIds },
+          action: 'STATUS_CHANGE',
+          createdAt: { gte: new Date(Date.now() - 10000) }, // last 10 seconds
+        },
+        select: { logId: true },
+        orderBy: { createdAt: 'desc' },
+        take: claimIds.length,
+      });
+      for (const log of broadcastLogs) {
+        await broadcaster.broadcastFromAuditLog(log.logId);
+      }
+    } // end if (statusChange)
 
     // Log bulk audit trail
     await prisma.auditLog.create({

@@ -309,6 +309,7 @@ export const clientAuthRouter = createTRPCRouter({
             deductible: true,
             status: true,
             createdAt: true,
+            _count: { select: { claims: true } },
           },
           orderBy: { createdAt: 'desc' },
         });
@@ -321,6 +322,59 @@ export const clientAuthRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: error instanceof Error ? error.message : 'Failed to fetch policies',
+        });
+      }
+    }),
+
+  // Get Single Policy Detail with Claims (Protected)
+  getPolicyDetail: clientProtected
+    .input(z.object({ policyId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const policy = await prisma.policy.findFirst({
+          where: {
+            policyId: input.policyId,
+            clientId: ctx.client.clientId, // ownership check
+          },
+          select: {
+            policyId: true,
+            policyNumber: true,
+            policyType: true,
+            coverageType: true,
+            startDate: true,
+            endDate: true,
+            premiumAmount: true,
+            insuredAmount: true,
+            deductible: true,
+            status: true,
+            createdAt: true,
+            claims: {
+              select: {
+                claimId: true,
+                claimNumber: true,
+                claimType: true,
+                incidentDate: true,
+                claimedAmount: true,
+                approvedAmount: true,
+                status: true,
+                priority: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        });
+
+        if (!policy) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Policy not found' });
+        }
+
+        return { success: true, data: policy };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to fetch policy',
         });
       }
     }),

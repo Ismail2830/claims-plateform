@@ -18,6 +18,7 @@ interface UseRealTimeOptions {
   entityTypes?: string[];
   actions?: string[];
   riskLevels?: string[];
+  clientId?: string;
   autoReconnect?: boolean;
   onEvent?: (event: RealTimeEvent) => void;
   onError?: (error: Event) => void;
@@ -68,6 +69,7 @@ export function useRealTimeUpdates(options: UseRealTimeOptions = {}) {
     entityTypes,
     actions,
     riskLevels,
+    clientId,
     autoReconnect = true,
   } = options;
 
@@ -92,6 +94,9 @@ export function useRealTimeUpdates(options: UseRealTimeOptions = {}) {
     }
     if (riskLevels?.length) {
       params.set('riskLevels', riskLevels.join(','));
+    }
+    if (clientId) {
+      params.set('clientId', clientId);
     }
 
     const url = `/api/real-time?${params.toString()}`;

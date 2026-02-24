@@ -77,7 +77,7 @@ function ProfileHeader({ profile }: { profile: UserProfile }) {
   return (
     <div className="relative bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
       {/* Banner gradient */}
-      <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+      <div className="h-24 bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600" />
 
       {/* Content */}
       <div className="px-6 pb-6">
@@ -86,7 +86,7 @@ function ProfileHeader({ profile }: { profile: UserProfile }) {
           {/* Avatar always on the left */}
           <div className="shrink-0">
             <Avatar className="w-20 h-20 ring-4 ring-white shadow-lg">
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
+              <AvatarFallback className="bg-linear-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
                 {initials}
               </AvatarFallback>
             </Avatar>
@@ -255,7 +255,7 @@ function ProfilePageContent() {
                 notificationPrefs={notificationPrefs}
                 documents={documents}
                 locale={locale}
-                onLocaleChange={changeLocale}
+                onLocaleChange={(l) => changeLocale(l as 'en' | 'fr' | 'ar')}
               />
             </div>
           )}

@@ -6,6 +6,11 @@ import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
 import { trpc } from '@/app/lib/trpc-client';
+import { NextIntlClientProvider, useTranslations } from 'next-intl';
+import { useLocale } from '@/app/hooks/useLocale';
+import enMessages from '@/messages/en.json';
+import frMessages from '@/messages/fr.json';
+import arMessages from '@/messages/ar.json';
 import {
   Shield,
   FileText,
@@ -55,7 +60,7 @@ const TYPE_STYLES: Record<PolicyType, { bg: string; icon: React.ReactNode; label
   },
 };
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, label }: { status: string; label?: string }) {
   const style = STATUS_STYLES[status as PolicyStatus] ?? 'bg-gray-100 text-gray-700';
   const icons: Record<string, React.ReactNode> = {
     ACTIVE: <CheckCircle className="w-3.5 h-3.5" />,
@@ -66,7 +71,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${style}`}>
       {icons[status]}
-      {status.charAt(0) + status.slice(1).toLowerCase()}
+      {label ?? (status.charAt(0) + status.slice(1).toLowerCase())}
     </span>
   );
 }
@@ -76,7 +81,9 @@ function isExpiringSoon(endDate: string): boolean {
   return days > 0 && days <= 30;
 }
 
-export default function ClientPoliciesPage() {
+export function ClientPoliciesContent() {
+  const t = useTranslations('policies');
+  const tNav = useTranslations('navigation');
   const [filterStatus, setFilterStatus] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -105,11 +112,11 @@ export default function ClientPoliciesPage() {
   });
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard/client', icon: <Shield className="w-5 h-5" /> },
-    { name: 'My Claims', href: '/dashboard/client/claims', icon: <FileText className="w-5 h-5" /> },
-    { name: 'My Policies', href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />, current: true },
-    { name: 'Create Claim', href: '/claims/create', icon: <PlusCircle className="w-5 h-5" /> },
-    { name: 'Profile', href: '/dashboard/client/profile', icon: <CheckCircle className="w-5 h-5" /> },
+    { name: tNav('dashboard'), href: '/dashboard/client', icon: <Shield className="w-5 h-5" /> },
+    { name: tNav('myClaims'), href: '/dashboard/client/claims', icon: <FileText className="w-5 h-5" /> },
+    { name: tNav('myPolicies'), href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />, current: true },
+    { name: tNav('createClaim'), href: '/claims/create', icon: <PlusCircle className="w-5 h-5" /> },
+    { name: tNav('profile'), href: '/dashboard/client/profile', icon: <CheckCircle className="w-5 h-5" /> },
   ];
 
   // Stats
@@ -118,7 +125,7 @@ export default function ClientPoliciesPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout title="My Policies" userRole="CLIENT" navigation={navigation}>
+      <DashboardLayout title={t('title')} userRole="CLIENT" navigation={navigation}>
         <div className="flex items-center justify-center py-24">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
         </div>
@@ -127,17 +134,17 @@ export default function ClientPoliciesPage() {
   }
 
   return (
-    <DashboardLayout title="My Policies" userRole="CLIENT" navigation={navigation}>
+    <DashboardLayout title={t('title')} userRole="CLIENT" navigation={navigation}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">My Policies</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('title')}</h2>
             <p className="text-gray-500 text-sm mt-1">
-              {totalActive} active {totalActive === 1 ? 'policy' : 'policies'}
+              {totalActive} {totalActive === 1 ? t('policy') : t('policiesPlural')}
               {totalExpiring > 0 && (
                 <span className="ml-2 text-amber-600 font-medium">
-                  · {totalExpiring} expiring soon
+                  &middot; {totalExpiring} {t('expiringSoon')}
                 </span>
               )}
             </p>
@@ -160,7 +167,7 @@ export default function ClientPoliciesPage() {
               >
                 <p className="text-2xl font-bold text-gray-900">{count}</p>
                 <p className={`text-xs font-semibold mt-1 ${STATUS_STYLES[s]?.split(' ')[1] ?? 'text-gray-600'}`}>
-                  {s.charAt(0) + s.slice(1).toLowerCase()}
+                  {t(`statuses.${s}`)}
                 </p>
               </button>
             );
@@ -173,7 +180,7 @@ export default function ClientPoliciesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search by policy number, type or coverage..."
+              placeholder={t('searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -184,11 +191,11 @@ export default function ClientPoliciesPage() {
             onChange={(e) => setFilterStatus(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="EXPIRED">Expired</option>
-            <option value="SUSPENDED">Suspended</option>
-            <option value="CANCELED">Canceled</option>
+            <option value="">{t('allStatus')}</option>
+            <option value="ACTIVE">{t('statuses.ACTIVE')}</option>
+            <option value="EXPIRED">{t('statuses.EXPIRED')}</option>
+            <option value="SUSPENDED">{t('statuses.SUSPENDED')}</option>
+            <option value="CANCELED">{t('statuses.CANCELED')}</option>
           </select>
           <button
             onClick={() => refetch()}
@@ -202,16 +209,16 @@ export default function ClientPoliciesPage() {
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <RefreshCw className="w-7 h-7 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-500">Loading policies...</span>
+            <span className="ml-2 text-gray-500">{t('loadingPolicies')}</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-lg border">
             <Shield className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-1">No policies found</h3>
+            <h3 className="text-lg font-semibold text-gray-700 mb-1">{t('noPoliciesFound')}</h3>
             <p className="text-gray-400 text-sm">
               {searchTerm || filterStatus
-                ? 'Try adjusting your filters.'
-                : 'You have no policies on your account.'}
+                ? t('noPoliciesFiltered')
+                : t('noPoliciesYet')}
             </p>
           </div>
         ) : (
@@ -239,14 +246,14 @@ export default function ClientPoliciesPage() {
                           <span className="text-base font-bold text-gray-900 font-mono">
                             {policy.policyNumber}
                           </span>
-                          <StatusBadge status={policy.status} />
+                          <StatusBadge status={policy.status} label={t(`statuses.${policy.status}`)} />
                           {expiring && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
-                              <AlertCircle className="w-3 h-3" /> Expiring soon
+                              <AlertCircle className="w-3 h-3" /> {t('expiringSoonBadge')}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm font-medium text-gray-600 mb-3">{meta.label}</p>
+                        <p className="text-sm font-medium text-gray-600 mb-3">{t(`types.${policy.policyType}`)}</p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -264,13 +271,13 @@ export default function ClientPoliciesPage() {
                               <span className="font-semibold text-gray-800">
                                 MAD {Number(policy.premiumAmount).toLocaleString()}
                               </span>
-                              {' '}/ year
+                              {' '}{t('yearSuffix')}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Shield className="w-4 h-4 shrink-0 text-gray-400" />
                             <span>
-                              Coverage:{' '}
+                              {t('coverage')}:{' '}
                               <span className="font-semibold text-gray-800">
                                 MAD {Number(policy.insuredAmount).toLocaleString()}
                               </span>
@@ -284,7 +291,7 @@ export default function ClientPoliciesPage() {
                           )}
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <FileText className="w-4 h-4 shrink-0 text-gray-400" />
-                            <span>{claimCount} linked {claimCount === 1 ? 'claim' : 'claims'}</span>
+                            <span>{claimCount} {claimCount === 1 ? t('linkedClaim') : t('linkedClaims')}</span>
                           </div>
                         </div>
                       </div>
@@ -297,7 +304,7 @@ export default function ClientPoliciesPage() {
                         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
                       >
                         <Eye className="w-4 h-4" />
-                        View Details
+                        {t('viewDetails')}
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
@@ -309,5 +316,15 @@ export default function ClientPoliciesPage() {
         )}
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function ClientPoliciesPage() {
+  const { locale } = useLocale();
+  const messages = locale === 'fr' ? frMessages : locale === 'ar' ? arMessages : enMessages;
+  return (
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <ClientPoliciesContent />
+    </NextIntlClientProvider>
   );
 }

@@ -1,0 +1,308 @@
+{
+  "tabs": {
+    "personalInfo": "Personal Info",
+    "security": "Security",
+    "notifications": "Notifications",
+    "documents": "Documents"
+  },
+  "header": {
+    "memberSince": "Member since",
+    "lastLogin": "Last login",
+    "at": "at",
+    "idVerified": "ID Verified",
+    "emailVerified": "Email Verified",
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "SUSPENDED": "Suspended",
+      "PENDING_VERIFICATION": "Pending Verification",
+      "BLOCKED": "Blocked"
+    }
+  },
+  "personalInfo": {
+    "title": "Personal Information",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "saving": "Saving…",
+    "sections": {
+      "name": "Name",
+      "contact": "Contact",
+      "identity": "Identity",
+      "address": "Address"
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phone": "Phone Number",
+      "dateOfBirth": "Date of Birth",
+      "nationalId": "National ID (CIN)",
+      "street": "Street",
+      "city": "City",
+      "province": "Province / State",
+      "postalCode": "Postal Code"
+    },
+    "placeholders": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email address",
+      "phone": "+212 6XX XXX XXX",
+      "postalCode": "00000",
+      "city": "City",
+      "province": "Province",
+      "street": "123 Main St"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "myClaims": "My Claims",
+    "myPolicies": "My Policies",
+    "createClaim": "Create Claim",
+    "profile": "Profile"
+  },
+  "dashboard": {
+    "title": "Client Dashboard",
+    "loadingDashboard": "Loading your dashboard...",
+    "redirectingToLogin": "Redirecting to login...",
+    "loadingData": "Loading dashboard data...",
+    "unableToLoad": "Unable to Load Dashboard",
+    "unableToLoadDesc": "There was an issue loading your dashboard data.",
+    "refreshPage": "Refresh Page",
+    "loadingFallback": "Loading dashboard...",
+    "claimSubmittedSuccess": "Your claim has been successfully submitted! You will receive updates on your claim status.",
+    "newActivityUpdate": "New Activity Update",
+    "realTimeUnavailable": "Real-time updates are currently unavailable.",
+    "reconnect": "Reconnect",
+    "dataNotCurrent": "Some dashboard data may not be current. Please refresh the page if this persists.",
+    "welcomeBack": "Welcome back, {name}!",
+    "overviewDesc": "Here's an overview of your insurance claims and policies.",
+    "stats": {
+      "totalClaims": "Total Claims",
+      "pendingClaims": "Pending Claims",
+      "activePolicies": "Active Policies",
+      "totalCoverage": "Total Coverage",
+      "allTime": "All time",
+      "underReview": "Under review",
+      "currentlyCovered": "Currently covered",
+      "combinedPolicies": "Combined policies"
+    },
+    "actions": {
+      "createNew": "Create New Claim",
+      "createNewDesc": "Submit a new insurance claim for damage or loss",
+      "startNew": "Start New Claim",
+      "trackClaims": "Track Claims",
+      "trackClaimsDesc": "View status and updates for your submitted claims",
+      "viewMyClaims": "View My Claims",
+      "managePolicies": "Manage Policies",
+      "managePoliciesDesc": "Review your current insurance policies and coverage",
+      "viewPolicies": "View Policies"
+    },
+    "quickInfo": {
+      "title": "Quick Info",
+      "lastLogin": "Last Login",
+      "coverageStatus": "Coverage Status",
+      "pendingClaims": "Pending Claims",
+      "active": "Active",
+      "noCoverage": "No Coverage",
+      "today": "Today",
+      "pendingSuffix": "Pending"
+    },
+    "recentActivity": "Recent Activity",
+    "justNow": "Just now",
+    "minutesAgo": "{count} minutes ago",
+    "hoursAgo": "{count} hours ago",
+    "daysAgo": "{count} days ago"
+  },
+  "claims": {
+    "title": "My Claims",
+    "loading": "Loading...",
+    "loadingClaims": "Loading claims...",
+    "subtitle": "Track and manage your insurance claims",
+    "createNew": "Create New Claim",
+    "searchPlaceholder": "Search claims...",
+    "allStatus": "All Status",
+    "tryAgain": "Try again",
+    "noClaimsFound": "No claims found",
+    "noClaimsFiltered": "Try adjusting your filters to see more results.",
+    "noClaimsYet": "You haven't submitted any claims yet.",
+    "createFirstClaim": "Create Your First Claim",
+    "policy": "Policy",
+    "incident": "Incident",
+    "location": "Location",
+    "type": "Type",
+    "claimed": "Claimed",
+    "approved": "Approved",
+    "submitted": "Submitted",
+    "via": "via",
+    "viewDetails": "View Details",
+    "statuses": {
+      "DECLARED": "Declared",
+      "ANALYZING": "Analyzing",
+      "DOCS_REQUIRED": "Docs Required",
+      "UNDER_EXPERTISE": "Under Expertise",
+      "IN_DECISION": "In Decision",
+      "APPROVED": "Approved",
+      "IN_PAYMENT": "In Payment",
+      "CLOSED": "Closed",
+      "REJECTED": "Rejected"
+    }
+  },
+  "notifications": {
+    "channels": {
+      "title": "Notification Channels",
+      "desc": "Choose how you want to receive notifications.",
+      "email": "Email",
+      "emailDesc": "Receive notifications via email",
+      "sms": "SMS",
+      "smsDesc": "Receive SMS text messages",
+      "inApp": "In-App",
+      "inAppDesc": "See notifications inside the platform"
+    },
+    "language": {
+      "title": "Language Preference",
+      "desc": "Select the language for notifications and the platform interface."
+    },
+    "triggers": {
+      "title": "Notification Triggers",
+      "desc": "Choose which events you want to be notified about.",
+      "claimStatusUpdates": "Claim Status Updates",
+      "claimStatusUpdatesDesc": "Get notified when your claim changes status.",
+      "policyRenewalReminders": "Policy Renewal Reminders",
+      "policyRenewalRemindersDesc": "Reminders before your policy expires.",
+      "paymentConfirmations": "Payment Confirmations",
+      "paymentConfirmationsDesc": "Confirmation when payments are processed.",
+      "securityAlerts": "Security Alerts",
+      "securityAlertsDesc": "Alerts for suspicious activity or login from new devices."
+    },
+    "savePreferences": "Save Preferences",
+    "saving": "Saving\u2026",
+    "savedSuccess": "Preferences saved successfully!",
+    "savedError": "Failed to save preferences."
+  },
+  "policies": {
+    "title": "My Policies",
+    "loadingPolicies": "Loading policies...",
+    "policy": "policy",
+    "policiesPlural": "policies",
+    "expiringSoon": "expiring soon",
+    "expiringSoonBadge": "Expiring soon",
+    "searchPlaceholder": "Search by policy number, type or coverage...",
+    "allStatus": "All Status",
+    "noPoliciesFound": "No policies found",
+    "noPoliciesFiltered": "Try adjusting your filters.",
+    "noPoliciesYet": "You have no policies on your account.",
+    "viewDetails": "View Details",
+    "coverage": "Coverage",
+    "yearSuffix": "/ year",
+    "linkedClaim": "linked claim",
+    "linkedClaims": "linked claims",
+    "statuses": {
+      "ACTIVE": "Active",
+      "EXPIRED": "Expired",
+      "SUSPENDED": "Suspended",
+      "CANCELED": "Canceled"
+    },
+    "types": {
+      "AUTO": "Auto Insurance",
+      "HOME": "Home Insurance",
+      "HEALTH": "Health Insurance",
+      "LIFE": "Life Insurance"
+    }
+  },
+  "security": {
+    "contactVerification": {
+      "title": "Contact Verification",
+      "desc": "Verify your email to secure your account and enable 2FA.",
+      "emailAddress": "Email Address",
+      "verified": "Verified",
+      "verify": "Verify",
+      "otpSent": "OTP Sent",
+      "enterCode": "Enter the 6-digit code sent to your {type}",
+      "resendIn": "Resend in {countdown}s",
+      "resendOtp": "Resend OTP",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "otpSentSuccess": "OTP sent to your {type}"
+    },
+    "twoFactor": {
+      "title": "Two-Factor Authentication",
+      "desc": "Require an OTP code every time you log in for extra security.",
+      "statusLabel": "2FA Status",
+      "verifyEmailFirst": "Verify your email first to enable 2FA.",
+      "activeCodes": "Active — codes sent via {method}",
+      "enableProtection": "Enable for stronger login protection.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "chooseMethod": "Choose how to receive your OTP:",
+      "notVerified": "(not verified)",
+      "cancel": "Cancel",
+      "enable": "Enable 2FA"
+    },
+    "password": {
+      "title": "Change Password",
+      "desc": "Choose a strong, unique password.",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "update": "Update Password",
+      "updating": "Updating\u2026"
+    },
+    "strength": {
+      "veryWeak": "Very weak",
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong",
+      "veryStrong": "Very strong"
+    }
+  },
+  "documents": {
+    "upload": {
+      "title": "Upload Documents",
+      "desc": "Supported: JPEG, PNG, PDF, DOC, DOCX — max 10 MB per file.",
+      "uploading": "Uploading\u2026",
+      "dragDrop": "Drag & drop files here, or click to browse",
+      "formats": "JPEG \u00b7 PNG \u00b7 PDF \u00b7 DOC \u00b7 DOCX",
+      "success": "{count, plural, one {# file uploaded} other {# files uploaded}}",
+      "failed": "Upload failed. Please try again."
+    },
+    "list": {
+      "title": "My Documents",
+      "empty": "No documents uploaded yet.",
+      "headers": {
+        "name": "Name",
+        "type": "Type",
+        "uploadDate": "Upload Date",
+        "expiryDate": "Expiry Date",
+        "status": "Status",
+        "actions": "Actions"
+      }
+    },
+    "types": {
+      "NATIONAL_ID": "National ID",
+      "PASSPORT": "Passport",
+      "POLICY_DOCUMENT": "Policy Document",
+      "CLAIM_ATTACHMENT": "Claim Attachment",
+      "OTHER": "Other"
+    },
+    "statuses": {
+      "UPLOADED": "Uploaded",
+      "PROCESSING": "Processing",
+      "VERIFIED": "Verified",
+      "REJECTED": "Rejected",
+      "EXPIRED": "Expired"
+    },
+    "delete": {
+      "success": "Document deleted.",
+      "failed": "Failed to delete document."
+    },
+    "download": {
+      "downloading": "Downloading {name}\u2026"
+    },
+    "preview": {
+      "notAvailable": "Preview not available",
+      "downloadToView": "Download to view"
+    }
+  }
+}

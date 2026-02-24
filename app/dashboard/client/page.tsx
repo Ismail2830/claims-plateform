@@ -8,6 +8,11 @@ import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
 import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
 import { useClaimUpdates } from '@/app/hooks/useRealTimeUpdates';
 import { trpc } from '@/app/lib/trpc-client';
+import { NextIntlClientProvider, useTranslations } from 'next-intl';
+import { useLocale } from '@/app/hooks/useLocale';
+import enMessages from '@/messages/en.json';
+import frMessages from '@/messages/fr.json';
+import arMessages from '@/messages/ar.json';
 import { 
   PlusCircle, 
   FileText, 
@@ -21,6 +26,8 @@ import {
 } from 'lucide-react';
 
 function ClientDashboardContent() {
+  const t = useTranslations('dashboard');
+  const tNav = useTranslations('navigation');
   const [showSuccess, setShowSuccess] = useState(false);
   const [showRealTimeNotification, setShowRealTimeNotification] = useState(false);
   const [lastActivity, setLastActivity] = useState<string>('');
@@ -126,28 +133,28 @@ function ClientDashboardContent() {
   // Navigation items for sidebar
   const navigation = [
     {
-      name: 'Dashboard',
+      name: tNav('dashboard'),
       href: '/dashboard/client',
       icon: <Shield className="w-5 h-5" />,
       current: true,
     },
     {
-      name: 'My Claims',
+      name: tNav('myClaims'),
       href: '/dashboard/client/claims',
       icon: <FileText className="w-5 h-5" />,
     },
     {
-      name: 'My Policies',
+      name: tNav('myPolicies'),
       href: '/dashboard/client/policies',
       icon: <Shield className="w-5 h-5" />,
     },
     {
-      name: 'Create Claim',
+      name: tNav('createClaim'),
       href: '/claims/create',
       icon: <PlusCircle className="w-5 h-5" />,
     },
     {
-      name: 'Profile',
+      name: tNav('profile'),
       href: '/dashboard/client/profile',
       icon: <CheckCircle className="w-5 h-5" />,
     },
@@ -158,10 +165,10 @@ function ClientDashboardContent() {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    if (diffInSeconds < 60) return t('justNow');
+    if (diffInSeconds < 3600) return t('minutesAgo', { count: Math.floor(diffInSeconds / 60) });
+    if (diffInSeconds < 86400) return t('hoursAgo', { count: Math.floor(diffInSeconds / 3600) });
+    if (diffInSeconds < 2592000) return t('daysAgo', { count: Math.floor(diffInSeconds / 86400) });
     return date.toLocaleDateString();
   };
 
@@ -172,7 +179,7 @@ function ClientDashboardContent() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <p className="text-gray-600">{t('loadingDashboard')}</p>
         </div>
       </div>
     );
@@ -184,7 +191,7 @@ function ClientDashboardContent() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting to login...</p>
+          <p className="text-gray-600">{t('redirectingToLogin')}</p>
         </div>
       </div>
     );
@@ -234,14 +241,14 @@ function ClientDashboardContent() {
   if (statsLoading || activitiesLoading) {
     return (
       <DashboardLayout 
-        title="Client Dashboard" 
+        title={t('title')}
         userRole="CLIENT"
         navigation={navigation}
       >
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading dashboard data...</p>
+            <p className="text-gray-600">{t('loadingData')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -252,7 +259,7 @@ function ClientDashboardContent() {
   if (statsError && activitiesError && !dashboardStats && !recentActivitiesData) {
     return (
       <DashboardLayout 
-        title="Client Dashboard" 
+        title={t('title')}
         userRole="CLIENT"
         navigation={navigation}
       >
@@ -261,13 +268,13 @@ function ClientDashboardContent() {
             <div className="text-red-600 mb-4">
               <AlertCircle className="h-12 w-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to Load Dashboard</h3>
-            <p className="text-gray-600 mb-4">There was an issue loading your dashboard data.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('unableToLoad')}</h3>
+            <p className="text-gray-600 mb-4">{t('unableToLoadDesc')}</p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
-              Refresh Page
+              {t('refreshPage')}
             </button>
           </div>
         </div>
@@ -283,9 +290,9 @@ function ClientDashboardContent() {
   // Format currency
   const formatCurrency = (amount: number) => {
     const numAmount = typeof amount === 'number' ? amount : Number(amount) || 0;
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('fr-MA', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'MAD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(numAmount);
@@ -293,7 +300,7 @@ function ClientDashboardContent() {
 
   return (
     <DashboardLayout 
-      title="Client Dashboard" 
+      title={t('title')}
       userRole="CLIENT"
       navigation={navigation}
     >
@@ -308,7 +315,7 @@ function ClientDashboardContent() {
             <CheckCircle className="h-5 w-5 text-green-400" />
             <div className="ml-3">
               <p className="text-sm text-green-700">
-                Your claim has been successfully submitted! You will receive updates on your claim status.
+                {t('claimSubmittedSuccess')}
               </p>
             </div>
           </div>
@@ -328,7 +335,7 @@ function ClientDashboardContent() {
               <CheckCircle className="h-5 w-5 text-blue-400" />
               <div className="ml-3">
                 <p className="text-sm text-blue-700 font-medium">
-                  New Activity Update
+                  {t('newActivityUpdate')}
                 </p>
                 <p className="text-sm text-blue-600 mt-1">
                   {lastActivity}
@@ -355,12 +362,12 @@ function ClientDashboardContent() {
           <div className="flex items-center">
             <AlertCircle className="h-4 w-4 text-yellow-500 mr-2" />
             <p className="text-sm text-yellow-700">
-              Real-time updates are currently unavailable. 
+              {t('realTimeUnavailable')}{' '}
               <button 
                 onClick={realTimeUpdates.reconnect} 
                 className="text-yellow-800 underline hover:no-underline ml-1"
               >
-                Reconnect
+                {t('reconnect')}
               </button>
             </p>
           </div>
@@ -378,7 +385,7 @@ function ClientDashboardContent() {
             <AlertCircle className="h-5 w-5 text-yellow-400" />
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                Some dashboard data may not be current. Please refresh the page if this persists.
+                {t('dataNotCurrent')}
               </p>
             </div>
           </div>
@@ -388,69 +395,69 @@ function ClientDashboardContent() {
       {/* Welcome Message */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">
-          Welcome back, {user?.firstName || 'Client'}!
+          {t('welcomeBack', { name: user?.firstName || 'Client' })}
         </h2>
         <p className="text-gray-600 mt-2">
-          Here's an overview of your insurance claims and policies.
+          {t('overviewDesc')}
         </p>
       </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
-          title="Total Claims"
+          title={t('stats.totalClaims')}
           value={statsLoading ? '...' : stats.totalClaims}
           icon={FileText}
           color="blue"
-          subtitle="All time"
+          subtitle={t('stats.allTime')}
         />
         <StatCard
-          title="Pending Claims"
+          title={t('stats.pendingClaims')}
           value={statsLoading ? '...' : stats.pendingClaims}
           icon={Clock}
           color="yellow"
-          subtitle="Under review"
+          subtitle={t('stats.underReview')}
         />
         <StatCard
-          title="Active Policies"
+          title={t('stats.activePolicies')}
           value={statsLoading ? '...' : stats.activePolicies}
           icon={Shield}
           color="green"
-          subtitle="Currently covered"
+          subtitle={t('stats.currentlyCovered')}
         />
         <StatCard
-          title="Total Coverage"
+          title={t('stats.totalCoverage')}
           value={statsLoading ? '...' : formatCurrency(Number(stats.totalCoverage) || 0)}
           icon={DollarSign}
           color="purple"
-          subtitle="Combined policies"
+          subtitle={t('stats.combinedPolicies')}
         />
       </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <ActionCard
-          title="Create New Claim"
-          description="Submit a new insurance claim for damage or loss"
+          title={t('actions.createNew')}
+          description={t('actions.createNewDesc')}
           icon={PlusCircle}
           color="blue"
-          buttonText="Start New Claim"
+          buttonText={t('actions.startNew')}
           onClick={() => router.push('/claims/create')}
         />
         <ActionCard
-          title="Track Claims"
-          description="View status and updates for your submitted claims"
+          title={t('actions.trackClaims')}
+          description={t('actions.trackClaimsDesc')}
           icon={FileText}
           color="green"
-          buttonText="View My Claims"
+          buttonText={t('actions.viewMyClaims')}
           onClick={() => router.push('/dashboard/client/claims')}
         />
         <ActionCard
-          title="Manage Policies"
-          description="Review your current insurance policies and coverage"
+          title={t('actions.managePolicies')}
+          description={t('actions.managePoliciesDesc')}
           icon={Shield}
           color="purple"
-          buttonText="View Policies"
+          buttonText={t('actions.viewPolicies')}
           onClick={() => router.push('/dashboard/client/policies')}
         />
       </div>
@@ -461,7 +468,7 @@ function ClientDashboardContent() {
           {activitiesLoading ? (
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Activity</h3>
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">{t('recentActivity')}</h3>
                 <div className="space-y-4">
                   {[1, 2, 3].map((i: number) => (
                     <div key={i} className="flex items-center space-x-3">
@@ -484,42 +491,42 @@ function ClientDashboardContent() {
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Quick Info
+              {t('quickInfo.title')}
             </h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Calendar className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-600">Last Login</span>
+                  <span className="text-sm text-gray-600">{t('quickInfo.lastLogin')}</span>
                 </div>
                 <span className="text-sm font-medium text-gray-900">
-                  {user?.lastLoginAt ? formatRelativeTime(new Date(user.lastLoginAt)) : 'Today'}
+                  {user?.lastLoginAt ? formatRelativeTime(new Date(user.lastLoginAt)) : t('quickInfo.today')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Shield className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-600">Coverage Status</span>
+                  <span className="text-sm text-gray-600">{t('quickInfo.coverageStatus')}</span>
                 </div>
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   stats.activePolicies > 0 
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-red-100 text-red-800'
                 }`}>
-                  {stats.activePolicies > 0 ? 'Active' : 'No Coverage'}
+                  {stats.activePolicies > 0 ? t('quickInfo.active') : t('quickInfo.noCoverage')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <AlertCircle className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-600">Pending Claims</span>
+                  <span className="text-sm text-gray-600">{t('quickInfo.pendingClaims')}</span>
                 </div>
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   stats.pendingClaims > 0 
                     ? 'bg-yellow-100 text-yellow-800' 
                     : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {statsLoading ? '...' : `${stats.pendingClaims} Pending`}
+                  {statsLoading ? '...' : `${stats.pendingClaims} ${t('quickInfo.pendingSuffix')}`}
                 </span>
               </div>
             </div>
@@ -531,9 +538,13 @@ function ClientDashboardContent() {
 }
 
 export default function ClientDashboard() {
+  const { locale } = useLocale();
+  const messages = locale === 'fr' ? frMessages : locale === 'ar' ? arMessages : enMessages;
   return (
-    <Suspense fallback={<div>Loading dashboard...</div>}>
-      <ClientDashboardContent />
-    </Suspense>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <Suspense fallback={<div>...</div>}>
+        <ClientDashboardContent />
+      </Suspense>
+    </NextIntlClientProvider>
   );
 }

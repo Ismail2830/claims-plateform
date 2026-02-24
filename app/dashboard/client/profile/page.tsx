@@ -2,11 +2,15 @@
 
 import React, { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
+import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
-import { LinkedPolicies } from '@/components/profile/LinkedPolicies';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
+import { useLocale } from '@/app/hooks/useLocale';
 import { trpc } from '@/app/lib/trpc-client';
+import enMessages from '@/messages/en.json';
+import frMessages from '@/messages/fr.json';
+import arMessages from '@/messages/ar.json';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Toaster } from '@/components/ui/sonner';
@@ -21,19 +25,9 @@ import type {
   UserProfile,
   NotificationPreferences,
   ProfileDocument,
-  LinkedPolicy,
 } from '@/types/profile';
 
-// ─── Navigation (mirrors client dashboard) ───────────────────────
-function buildNav(isCurrent: (href: string) => boolean) {
-  return [
-    { name: 'Dashboard', href: '/dashboard/client', icon: <Shield className="w-5 h-5" />, current: isCurrent('/dashboard/client') },
-    { name: 'My Claims', href: '/dashboard/client/claims', icon: <FileText className="w-5 h-5" />, current: isCurrent('/dashboard/client/claims') },
-    { name: 'My Policies', href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />, current: isCurrent('/dashboard/client/policies') },
-    { name: 'Create Claim', href: '/claims/create', icon: <PlusCircle className="w-5 h-5" />, current: isCurrent('/claims/create') },
-    { name: 'Profile', href: '/dashboard/client/profile', icon: <User className="w-5 h-5" />, current: isCurrent('/dashboard/client/profile') },
-  ];
-}
+
 
 // ─── Skeleton Loader ──────────────────────────────────────────────
 function ProfileSkeleton() {
@@ -68,6 +62,7 @@ function ProfileSkeleton() {
 
 // ─── Profile Header ───────────────────────────────────────────────
 function ProfileHeader({ profile }: { profile: UserProfile }) {
+  const t = useTranslations('header');
   const initials = `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase();
   const memberSince = new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
@@ -80,53 +75,60 @@ function ProfileHeader({ profile }: { profile: UserProfile }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-        {/* Avatar */}
-        <div className="shrink-0">
-          <Avatar className="w-20 h-20 ring-4 ring-blue-100">
-            <AvatarFallback className="bg-linear-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+    <div className="relative bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+      {/* Banner gradient */}
+      <div className="h-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+
+      {/* Content */}
+      <div className="px-6 pb-6">
+        {/* Avatar row */}
+        <div className="flex items-end justify-between -mt-10 mb-4">
+          {/* Avatar always on the left */}
+          <div className="shrink-0">
+            <Avatar className="w-20 h-20 ring-4 ring-white shadow-lg">
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+
+          {/* Last login — top right */}
+          {profile.lastLoginAt && (
+            <div className="text-right pb-1">
+              <p className="text-xs text-gray-400">{t('lastLogin')}</p>
+              <p className="text-xs text-gray-600 font-medium mt-0.5">
+                {new Date(profile.lastLoginAt).toLocaleDateString()} {t('at')}{' '}
+                {new Date(profile.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Info */}
-        <div className="text-center sm:text-left flex-1">
+        {/* Name + email + badges */}
+        <div>
           <h2 className="text-xl font-bold text-gray-900">
             {profile.firstName} {profile.lastName}
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">{profile.email}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Member since {memberSince}</p>
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
+          <p className="text-xs text-gray-400 mt-0.5">{t('memberSince')} {memberSince}</p>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
             <Badge className={`${statusColors[profile.status]} text-xs`}>
-              {profile.status.replace('_', ' ')}
+              {t(`status.${profile.status}`)}
             </Badge>
             {profile.documentVerified && (
               <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
                 <CheckCircle className="w-3 h-3 mr-1" />
-                ID Verified
+                {t('idVerified')}
               </Badge>
             )}
             {profile.emailVerified && (
               <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
                 <CheckCircle className="w-3 h-3 mr-1" />
-                Email Verified
+                {t('emailVerified')}
               </Badge>
             )}
           </div>
         </div>
-
-        {/* Last login */}
-        {profile.lastLoginAt && (
-          <div className="hidden lg:block text-right shrink-0">
-            <p className="text-xs text-gray-400">Last login</p>
-            <p className="text-xs text-gray-600 font-medium mt-0.5">
-              {new Date(profile.lastLoginAt).toLocaleDateString()} at{' '}
-              {new Date(profile.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -137,6 +139,9 @@ function ProfilePageContent() {
   const auth = useSimpleAuth();
   const router = useRouter();
   const { token, isLoading } = auth;
+  const { locale, changeLocale } = useLocale();
+
+  const messages = locale === 'fr' ? frMessages : locale === 'ar' ? arMessages : enMessages;
 
   // Fetch real profile from DB
   const utils = trpc.useUtils();
@@ -151,7 +156,14 @@ function ProfilePageContent() {
     }
   }, [token, isLoading, router]);
 
-  const navigation = buildNav((href) => href === '/dashboard/client/profile');
+  const navMsgs = messages.navigation;
+  const navigation = [
+    { name: navMsgs.dashboard,    href: '/dashboard/client',          icon: <Shield className="w-5 h-5" />,    current: false },
+    { name: navMsgs.myClaims,     href: '/dashboard/client/claims',   icon: <FileText className="w-5 h-5" />,  current: false },
+    { name: navMsgs.myPolicies,   href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />,    current: false },
+    { name: navMsgs.createClaim,  href: '/claims/create',             icon: <PlusCircle className="w-5 h-5" />, current: false },
+    { name: navMsgs.profile,      href: '/dashboard/client/profile',  icon: <User className="w-5 h-5" />,      current: true },
+  ];
 
   if (isLoading) {
     return (
@@ -223,31 +235,32 @@ function ProfilePageContent() {
     },
   };
   const documents: ProfileDocument[] = [];
-  const policies: LinkedPolicy[] = [];
 
   return (
-    <DashboardLayout title="My Profile" userRole="CLIENT" navigation={navigation}>
+    <DashboardLayout title={navMsgs.profile} userRole="CLIENT" navigation={navigation}>
       <Toaster richColors position="top-right" />
+      <NextIntlClientProvider locale={locale} messages={messages}>
+        <div>
+          {profileLoading || !profile ? (
+            <ProfileSkeleton />
+          ) : (
+            <div className="space-y-6">
+              {/* Profile Header */}
+              <ProfileHeader profile={profile} />
 
-      {profileLoading || !profile ? (
-        <ProfileSkeleton />
-      ) : (
-        <div className="space-y-6">
-          {/* Profile Header */}
-          <ProfileHeader profile={profile} />
-
-          {/* Tabs Section */}
-          <ProfileTabs
-            profile={profile}
-            onProfileUpdated={() => utils.clientAuth.getProfile.invalidate()}
-            notificationPrefs={notificationPrefs}
-            documents={documents}
-          />
-
-          {/* Linked Policies */}
-          <LinkedPolicies policies={policies} />
+              {/* Tabs Section */}
+              <ProfileTabs
+                profile={profile}
+                onProfileUpdated={() => utils.clientAuth.getProfile.invalidate()}
+                notificationPrefs={notificationPrefs}
+                documents={documents}
+                locale={locale}
+                onLocaleChange={changeLocale}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </NextIntlClientProvider>
     </DashboardLayout>
   );
 }

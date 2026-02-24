@@ -1,6 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,40 +33,27 @@ interface DocumentsTabProps {
   documents: ProfileDocument[];
 }
 
-const DOC_TYPE_LABELS: Record<ProfileDocument['type'], string> = {
-  NATIONAL_ID: 'National ID',
-  PASSPORT: 'Passport',
-  POLICY_DOCUMENT: 'Policy Document',
-  CLAIM_ATTACHMENT: 'Claim Attachment',
-  OTHER: 'Other',
-};
-
-const STATUS_CONFIG: Record<
+const STATUS_STYLE: Record<
   ProfileDocument['status'],
-  { label: string; className: string; icon: React.ReactNode }
+  { className: string; icon: React.ReactNode }
 > = {
   UPLOADED: {
-    label: 'Uploaded',
     className: 'bg-blue-100 text-blue-700 border-blue-200',
     icon: <Clock className="w-3 h-3" />,
   },
   PROCESSING: {
-    label: 'Processing',
     className: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     icon: <Loader2 className="w-3 h-3 animate-spin" />,
   },
   VERIFIED: {
-    label: 'Verified',
     className: 'bg-green-100 text-green-700 border-green-200',
     icon: <CheckCircle className="w-3 h-3" />,
   },
   REJECTED: {
-    label: 'Rejected',
     className: 'bg-red-100 text-red-700 border-red-200',
     icon: <XCircle className="w-3 h-3" />,
   },
   EXPIRED: {
-    label: 'Expired',
     className: 'bg-gray-100 text-gray-600 border-gray-200',
     icon: <AlertCircle className="w-3 h-3" />,
   },
@@ -83,6 +71,7 @@ function DocIcon({ mimeType }: { mimeType: string }) {
 }
 
 export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
+  const t = useTranslations('documents');
   const [docs, setDocs] = useState<ProfileDocument[]>(initialDocs);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -95,7 +84,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
       if (!files || files.length === 0) return;
       setUploading(true);
       try {
-        // TODO: replace with API call — upload files to server/storage
+        // TODO: replace with API call  upload files to server/storage
         await new Promise((resolve) => setTimeout(resolve, 1500));
         const newDocs: ProfileDocument[] = Array.from(files).map((file) => ({
           documentId: `doc-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -108,14 +97,14 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
           status: 'UPLOADED',
         }));
         setDocs((prev) => [...newDocs, ...prev]);
-        toast.success(`${files.length} file${files.length > 1 ? 's' : ''} uploaded.`);
+        toast.success(t('upload.success', { count: files.length }));
       } catch {
-        toast.error('Upload failed. Please try again.');
+        toast.error(t('upload.failed'));
       } finally {
         setUploading(false);
       }
     },
-    [],
+    [t],
   );
 
   const handleDrop = (e: React.DragEvent) => {
@@ -130,18 +119,27 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
       // TODO: replace with API call
       await new Promise((resolve) => setTimeout(resolve, 700));
       setDocs((prev) => prev.filter((d) => d.documentId !== docId));
-      toast.success('Document deleted.');
+      toast.success(t('delete.success'));
     } catch {
-      toast.error('Failed to delete document.');
+      toast.error(t('delete.failed'));
     } finally {
       setDeletingId(null);
     }
   };
 
   const handleDownload = (doc: ProfileDocument) => {
-    // TODO: replace with API call — generate signed URL and trigger download
-    toast.info(`Downloading ${doc.originalName}…`);
+    // TODO: replace with API call  generate signed URL and trigger download
+    toast.info(t('download.downloading', { name: doc.originalName }));
   };
+
+  const tableHeaders = [
+    t('list.headers.name'),
+    t('list.headers.type'),
+    t('list.headers.uploadDate'),
+    t('list.headers.expiryDate'),
+    t('list.headers.status'),
+    t('list.headers.actions'),
+  ];
 
   return (
     <div className="space-y-6">
@@ -150,9 +148,9 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Upload className="w-4 h-4 text-blue-500" />
-            Upload Documents
+            {t('upload.title')}
           </CardTitle>
-          <CardDescription>Supported: JPEG, PNG, PDF, DOC, DOCX — max 10 MB per file.</CardDescription>
+          <CardDescription>{t('upload.desc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div
@@ -173,9 +171,9 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
             )}
             <div className="text-center">
               <p className="text-sm font-medium text-gray-700">
-                {uploading ? 'Uploading…' : 'Drag & drop files here, or click to browse'}
+                {uploading ? t('upload.uploading') : t('upload.dragDrop')}
               </p>
-              <p className="text-xs text-gray-400 mt-1">JPEG · PNG · PDF · DOC · DOCX</p>
+              <p className="text-xs text-gray-400 mt-1">{t('upload.formats')}</p>
             </div>
             <input
               ref={fileInputRef}
@@ -194,7 +192,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <File className="w-4 h-4 text-gray-500" />
-            My Documents
+            {t('list.title')}
             <Badge className="ml-1 bg-gray-100 text-gray-600 border-gray-200 text-xs">{docs.length}</Badge>
           </CardTitle>
         </CardHeader>
@@ -202,14 +200,14 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
           {docs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
               <FileText className="w-12 h-12 mb-3 text-gray-200" />
-              <p className="text-sm">No documents uploaded yet.</p>
+              <p className="text-sm">{t('list.empty')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    {['Name', 'Type', 'Upload Date', 'Expiry Date', 'Status', 'Actions'].map((h) => (
+                    {tableHeaders.map((h) => (
                       <th
                         key={h}
                         className="text-left py-2 pr-4 last:pr-0 font-medium text-gray-500 text-xs uppercase tracking-wider whitespace-nowrap"
@@ -221,7 +219,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {docs.map((doc) => {
-                    const status = STATUS_CONFIG[doc.status];
+                    const style = STATUS_STYLE[doc.status];
                     return (
                       <tr key={doc.documentId} className="hover:bg-gray-50 transition-colors">
                         <td className="py-3 pr-4">
@@ -233,17 +231,19 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 pr-4 text-gray-600 whitespace-nowrap">{DOC_TYPE_LABELS[doc.type]}</td>
+                        <td className="py-3 pr-4 text-gray-600 whitespace-nowrap">
+                          {t(`types.${doc.type}`)}
+                        </td>
                         <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
                           {new Date(doc.uploadDate).toLocaleDateString()}
                         </td>
                         <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
-                          {doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : '—'}
+                          {doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : ''}
                         </td>
                         <td className="py-3 pr-4">
-                          <Badge className={`${status.className} flex items-center gap-1 w-fit`}>
-                            {status.icon}
-                            {status.label}
+                          <Badge className={`${style.className} flex items-center gap-1 w-fit`}>
+                            {style.icon}
+                            {t(`statuses.${doc.status}`)}
                           </Badge>
                         </td>
                         <td className="py-3">
@@ -253,7 +253,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
                               size="icon"
                               className="h-7 w-7 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
                               onClick={() => setViewDoc(doc)}
-                              title="View"
+                              title={t('list.headers.status')}
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
@@ -262,7 +262,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
                               size="icon"
                               className="h-7 w-7 text-gray-500 hover:text-green-600 hover:bg-green-50"
                               onClick={() => handleDownload(doc)}
-                              title="Download"
+                              title={t('list.headers.actions')}
                             >
                               <Download className="w-3.5 h-3.5" />
                             </Button>
@@ -272,7 +272,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
                               className="h-7 w-7 text-gray-500 hover:text-red-600 hover:bg-red-50"
                               onClick={() => handleDelete(doc.documentId)}
                               disabled={deletingId === doc.documentId}
-                              title="Delete"
+                              title={t('delete.success')}
                             >
                               {deletingId === doc.documentId ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -301,7 +301,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
               {viewDoc?.originalName}
             </DialogTitle>
             <DialogDescription>
-              {viewDoc && DOC_TYPE_LABELS[viewDoc.type]} · {viewDoc && formatFileSize(viewDoc.fileSize)}
+              {viewDoc && t(`types.${viewDoc.type}`)}  {viewDoc && formatFileSize(viewDoc.fileSize)}
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center min-h-75">
@@ -315,7 +315,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
             ) : (
               <div className="flex flex-col items-center gap-3 py-12 text-gray-400">
                 <FileText className="w-16 h-16 text-gray-200" />
-                <p className="text-sm">Preview not available</p>
+                <p className="text-sm">{t('preview.notAvailable')}</p>
                 <Button
                   size="sm"
                   variant="outline"
@@ -323,7 +323,7 @@ export function DocumentsTab({ documents: initialDocs }: DocumentsTabProps) {
                   className="mt-2"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download to view
+                  {t('preview.downloadToView')}
                 </Button>
               </div>
             )}

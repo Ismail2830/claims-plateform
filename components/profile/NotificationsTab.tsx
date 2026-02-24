@@ -1,6 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,44 +12,36 @@ import type { NotificationPreferences } from '@/types/profile';
 
 interface NotificationsTabProps {
   preferences: NotificationPreferences;
+  locale?: string;
+  onLocaleChange?: (locale: string) => void;
 }
 
 const LANGUAGES = [
-  { value: 'en', label: 'English', flag: '🇬🇧' },
-  { value: 'fr', label: 'Français', flag: '🇫🇷' },
-  { value: 'ar', label: 'العربية', flag: '🇸🇦' },
+  { value: 'en', label: 'English', flag: '' },
+  { value: 'fr', label: 'Français', flag: '' },
+  { value: 'ar', label: 'العربية', flag: '' },
 ] as const;
 
-const TRIGGER_OPTIONS = [
-  {
-    key: 'claimStatusUpdates' as const,
-    label: 'Claim Status Updates',
-    description: 'Get notified when your claim changes status.',
-    icon: <FileText className="w-4 h-4" />,
-  },
-  {
-    key: 'policyRenewalReminders' as const,
-    label: 'Policy Renewal Reminders',
-    description: 'Reminders before your policy expires.',
-    icon: <RefreshCw className="w-4 h-4" />,
-  },
-  {
-    key: 'paymentConfirmations' as const,
-    label: 'Payment Confirmations',
-    description: 'Confirmation when payments are processed.',
-    icon: <CreditCard className="w-4 h-4" />,
-  },
-  {
-    key: 'securityAlerts' as const,
-    label: 'Security Alerts',
-    description: 'Alerts for suspicious activity or login from new devices.',
-    icon: <Shield className="w-4 h-4" />,
-  },
+const TRIGGER_KEYS = [
+  { key: 'claimStatusUpdates' as const, icon: <FileText className="w-4 h-4" /> },
+  { key: 'policyRenewalReminders' as const, icon: <RefreshCw className="w-4 h-4" /> },
+  { key: 'paymentConfirmations' as const, icon: <CreditCard className="w-4 h-4" /> },
+  { key: 'securityAlerts' as const, icon: <Shield className="w-4 h-4" /> },
 ];
 
-export function NotificationsTab({ preferences }: NotificationsTabProps) {
-  const [prefs, setPrefs] = useState<NotificationPreferences>(preferences);
+export function NotificationsTab({ preferences, locale, onLocaleChange }: NotificationsTabProps) {
+  const t = useTranslations('notifications');
+  const [prefs, setPrefs] = useState<NotificationPreferences>({
+    ...preferences,
+    language: (locale as typeof preferences.language) ?? preferences.language,
+  });
   const [isSaving, setIsSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (locale) {
+      setPrefs((prev) => ({ ...prev, language: locale as typeof prev.language }));
+    }
+  }, [locale]);
 
   const updateChannel = (channel: keyof NotificationPreferences['channels'], value: boolean) => {
     setPrefs((prev) => ({ ...prev, channels: { ...prev.channels, [channel]: value } }));
@@ -61,12 +54,10 @@ export function NotificationsTab({ preferences }: NotificationsTabProps) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // TODO: replace with API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log('Saving notification preferences:', prefs);
-      toast.success('Preferences saved successfully!');
+      toast.success(t('savedSuccess'));
     } catch {
-      toast.error('Failed to save preferences.');
+      toast.error(t('savedError'));
     } finally {
       setIsSaving(false);
     }
@@ -79,17 +70,17 @@ export function NotificationsTab({ preferences }: NotificationsTabProps) {
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Bell className="w-4 h-4 text-blue-500" />
-            Notification Channels
+            {t('channels.title')}
           </CardTitle>
-          <CardDescription>Choose how you want to receive notifications.</CardDescription>
+          <CardDescription>{t('channels.desc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
             <div className="flex items-center gap-3">
               <Mail className="w-5 h-5 text-blue-500" />
               <div>
-                <p className="text-sm font-medium text-gray-800">Email</p>
-                <p className="text-xs text-gray-500">Receive notifications via email</p>
+                <p className="text-sm font-medium text-gray-800">{t('channels.email')}</p>
+                <p className="text-xs text-gray-500">{t('channels.emailDesc')}</p>
               </div>
             </div>
             <Switch
@@ -98,13 +89,12 @@ export function NotificationsTab({ preferences }: NotificationsTabProps) {
               aria-label="Email notifications"
             />
           </div>
-
           <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
             <div className="flex items-center gap-3">
               <MessageSquare className="w-5 h-5 text-green-500" />
               <div>
-                <p className="text-sm font-medium text-gray-800">SMS</p>
-                <p className="text-xs text-gray-500">Receive SMS text messages</p>
+                <p className="text-sm font-medium text-gray-800">{t('channels.sms')}</p>
+                <p className="text-xs text-gray-500">{t('channels.smsDesc')}</p>
               </div>
             </div>
             <Switch
@@ -113,13 +103,12 @@ export function NotificationsTab({ preferences }: NotificationsTabProps) {
               aria-label="SMS notifications"
             />
           </div>
-
           <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
             <div className="flex items-center gap-3">
               <Smartphone className="w-5 h-5 text-purple-500" />
               <div>
-                <p className="text-sm font-medium text-gray-800">In-App</p>
-                <p className="text-xs text-gray-500">See notifications inside the platform</p>
+                <p className="text-sm font-medium text-gray-800">{t('channels.inApp')}</p>
+                <p className="text-xs text-gray-500">{t('channels.inAppDesc')}</p>
               </div>
             </div>
             <Switch
@@ -136,9 +125,9 @@ export function NotificationsTab({ preferences }: NotificationsTabProps) {
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Globe className="w-4 h-4 text-indigo-500" />
-            Language Preference
+            {t('language.title')}
           </CardTitle>
-          <CardDescription>Select the language for notifications and the platform interface.</CardDescription>
+          <CardDescription>{t('language.desc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -146,7 +135,10 @@ export function NotificationsTab({ preferences }: NotificationsTabProps) {
               <button
                 key={lang.value}
                 type="button"
-                onClick={() => setPrefs((prev) => ({ ...prev, language: lang.value }))}
+                onClick={() => {
+                  setPrefs((prev) => ({ ...prev, language: lang.value }));
+                  onLocaleChange?.(lang.value);
+                }}
                 className={`flex items-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
                   prefs.language === lang.value
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -166,28 +158,28 @@ export function NotificationsTab({ preferences }: NotificationsTabProps) {
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Bell className="w-4 h-4 text-orange-500" />
-            Notification Triggers
+            {t('triggers.title')}
           </CardTitle>
-          <CardDescription>Choose which events you want to be notified about.</CardDescription>
+          <CardDescription>{t('triggers.desc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {TRIGGER_OPTIONS.map((opt, i) => (
+          {TRIGGER_KEYS.map((opt, i) => (
             <React.Fragment key={opt.key}>
               <div className="flex items-center justify-between py-1">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 text-gray-400">{opt.icon}</div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">{opt.label}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{opt.description}</p>
+                    <p className="text-sm font-medium text-gray-800">{t(`triggers.${opt.key}`)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{t(`triggers.${opt.key}Desc`)}</p>
                   </div>
                 </div>
                 <Switch
                   checked={prefs.triggers[opt.key]}
                   onCheckedChange={(v) => updateTrigger(opt.key, v)}
-                  aria-label={opt.label}
+                  aria-label={t(`triggers.${opt.key}`)}
                 />
               </div>
-              {i < TRIGGER_OPTIONS.length - 1 && <Separator />}
+              {i < TRIGGER_KEYS.length - 1 && <Separator />}
             </React.Fragment>
           ))}
         </CardContent>
@@ -199,10 +191,10 @@ export function NotificationsTab({ preferences }: NotificationsTabProps) {
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving…
+              {t('saving')}
             </>
           ) : (
-            'Save Preferences'
+            t('savePreferences')
           )}
         </Button>
       </div>

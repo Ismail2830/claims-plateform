@@ -3,6 +3,7 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Shield, Bell, FileText } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { PersonalInfoTab } from './PersonalInfoTab';
 import { SecurityTab } from './SecurityTab';
 import { NotificationsTab } from './NotificationsTab';
@@ -18,21 +19,27 @@ interface ProfileTabsProps {
   onProfileUpdated: () => void;
   notificationPrefs: NotificationPreferences;
   documents: ProfileDocument[];
+  locale?: string;
+  onLocaleChange?: (locale: string) => void;
 }
-
-const TABS = [
-  { value: 'personal', label: 'Personal Info', icon: <User className="w-4 h-4" /> },
-  { value: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> },
-  { value: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
-  { value: 'documents', label: 'Documents', icon: <FileText className="w-4 h-4" /> },
-] as const;
 
 export function ProfileTabs({
   profile,
   onProfileUpdated,
   notificationPrefs,
   documents,
+  locale,
+  onLocaleChange,
 }: ProfileTabsProps) {
+  const t = useTranslations('tabs');
+
+  const TABS = [
+    { value: 'personal', label: t('personalInfo'), icon: <User className="w-4 h-4" /> },
+    { value: 'security', label: t('security'), icon: <Shield className="w-4 h-4" /> },
+    { value: 'notifications', label: t('notifications'), icon: <Bell className="w-4 h-4" /> },
+    { value: 'documents', label: t('documents'), icon: <FileText className="w-4 h-4" /> },
+  ];
+
   return (
     <Tabs defaultValue="personal" className="w-full">
       {/* Tab Navigation */}
@@ -63,7 +70,7 @@ export function ProfileTabs({
       </TabsContent>
 
       <TabsContent value="notifications" className="mt-0 focus-visible:outline-none">
-        <NotificationsTab preferences={notificationPrefs} />
+        <NotificationsTab preferences={notificationPrefs} locale={locale} onLocaleChange={onLocaleChange} />
       </TabsContent>
 
       <TabsContent value="documents" className="mt-0 focus-visible:outline-none">

@@ -1,0 +1,306 @@
+{
+  "tabs": {
+    "personalInfo": "Infos personnelles",
+    "security": "Sécurité",
+    "notifications": "Notifications",
+    "documents": "Documents"
+  },
+  "header": {
+    "memberSince": "Membre depuis",
+    "lastLogin": "Dernière connexion",
+    "at": "à",
+    "idVerified": "ID vérifié",
+    "emailVerified": "E-mail vérifié",
+    "status": {
+      "ACTIVE": "Actif",
+      "INACTIVE": "Inactif",
+      "SUSPENDED": "Suspendu",
+      "PENDING_VERIFICATION": "En attente",
+      "BLOCKED": "Bloqué"
+    }
+  },
+  "personalInfo": {
+    "title": "Informations personnelles",
+    "edit": "Modifier",
+    "cancel": "Annuler",
+    "saveChanges": "Enregistrer",
+    "saving": "Enregistrement…",
+    "sections": {
+      "name": "Nom",
+      "contact": "Contact",
+      "identity": "Identité",
+      "address": "Adresse"
+    },
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom de famille",
+      "email": "E-mail",
+      "phone": "Numéro de téléphone",
+      "dateOfBirth": "Date de naissance",
+      "nationalId": "CIN",
+      "street": "Rue",
+      "city": "Ville",
+      "province": "Province / Région",
+      "postalCode": "Code postal"
+    },
+    "placeholders": {
+      "firstName": "Prénom",
+      "lastName": "Nom de famille",
+      "email": "Adresse e-mail",
+      "phone": "+212 6XX XXX XXX",
+      "postalCode": "00000",
+      "city": "Ville",
+      "province": "Province",
+      "street": "123 Rue Principale"
+    }
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "myClaims": "Mes sinistres",
+    "myPolicies": "Mes polices",
+    "createClaim": "Déclarer un sinistre",
+    "profile": "Profil"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "loadingDashboard": "Chargement de votre tableau de bord...",
+    "redirectingToLogin": "Redirection vers la connexion...",
+    "loadingData": "Chargement des données...",
+    "unableToLoad": "Impossible de charger le tableau de bord",
+    "unableToLoadDesc": "Un problème est survenu lors du chargement de vos données.",
+    "refreshPage": "Actualiser la page",
+    "loadingFallback": "Chargement...",
+    "claimSubmittedSuccess": "Votre sinistre a été soumis avec succès ! Vous recevrez des mises à jour sur son statut.",
+    "newActivityUpdate": "Nouvelle activité",
+    "realTimeUnavailable": "Les mises à jour en temps réel sont indisponibles.",
+    "reconnect": "Reconnecter",
+    "dataNotCurrent": "Certaines données peuvent ne pas être à jour. Actualisez la page si le problème persiste.",
+    "welcomeBack": "Bon retour, {name} !",
+    "overviewDesc": "Voici un aperçu de vos sinistres et polices d'assurance.",
+    "stats": {
+      "totalClaims": "Sinistres totaux",
+      "pendingClaims": "Sinistres en attente",
+      "activePolicies": "Polices actives",
+      "totalCoverage": "Couverture totale",
+      "allTime": "Total",
+      "underReview": "En cours d'examen",
+      "currentlyCovered": "Couverture active",
+      "combinedPolicies": "Polices combinées"
+    },
+    "actions": {
+      "createNew": "Déclarer un sinistre",
+      "createNewDesc": "Soumettre un nouveau sinistre pour dommage ou perte",
+      "startNew": "Nouveau sinistre",
+      "trackClaims": "Suivre les sinistres",
+      "trackClaimsDesc": "Voir le statut et les mises à jour de vos sinistres",
+      "viewMyClaims": "Voir mes sinistres",
+      "managePolicies": "Gérer les polices",
+      "managePoliciesDesc": "Consultez vos polices d'assurance et vos garanties",
+      "viewPolicies": "Voir les polices"
+    },
+    "quickInfo": {
+      "title": "Informations rapides",
+      "lastLogin": "Dernière connexion",
+      "coverageStatus": "Statut de couverture",
+      "pendingClaims": "Sinistres en attente",
+      "active": "Actif",
+      "noCoverage": "Sans couverture",
+      "today": "Aujourd'hui",
+      "pendingSuffix": "en attente"
+    },
+    "recentActivity": "Activité récente",
+    "justNow": "À l'instant",
+    "minutesAgo": "Il y a {count} min",
+    "hoursAgo": "Il y a {count} h",
+    "daysAgo": "Il y a {count} j"
+  },
+  "claims": {
+    "title": "Mes sinistres",
+    "loading": "Chargement...",
+    "loadingClaims": "Chargement des sinistres...",
+    "subtitle": "Suivez et gérez vos sinistres",
+    "createNew": "Déclarer un sinistre",
+    "searchPlaceholder": "Rechercher des sinistres...",
+    "allStatus": "Tous les statuts",
+    "tryAgain": "Réessayer",
+    "noClaimsFound": "Aucun sinistre trouvé",
+    "noClaimsFiltered": "Essayez d'ajuster vos filtres.",
+    "noClaimsYet": "Vous n'avez pas encore soumis de sinistre.",
+    "createFirstClaim": "Créer votre premier sinistre",
+    "policy": "Police",
+    "incident": "Incident",
+    "location": "Lieu",
+    "type": "Type",
+    "claimed": "Réclamé",
+    "approved": "Approuvé",
+    "submitted": "Soumis",
+    "via": "via",
+    "viewDetails": "Voir les détails",
+    "statuses": {
+      "DECLARED": "Déclaré",
+      "ANALYZING": "En analyse",
+      "DOCS_REQUIRED": "Docs requis",
+      "UNDER_EXPERTISE": "En expertise",
+      "IN_DECISION": "En décision",
+      "APPROVED": "Approuvé",
+      "IN_PAYMENT": "En paiement",
+      "CLOSED": "Clôturé",
+      "REJECTED": "Rejeté"
+    }
+  },
+  "notifications": {
+    "channels": {
+      "title": "Canaux de notification",
+      "desc": "Choisissez comment vous souhaitez recevoir les notifications.",
+      "email": "E-mail",
+      "emailDesc": "Recevoir des notifications par e-mail",
+      "sms": "SMS",
+      "smsDesc": "Recevoir des messages SMS",
+      "inApp": "In-App",
+      "inAppDesc": "Voir les notifications dans la plateforme"
+    },
+    "language": {
+      "title": "Pr\u00e9f\u00e9rence de langue",
+      "desc": "S\u00e9lectionnez la langue pour les notifications et l'interface."
+    },
+    "triggers": {
+      "title": "D\u00e9clencheurs de notifications",
+      "desc": "Choisissez les \u00e9v\u00e9nements pour lesquels vous souhaitez \u00eatre notifi\u00e9.",
+      "claimStatusUpdates": "Mise \u00e0 jour du statut du sinistre",
+      "claimStatusUpdatesDesc": "Soyez notifi\u00e9 lorsque le statut de votre sinistre change.",
+      "policyRenewalReminders": "Rappels de renouvellement de police",
+      "policyRenewalRemindersDesc": "Rappels avant l'expiration de votre police.",
+      "paymentConfirmations": "Confirmations de paiement",
+      "paymentConfirmationsDesc": "Confirmation lorsque les paiements sont trait\u00e9s.",
+      "securityAlerts": "Alertes de s\u00e9curit\u00e9",
+      "securityAlertsDesc": "Alertes pour activit\u00e9 suspecte ou connexion depuis un nouvel appareil."
+    },
+    "savePreferences": "Enregistrer les pr\u00e9f\u00e9rences",
+    "saving": "Enregistrement\u2026",
+    "savedSuccess": "Pr\u00e9f\u00e9rences enregistr\u00e9es avec succ\u00e8s !",
+    "savedError": "\u00c9chec de l'enregistrement."
+  },
+  "policies": {
+    "title": "Mes polices",
+    "loadingPolicies": "Chargement des polices...",
+    "policy": "police",
+    "policiesPlural": "polices",
+    "expiringSoon": "expirent bientôt",
+    "expiringSoonBadge": "Expire bientôt",
+    "searchPlaceholder": "Rechercher par numéro, type ou couverture...",
+    "allStatus": "Tous les statuts",
+    "noPoliciesFound": "Aucune police trouvée",
+    "noPoliciesFiltered": "Essayez d'ajuster vos filtres.",
+    "noPoliciesYet": "Vous n'avez aucune police sur votre compte.",
+    "viewDetails": "Voir les détails",
+    "coverage": "Couverture",
+    "yearSuffix": "/ an",
+    "linkedClaim": "sinistre lié",
+    "linkedClaims": "sinistres liés",
+    "statuses": {
+      "ACTIVE": "Actif",
+      "EXPIRED": "Expiré",
+      "SUSPENDED": "Suspendu",
+      "CANCELED": "Résilié"
+    },
+    "types": {
+      "AUTO": "Assurance auto",
+      "HOME": "Assurance habitation",
+      "HEALTH": "Assurance santé",
+      "LIFE": "Assurance vie"
+    }  },
+  "security": {
+    "contactVerification": {
+      "title": "V\u00e9rification des contacts",
+      "desc": "V\u00e9rifiez votre e-mail pour s\u00e9curiser votre compte et activer la 2FA.",
+      "emailAddress": "Adresse e-mail",
+      "verified": "V\u00e9rifi\u00e9",
+      "verify": "V\u00e9rifier",
+      "otpSent": "Code envoy\u00e9",
+      "enterCode": "Entrez le code \u00e0 6 chiffres envoy\u00e9 \u00e0 votre {type}",
+      "resendIn": "Renvoyer dans {countdown}s",
+      "resendOtp": "Renvoyer le code",
+      "cancel": "Annuler",
+      "confirm": "Confirmer",
+      "otpSentSuccess": "Code envoy\u00e9 \u00e0 votre {type}"
+    },
+    "twoFactor": {
+      "title": "Authentification \u00e0 deux facteurs",
+      "desc": "Exigez un code OTP \u00e0 chaque connexion pour une s\u00e9curit\u00e9 accrue.",
+      "statusLabel": "Statut 2FA",
+      "verifyEmailFirst": "V\u00e9rifiez d\u2019abord votre e-mail pour activer la 2FA.",
+      "activeCodes": "Actif \u2014 codes envoy\u00e9s via {method}",
+      "enableProtection": "Activez pour une protection de connexion renforc\u00e9e.",
+      "enabled": "Activ\u00e9",
+      "disabled": "D\u00e9sactiv\u00e9",
+      "chooseMethod": "Choisissez comment recevoir votre code :",
+      "notVerified": "(non v\u00e9rifi\u00e9)",
+      "cancel": "Annuler",
+      "enable": "Activer la 2FA"
+    },
+    "password": {
+      "title": "Changer le mot de passe",
+      "desc": "Choisissez un mot de passe fort et unique.",
+      "currentPassword": "Mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "update": "Mettre \u00e0 jour le mot de passe",
+      "updating": "Mise \u00e0 jour\u2026"
+    },
+    "strength": {
+      "veryWeak": "Tr\u00e8s faible",
+      "weak": "Faible",
+      "fair": "Correct",
+      "good": "Bien",
+      "strong": "Fort",
+      "veryStrong": "Tr\u00e8s fort"
+    }
+  },
+  "documents": {
+    "upload": {
+      "title": "T\u00e9l\u00e9charger des documents",
+      "desc": "Pris en charge : JPEG, PNG, PDF, DOC, DOCX — max 10 Mo par fichier.",
+      "uploading": "T\u00e9l\u00e9chargement\u2026",
+      "dragDrop": "Glissez-d\u00e9posez des fichiers ici, ou cliquez pour parcourir",
+      "formats": "JPEG \u00b7 PNG \u00b7 PDF \u00b7 DOC \u00b7 DOCX",
+      "success": "{count, plural, one {# fichier t\u00e9l\u00e9charg\u00e9} other {# fichiers t\u00e9l\u00e9charg\u00e9s}}",
+      "failed": "\u00c9chec du t\u00e9l\u00e9chargement. Veuillez r\u00e9essayer."
+    },
+    "list": {
+      "title": "Mes documents",
+      "empty": "Aucun document t\u00e9l\u00e9charg\u00e9 pour l\u2019instant.",
+      "headers": {
+        "name": "Nom",
+        "type": "Type",
+        "uploadDate": "Date d\u2019ajout",
+        "expiryDate": "Date d\u2019expiration",
+        "status": "Statut",
+        "actions": "Actions"
+      }
+    },
+    "types": {
+      "NATIONAL_ID": "Carte d\u2019identit\u00e9",
+      "PASSPORT": "Passeport",
+      "POLICY_DOCUMENT": "Document de police",
+      "CLAIM_ATTACHMENT": "Pi\u00e8ce jointe sinistre",
+      "OTHER": "Autre"
+    },
+    "statuses": {
+      "UPLOADED": "T\u00e9l\u00e9charg\u00e9",
+      "PROCESSING": "En cours",
+      "VERIFIED": "V\u00e9rifi\u00e9",
+      "REJECTED": "Rejet\u00e9",
+      "EXPIRED": "Expir\u00e9"
+    },
+    "delete": {
+      "success": "Document supprim\u00e9.",
+      "failed": "\u00c9chec de la suppression."
+    },
+    "download": {
+      "downloading": "T\u00e9l\u00e9chargement de {name}\u2026"
+    },
+    "preview": {
+      "notAvailable": "Aper\u00e7u non disponible",
+      "downloadToView": "T\u00e9l\u00e9charger pour visualiser"
+    }  }
+}

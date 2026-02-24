@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { useLocale } from '@/app/hooks/useLocale';
+import enMessages from '@/messages/en.json';
+import frMessages from '@/messages/fr.json';
+import arMessages from '@/messages/ar.json';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
@@ -179,6 +183,9 @@ export default function PolicyDetailPage() {
   const policyId = params?.id as string;
 
   const { token, isLoading } = useSimpleAuth();
+  const { locale } = useLocale();
+  const messages = locale === 'fr' ? frMessages : locale === 'ar' ? arMessages : enMessages;
+  const navMsgs = messages.navigation;
 
   useEffect(() => {
     if (!isLoading && !token) router.push('/auth/login');
@@ -192,11 +199,11 @@ export default function PolicyDetailPage() {
   const policy = res?.data;
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard/client', icon: <Shield className="w-5 h-5" /> },
-    { name: 'My Claims', href: '/dashboard/client/claims', icon: <FileText className="w-5 h-5" /> },
-    { name: 'My Policies', href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />, current: true },
-    { name: 'Create Claim', href: '/claims/create', icon: <PlusCircle className="w-5 h-5" /> },
-    { name: 'Profile', href: '/dashboard/client/profile', icon: <CheckCircle className="w-5 h-5" /> },
+    { name: navMsgs.dashboard,   href: '/dashboard/client',          icon: <Shield className="w-5 h-5" /> },
+    { name: navMsgs.myClaims,    href: '/dashboard/client/claims',   icon: <FileText className="w-5 h-5" /> },
+    { name: navMsgs.myPolicies,  href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />, current: true },
+    { name: navMsgs.createClaim, href: '/claims/create',             icon: <PlusCircle className="w-5 h-5" /> },
+    { name: navMsgs.profile,     href: '/dashboard/client/profile',  icon: <CheckCircle className="w-5 h-5" /> },
   ];
 
   if (isLoading || loading) {

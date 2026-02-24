@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, clientProtected } from '../../lib/trpc';
-import { authenticateClient, registerClient } from '../../lib/auth';
+import { authenticateClient, registerClient, hashPassword, verifyPassword } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
 import { generateOtp, storeOtp, verifyOtp, sendEmailOtp } from '../../lib/otp';
 
@@ -961,5 +961,37 @@ export const clientAuthRouter = createTRPCRouter({
           message: 'Invalid verification code or client not found',
         });
       }
+    }),
+
+  // Change Password (Protected)
+  changePassword: clientProtected
+    .input(
+      z.object({
+        currentPassword: z.string().min(1, 'Current password is required'),
+        newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const client = await prisma.client.findUnique({
+        where: { clientId: ctx.client.clientId },
+        select: { password: true },
+      });
+
+      if (!client) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Client not found' });
+      }
+
+      const isValid = await verifyPassword(input.currentPassword, client.password);
+      if (!isValid) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Current password is incorrect' });
+      }
+
+      const newHash = await hashPassword(input.newPassword);
+      await prisma.client.update({
+        where: { clientId: ctx.client.clientId },
+        data: { password: newHash },
+      });
+
+      return { success: true, message: 'Password changed successfully' };
     }),
 });

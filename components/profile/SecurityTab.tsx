@@ -1,6 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,7 +19,6 @@ import {
   Smartphone,
   Lock,
   Mail,
-  Phone,
   CheckCircle,
   AlertCircle,
   Shield,
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import type { UserProfile, ChangePasswordFormData } from '@/types/profile';
 
-// ─── Zod Schemas ─────────────────────────────────────────────────
+//  Zod Schemas 
 const passwordSchema = z
   .object({
     currentPassword: z.string().min(1, 'Current password is required'),
@@ -42,27 +42,37 @@ const passwordSchema = z
     path: ['confirmPassword'],
   });
 
-// ─── Helpers ─────────────────────────────────────────────────────
-function getStrength(password: string): { score: number; label: string; color: string } {
+//  Strength helpers 
+const STRENGTH_KEYS = [
+  'strength.veryWeak',
+  'strength.weak',
+  'strength.fair',
+  'strength.good',
+  'strength.strong',
+  'strength.veryStrong',
+] as const;
+
+function getStrength(password: string): { score: number; color: string } {
   let score = 0;
   if (password.length >= 8) score++;
   if (password.length >= 12) score++;
   if (/[A-Z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
-  const map: Record<number, { label: string; color: string }> = {
-    0: { label: 'Very weak', color: 'bg-red-500' },
-    1: { label: 'Weak', color: 'bg-orange-500' },
-    2: { label: 'Fair', color: 'bg-yellow-500' },
-    3: { label: 'Good', color: 'bg-blue-500' },
-    4: { label: 'Strong', color: 'bg-green-500' },
-    5: { label: 'Very strong', color: 'bg-emerald-600' },
+  const colorMap: Record<number, string> = {
+    0: 'bg-red-500',
+    1: 'bg-orange-500',
+    2: 'bg-yellow-500',
+    3: 'bg-blue-500',
+    4: 'bg-green-500',
+    5: 'bg-emerald-600',
   };
-  return { score, ...map[score] };
+  return { score, color: colorMap[score] };
 }
 
 function PasswordStrengthBar({ password }: { password: string }) {
-  const { score, label, color } = getStrength(password);
+  const t = useTranslations('security');
+  const { score, color } = getStrength(password);
   if (!password) return null;
   return (
     <div className="mt-2 space-y-1">
@@ -71,7 +81,7 @@ function PasswordStrengthBar({ password }: { password: string }) {
           <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i < score ? color : 'bg-gray-200'}`} />
         ))}
       </div>
-      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-xs text-gray-500">{t(STRENGTH_KEYS[score])}</p>
     </div>
   );
 }
@@ -92,7 +102,7 @@ function PasswordInput({ label, error, ...props }: React.ComponentProps<typeof I
   );
 }
 
-// ─── OTP Input (6 individual boxes) ──────────────────────────────
+//  OTP Input (6 individual boxes) 
 function OtpInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -136,7 +146,7 @@ function OtpInput({ value, onChange, disabled }: { value: string; onChange: (v: 
   );
 }
 
-// ─── Contact Verification Row ─────────────────────────────────────
+//  Contact Verification Row 
 function ContactVerifyRow({
   type,
   label,
@@ -150,6 +160,7 @@ function ContactVerifyRow({
   isVerified: boolean;
   onVerified: () => void;
 }) {
+  const t = useTranslations('security');
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -157,7 +168,7 @@ function ContactVerifyRow({
 
   const sendOtp = trpc.clientAuth.sendVerificationOtp.useMutation({
     onSuccess: () => {
-      toast.success(`OTP sent to your ${type}`);
+      toast.success(t('contactVerification.otpSentSuccess', { type }));
       setShowOtp(true);
       setOtp('');
       setCountdown(60);
@@ -181,7 +192,7 @@ function ContactVerifyRow({
     onError: (err) => toast.error(err.message),
   });
 
-  const Icon = type === 'email' ? Mail : Phone;
+  const Icon = type === 'email' ? Mail : Mail;
 
   return (
     <div className="space-y-3">
@@ -198,7 +209,7 @@ function ContactVerifyRow({
         {isVerified ? (
           <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
             <CheckCircle className="w-3 h-3" />
-            Verified
+            {t('contactVerification.verified')}
           </Badge>
         ) : (
           <Button
@@ -209,7 +220,7 @@ function ContactVerifyRow({
             className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs gap-1.5"
           >
             {sendOtp.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-            {showOtp ? 'OTP Sent' : 'Verify'}
+            {showOtp ? t('contactVerification.otpSent') : t('contactVerification.verify')}
           </Button>
         )}
       </div>
@@ -217,7 +228,7 @@ function ContactVerifyRow({
       {!isVerified && showOtp && (
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
           <p className="text-xs text-blue-700 text-center">
-            Enter the 6-digit code sent to your {type}
+            {t('contactVerification.enterCode', { type })}
           </p>
           <OtpInput value={otp} onChange={setOtp} disabled={verifyOtp.isPending} />
           {verifyOtp.error && (
@@ -232,11 +243,13 @@ function ContactVerifyRow({
               disabled={countdown > 0 || sendOtp.isPending}
               onClick={() => sendOtp.mutate({ type })}
             >
-              {countdown > 0 ? `Resend in ${countdown}s` : 'Resend OTP'}
+              {countdown > 0
+                ? t('contactVerification.resendIn', { countdown })
+                : t('contactVerification.resendOtp')}
             </button>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" className="text-xs" onClick={() => { setShowOtp(false); setOtp(''); }}>
-                Cancel
+                {t('contactVerification.cancel')}
               </Button>
               <Button
                 size="sm"
@@ -245,7 +258,7 @@ function ContactVerifyRow({
                 onClick={() => verifyOtp.mutate({ type, code: otp })}
               >
                 {verifyOtp.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
-                Confirm
+                {t('contactVerification.confirm')}
               </Button>
             </div>
           </div>
@@ -255,14 +268,15 @@ function ContactVerifyRow({
   );
 }
 
-// ─── Props ───────────────────────────────────────────────────────
+//  Props 
 interface SecurityTabProps {
   profile: UserProfile;
   onProfileUpdated: () => void;
 }
 
-// ─── Component ───────────────────────────────────────────────────
+//  Component 
 export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
+  const t = useTranslations('security');
   const utils = trpc.useUtils();
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(profile.twoFactorEnabled);
@@ -270,19 +284,26 @@ export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
     (profile.twoFactorMethod as 'email' | 'phone') ?? 'email'
   );
   const [showMethodPicker, setShowMethodPicker] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   const canVerifyOptions = [
     ...(profile.emailVerified ? ['email'] : []),
     ...(profile.phoneVerified ? ['phone'] : []),
   ] as ('email' | 'phone')[];
-  void canVerifyOptions; // used indirectly via profile.emailVerified / profile.phoneVerified checks
+  void canVerifyOptions;
 
   const update2FA = trpc.clientAuth.update2FAPreference.useMutation({
     onSuccess: (res) => {
       toast.success(res.message);
       utils.clientAuth.getProfile.invalidate();
       onProfileUpdated();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const changePassword = trpc.clientAuth.changePassword.useMutation({
+    onSuccess: (res) => {
+      toast.success(res.message);
+      reset();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -310,74 +331,60 @@ export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
 
   const newPasswordValue = watch('newPassword') || '';
 
-  const onPasswordSubmit = async (_data: ChangePasswordFormData) => {
-    setIsSaving(true);
-    try {
-      await new Promise((r) => setTimeout(r, 1000));
-      reset();
-      toast.success('Password changed successfully!');
-    } catch {
-      toast.error('Failed to change password.');
-    } finally {
-      setIsSaving(false);
-    }
+  const onPasswordSubmit = (data: ChangePasswordFormData) => {
+    changePassword.mutate({
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
+    });
   };
 
-  const hasVerified = profile.emailVerified || profile.phoneVerified;
+  const hasVerified = profile.emailVerified;
 
   return (
     <div className="space-y-6">
-      {/* ── Contact Verification ───────────────────────────────── */}
+      {/*  Contact Verification  */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Shield className="w-4 h-4 text-blue-500" />
-            Contact Verification
+            {t('contactVerification.title')}
           </CardTitle>
           <CardDescription>
-            Verify your email and phone number to secure your account and enable 2FA.
+            {t('contactVerification.desc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <ContactVerifyRow
             type="email"
-            label="Email Address"
+            label={t('contactVerification.emailAddress')}
             value={profile.email}
             isVerified={profile.emailVerified}
-            onVerified={() => { utils.clientAuth.getProfile.invalidate(); onProfileUpdated(); }}
-          />
-          <div className="border-t border-gray-100" />
-          <ContactVerifyRow
-            type="phone"
-            label="Phone Number"
-            value={profile.phone}
-            isVerified={profile.phoneVerified}
             onVerified={() => { utils.clientAuth.getProfile.invalidate(); onProfileUpdated(); }}
           />
         </CardContent>
       </Card>
 
-      {/* ── Two-Factor Authentication ──────────────────────────── */}
+      {/*  Two-Factor Authentication  */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-purple-500" />
-            Two-Factor Authentication
+            {t('twoFactor.title')}
           </CardTitle>
           <CardDescription>
-            Require an OTP code every time you log in for extra security.
+            {t('twoFactor.desc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-800">2FA Status</p>
+              <p className="text-sm font-medium text-gray-800">{t('twoFactor.statusLabel')}</p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {!hasVerified
-                  ? 'Verify your email or phone first to enable 2FA.'
+                  ? t('twoFactor.verifyEmailFirst')
                   : twoFactorEnabled
-                  ? `Active — codes sent via ${profile.twoFactorMethod ?? twoFactorMethod}`
-                  : 'Enable for stronger login protection.'}
+                  ? t('twoFactor.activeCodes', { method: profile.twoFactorMethod ?? twoFactorMethod })
+                  : t('twoFactor.enableProtection')}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -388,7 +395,7 @@ export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
                     : 'bg-gray-100 text-gray-600 border-gray-200'
                 }
               >
-                {twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                {twoFactorEnabled ? t('twoFactor.enabled') : t('twoFactor.disabled')}
               </Badge>
               <Switch
                 checked={twoFactorEnabled}
@@ -401,10 +408,10 @@ export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
 
           {showMethodPicker && (
             <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-medium text-gray-700">Choose how to receive your OTP:</p>
+              <p className="text-sm font-medium text-gray-700">{t('twoFactor.chooseMethod')}</p>
               <div className="flex flex-col gap-2">
-                {(['email', 'phone'] as const).map((m) => {
-                  const verified = m === 'email' ? profile.emailVerified : profile.phoneVerified;
+                {(['email'] as const).map((m) => {
+                  const verified = profile.emailVerified;
                   return (
                     <label
                       key={m}
@@ -425,10 +432,10 @@ export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
                         onChange={() => setTwoFactorMethod(m)}
                         className="accent-purple-600"
                       />
-                      {m === 'email' ? <Mail className="w-4 h-4 text-gray-500" /> : <Phone className="w-4 h-4 text-gray-500" />}
+                      {m === 'email' ? <Mail className="w-4 h-4 text-gray-500" /> : null}
                       <div className="flex-1">
                         <span className="text-sm font-medium capitalize">{m}</span>
-                        {!verified && <span className="ml-2 text-xs text-gray-400">(not verified)</span>}
+                        {!verified && <span className="ml-2 text-xs text-gray-400">{t('twoFactor.notVerified')}</span>}
                       </div>
                       {verified && <CheckCircle className="w-4 h-4 text-green-500" />}
                     </label>
@@ -442,7 +449,7 @@ export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
                   className="text-xs"
                   onClick={() => { setShowMethodPicker(false); setTwoFactorEnabled(false); }}
                 >
-                  Cancel
+                  {t('twoFactor.cancel')}
                 </Button>
                 <Button
                   size="sm"
@@ -451,7 +458,7 @@ export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
                   onClick={handleEnable2FA}
                 >
                   {update2FA.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
-                  Enable 2FA
+                  {t('twoFactor.enable')}
                 </Button>
               </div>
             </div>
@@ -459,25 +466,27 @@ export function SecurityTab({ profile, onProfileUpdated }: SecurityTabProps) {
         </CardContent>
       </Card>
 
-      {/* ── Change Password ────────────────────────────────────── */}
+      {/*  Change Password  */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Lock className="w-4 h-4 text-blue-500" />
-            Change Password
+            {t('password.title')}
           </CardTitle>
-          <CardDescription>Choose a strong, unique password.</CardDescription>
+          <CardDescription>{t('password.desc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4 max-w-md">
-            <PasswordInput label="Current Password" error={errors.currentPassword?.message} {...register('currentPassword')} />
+            <PasswordInput label={t('password.currentPassword')} error={errors.currentPassword?.message} {...register('currentPassword')} />
             <div className="space-y-1">
-              <PasswordInput label="New Password" error={errors.newPassword?.message} {...register('newPassword')} />
+              <PasswordInput label={t('password.newPassword')} error={errors.newPassword?.message} {...register('newPassword')} />
               <PasswordStrengthBar password={newPasswordValue} />
             </div>
-            <PasswordInput label="Confirm New Password" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
-            <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
-              {isSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Updating…</> : 'Update Password'}
+            <PasswordInput label={t('password.confirmPassword')} error={errors.confirmPassword?.message} {...register('confirmPassword')} />
+            <Button type="submit" disabled={changePassword.isPending} className="bg-blue-600 hover:bg-blue-700">
+              {changePassword.isPending
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('password.updating')}</>
+                : t('password.update')}
             </Button>
           </form>
         </CardContent>

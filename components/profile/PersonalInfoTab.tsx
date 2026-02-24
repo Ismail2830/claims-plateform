@@ -24,6 +24,7 @@ import {
   Pencil,
   X,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { trpc } from '@/app/lib/trpc-client';
 import type { UserProfile, PersonalInfoFormData } from '@/types/profile';
 
@@ -130,6 +131,7 @@ function EditField({
 
 // ─── Component ───────────────────────────────────────────────────
 export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProps) {
+  const t = useTranslations('personalInfo');
   const [isEditing, setIsEditing] = useState(false);
   const [cinVisible, setCinVisible] = useState(false);
   const [savedProfile, setSavedProfile] = useState<UserProfile>(initialProfile);
@@ -229,7 +231,7 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-gray-100">
-          <CardTitle className="text-base font-semibold text-gray-900">Personal Information</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900">{t('title')}</CardTitle>
           <Button
             type="button"
             size="sm"
@@ -238,17 +240,17 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
             className="gap-1.5 text-blue-600 border-blue-300 hover:bg-blue-50"
           >
             <Pencil className="w-3.5 h-3.5" />
-            Edit
+            {t('edit')}
           </Button>
         </CardHeader>
 
         <CardContent className="pt-6 space-y-6">
           {/* Name */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Name</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t('sections.name')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <ReadField label="First Name" value={p.firstName} icon={<User className="w-4 h-4" />} />
-              <ReadField label="Last Name" value={p.lastName} icon={<User className="w-4 h-4" />} />
+              <ReadField label={t('fields.firstName')} value={p.firstName} icon={<User className="w-4 h-4" />} />
+              <ReadField label={t('fields.lastName')} value={p.lastName} icon={<User className="w-4 h-4" />} />
             </div>
           </div>
 
@@ -256,16 +258,16 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
 
           {/* Contact */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Contact</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t('sections.contact')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <ReadField
-                label="Email"
+                label={t('fields.email')}
                 value={p.email}
                 icon={<Mail className="w-4 h-4" />}
                 badge={<VerifiedBadge verified={p.emailVerified} />}
               />
               <ReadField
-                label="Phone Number"
+                label={t('fields.phone')}
                 value={p.phone}
                 icon={<Phone className="w-4 h-4" />}
                 badge={<VerifiedBadge verified={p.phoneVerified} />}
@@ -277,15 +279,15 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
 
           {/* Identity */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Identity</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t('sections.identity')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <ReadField
-                label="Date of Birth"
+                label={t('fields.dateOfBirth')}
                 value={new Date(p.dateOfBirth).toLocaleDateString()}
                 icon={<Calendar className="w-4 h-4" />}
               />
               <ReadField
-                label="National ID (CIN)"
+                label={t('fields.nationalId')}
                 value={p.cin}
                 icon={<CreditCard className="w-4 h-4" />}
                 masked
@@ -297,13 +299,13 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
 
           {/* Address */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Address</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t('sections.address')}</p>
             <div className="space-y-4">
-              <ReadField label="Street" value={p.address.street} icon={<MapPin className="w-4 h-4" />} />
+              <ReadField label={t('fields.street')} value={p.address.street} icon={<MapPin className="w-4 h-4" />} />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <ReadField label="City" value={p.address.city} icon={<MapPin className="w-4 h-4" />} />
-                <ReadField label="Province / State" value={p.address.province} icon={<MapPin className="w-4 h-4" />} />
-                <ReadField label="Postal Code" value={p.address.postalCode ?? '—'} icon={<MapPin className="w-4 h-4" />} />
+                <ReadField label={t('fields.city')} value={p.address.city} icon={<MapPin className="w-4 h-4" />} />
+                <ReadField label={t('fields.province')} value={p.address.province} icon={<MapPin className="w-4 h-4" />} />
+                <ReadField label={t('fields.postalCode')} value={p.address.postalCode ?? '—'} icon={<MapPin className="w-4 h-4" />} />
               </div>
             </div>
           </div>
@@ -318,14 +320,14 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
       {/* Name */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-gray-900">Name</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900">{t('sections.name')}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <EditField label="First Name" error={errors.firstName?.message} icon={<User className="w-4 h-4" />}>
-            <Input {...register('firstName')} placeholder="First name" className={errors.firstName ? 'border-red-400' : ''} />
+          <EditField label={t('fields.firstName')} error={errors.firstName?.message} icon={<User className="w-4 h-4" />}>
+            <Input {...register('firstName')} placeholder={t('placeholders.firstName')} className={errors.firstName ? 'border-red-400' : ''} />
           </EditField>
-          <EditField label="Last Name" error={errors.lastName?.message} icon={<User className="w-4 h-4" />}>
-            <Input {...register('lastName')} placeholder="Last name" className={errors.lastName ? 'border-red-400' : ''} />
+          <EditField label={t('fields.lastName')} error={errors.lastName?.message} icon={<User className="w-4 h-4" />}>
+            <Input {...register('lastName')} placeholder={t('placeholders.lastName')} className={errors.lastName ? 'border-red-400' : ''} />
           </EditField>
         </CardContent>
       </Card>
@@ -333,24 +335,24 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
       {/* Contact */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-gray-900">Contact</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900">{t('sections.contact')}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <EditField
-            label="Email"
+            label={t('fields.email')}
             error={errors.email?.message}
             icon={<Mail className="w-4 h-4" />}
             badge={<VerifiedBadge verified={savedProfile.emailVerified} />}
           >
-            <Input {...register('email')} type="email" placeholder="Email address" className={errors.email ? 'border-red-400' : ''} />
+            <Input {...register('email')} type="email" placeholder={t('placeholders.email')} className={errors.email ? 'border-red-400' : ''} />
           </EditField>
           <EditField
-            label="Phone Number"
+            label={t('fields.phone')}
             error={errors.phone?.message}
             icon={<Phone className="w-4 h-4" />}
             badge={<VerifiedBadge verified={savedProfile.phoneVerified} />}
           >
-            <Input {...register('phone')} type="tel" placeholder="+1 234 567 8900" className={errors.phone ? 'border-red-400' : ''} />
+            <Input {...register('phone')} type="tel" placeholder={t('placeholders.phone')} className={errors.phone ? 'border-red-400' : ''} />
           </EditField>
         </CardContent>
       </Card>
@@ -358,13 +360,13 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
       {/* Identity */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-gray-900">Identity</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900">{t('sections.identity')}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <EditField label="Date of Birth" error={errors.dateOfBirth?.message} icon={<Calendar className="w-4 h-4" />}>
+          <EditField label={t('fields.dateOfBirth')} error={errors.dateOfBirth?.message} icon={<Calendar className="w-4 h-4" />}>
             <Input {...register('dateOfBirth')} type="date" className={errors.dateOfBirth ? 'border-red-400' : ''} />
           </EditField>
-          <EditField label="National ID (CIN)" error={errors.cin?.message} icon={<CreditCard className="w-4 h-4" />}>
+          <EditField label={t('fields.nationalId')} error={errors.cin?.message} icon={<CreditCard className="w-4 h-4" />}>
             <div className="relative">
               <Input
                 {...register('cin')}
@@ -388,21 +390,21 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
       {/* Address */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-gray-900">Address</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900">{t('sections.address')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <EditField label="Street" error={errors.street?.message} icon={<MapPin className="w-4 h-4" />}>
-            <Input {...register('street')} placeholder="123 Main St" className={errors.street ? 'border-red-400' : ''} />
+          <EditField label={t('fields.street')} error={errors.street?.message} icon={<MapPin className="w-4 h-4" />}>
+            <Input {...register('street')} placeholder={t('placeholders.street')} className={errors.street ? 'border-red-400' : ''} />
           </EditField>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <EditField label="City" error={errors.city?.message} icon={<MapPin className="w-4 h-4" />}>
-              <Input {...register('city')} placeholder="City" className={errors.city ? 'border-red-400' : ''} />
+            <EditField label={t('fields.city')} error={errors.city?.message} icon={<MapPin className="w-4 h-4" />}>
+              <Input {...register('city')} placeholder={t('placeholders.city')} className={errors.city ? 'border-red-400' : ''} />
             </EditField>
-            <EditField label="Province / State" error={errors.province?.message} icon={<MapPin className="w-4 h-4" />}>
-              <Input {...register('province')} placeholder="Province" className={errors.province ? 'border-red-400' : ''} />
+            <EditField label={t('fields.province')} error={errors.province?.message} icon={<MapPin className="w-4 h-4" />}>
+              <Input {...register('province')} placeholder={t('placeholders.province')} className={errors.province ? 'border-red-400' : ''} />
             </EditField>
-            <EditField label="Postal Code" error={errors.postalCode?.message} icon={<MapPin className="w-4 h-4" />}>
-              <Input {...register('postalCode')} placeholder="00000" className={errors.postalCode ? 'border-red-400' : ''} />
+            <EditField label={t('fields.postalCode')} error={errors.postalCode?.message} icon={<MapPin className="w-4 h-4" />}>
+              <Input {...register('postalCode')} placeholder={t('placeholders.postalCode')} className={errors.postalCode ? 'border-red-400' : ''} />
             </EditField>
           </div>
         </CardContent>
@@ -412,16 +414,16 @@ export function PersonalInfoTab({ profile: initialProfile }: PersonalInfoTabProp
       <div className="flex items-center justify-end gap-3">
         <Button type="button" variant="outline" onClick={handleCancel} disabled={isSaving} className="gap-1.5">
           <X className="w-4 h-4" />
-          Cancel
+          {t('cancel')}
         </Button>
         <Button type="submit" disabled={isSaving} className="min-w-35 bg-blue-600 hover:bg-blue-700">
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving…
+              {t('saving')}
             </>
           ) : (
-            'Save Changes'
+            t('saveChanges')
           )}
         </Button>
       </div>

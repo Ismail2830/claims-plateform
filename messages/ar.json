@@ -1,0 +1,308 @@
+{
+  "tabs": {
+    "personalInfo": "المعلومات الشخصية",
+    "security": "الأمان",
+    "notifications": "الإشعارات",
+    "documents": "الوثائق"
+  },
+  "header": {
+    "memberSince": "عضو منذ",
+    "lastLogin": "آخر دخول",
+    "at": "في",
+    "idVerified": "هوية متحققة",
+    "emailVerified": "بريد إلكتروني متحقق",
+    "status": {
+      "ACTIVE": "نشط",
+      "INACTIVE": "غير نشط",
+      "SUSPENDED": "موقوف",
+      "PENDING_VERIFICATION": "في انتظار التحقق",
+      "BLOCKED": "محظور"
+    }
+  },
+  "personalInfo": {
+    "title": "المعلومات الشخصية",
+    "edit": "تعديل",
+    "cancel": "إلغاء",
+    "saveChanges": "حفظ التغييرات",
+    "saving": "جارٍ الحفظ…",
+    "sections": {
+      "name": "الاسم",
+      "contact": "التواصل",
+      "identity": "الهوية",
+      "address": "العنوان"
+    },
+    "fields": {
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "phone": "رقم الهاتف",
+      "dateOfBirth": "تاريخ الميلاد",
+      "nationalId": "بطاقة الهوية الوطنية (CIN)",
+      "street": "الشارع",
+      "city": "المدينة",
+      "province": "الإقليم / الجهة",
+      "postalCode": "الرمز البريدي"
+    },
+    "placeholders": {
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "عنوان البريد الإلكتروني",
+      "phone": "+212 6XX XXX XXX",
+      "postalCode": "00000",
+      "city": "المدينة",
+      "province": "الإقليم",
+      "street": "123 الشارع الرئيسي"
+    }
+  },
+  "navigation": {
+    "dashboard": "لوحة التحكم",
+    "myClaims": "مطالباتي",
+    "myPolicies": "وثائقي",
+    "createClaim": "إنشاء مطالبة",
+    "profile": "الملف الشخصي"
+  },
+  "dashboard": {
+    "title": "لوحة تحكم العميل",
+    "loadingDashboard": "جارٍ تحميل لوحة التحكم...",
+    "redirectingToLogin": "جارٍ التحويل إلى تسجيل الدخول...",
+    "loadingData": "جارٍ تحميل البيانات...",
+    "unableToLoad": "تعذّر تحميل لوحة التحكم",
+    "unableToLoadDesc": "حدثت مشكلة أثناء تحميل بياناتك.",
+    "refreshPage": "تحديث الصفحة",
+    "loadingFallback": "جارٍ التحميل...",
+    "claimSubmittedSuccess": "تم تقديم مطالبتك بنجاح! ستتلقى تحديثات حول حالة مطالبتك.",
+    "newActivityUpdate": "تحديث جديد",
+    "realTimeUnavailable": "التحديثات الفورية غير متاحة حاليًا.",
+    "reconnect": "إعادة الاتصال",
+    "dataNotCurrent": "قد لا تكون بعض البيانات محدّثة. يرجى تحديث الصفحة إذا استمرت المشكلة.",
+    "welcomeBack": "مرحبًا بعودتك، {name}!",
+    "overviewDesc": "إليك نظرة عامة على مطالباتك ووثائق التأمين الخاصة بك.",
+    "stats": {
+      "totalClaims": "إجمالي المطالبات",
+      "pendingClaims": "المطالبات المعلّقة",
+      "activePolicies": "الوثائق النشطة",
+      "totalCoverage": "إجمالي التغطية",
+      "allTime": "الإجمالي",
+      "underReview": "قيد المراجعة",
+      "currentlyCovered": "تغطية نشطة",
+      "combinedPolicies": "الوثائق المجمّعة"
+    },
+    "actions": {
+      "createNew": "إنشاء مطالبة جديدة",
+      "createNewDesc": "تقديم مطالبة تأمين جديدة بسبب ضرر أو خسارة",
+      "startNew": "بدء مطالبة جديدة",
+      "trackClaims": "متابعة المطالبات",
+      "trackClaimsDesc": "عرض الحالة والتحديثات للمطالبات المقدّمة",
+      "viewMyClaims": "عرض مطالباتي",
+      "managePolicies": "إدارة الوثائق",
+      "managePoliciesDesc": "مراجعة وثائق التأمين والتغطية الخاصة بك",
+      "viewPolicies": "عرض الوثائق"
+    },
+    "quickInfo": {
+      "title": "معلومات سريعة",
+      "lastLogin": "آخر دخول",
+      "coverageStatus": "حالة التغطية",
+      "pendingClaims": "المطالبات المعلّقة",
+      "active": "نشط",
+      "noCoverage": "بدون تغطية",
+      "today": "اليوم",
+      "pendingSuffix": "معلّق"
+    },
+    "recentActivity": "النشاط الأخير",
+    "justNow": "الآن",
+    "minutesAgo": "منذ {count} دقيقة",
+    "hoursAgo": "منذ {count} ساعة",
+    "daysAgo": "منذ {count} يوم"
+  },
+  "claims": {
+    "title": "مطالباتي",
+    "loading": "جارٍ التحميل...",
+    "loadingClaims": "جارٍ تحميل المطالبات...",
+    "subtitle": "تتبّع مطالباتك وإدارتها",
+    "createNew": "إنشاء مطالبة جديدة",
+    "searchPlaceholder": "البحث في المطالبات...",
+    "allStatus": "جميع الحالات",
+    "tryAgain": "حاول مرة أخرى",
+    "noClaimsFound": "لا توجد مطالبات",
+    "noClaimsFiltered": "جرّب تعديل الفلاتر لعرض المزيد من النتائج.",
+    "noClaimsYet": "لم تقدّم أي مطالبة بعد.",
+    "createFirstClaim": "إنشاء أول مطالبة",
+    "policy": "الوثيقة",
+    "incident": "الحادثة",
+    "location": "الموقع",
+    "type": "النوع",
+    "claimed": "المطالب به",
+    "approved": "المعتمد",
+    "submitted": "تاريخ التقديم",
+    "via": "عبر",
+    "viewDetails": "عرض التفاصيل",
+    "statuses": {
+      "DECLARED": "مُصرَّح به",
+      "ANALYZING": "قيد التحليل",
+      "DOCS_REQUIRED": "وثائق مطلوبة",
+      "UNDER_EXPERTISE": "قيد الخبرة",
+      "IN_DECISION": "قيد القرار",
+      "APPROVED": "مقبولة",
+      "IN_PAYMENT": "قيد الصرف",
+      "CLOSED": "مغلقة",
+      "REJECTED": "مرفوضة"
+    }
+  },
+  "notifications": {
+    "channels": {
+      "title": "\u0642\u0646\u0648\u0627\u062a \u0627\u0644\u0625\u0634\u0639\u0627\u0631",
+      "desc": "\u0627\u062e\u062a\u0631 \u0643\u064a\u0641\u064a\u0629 \u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a.",
+      "email": "\u0628\u0631\u064a\u062f \u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a",
+      "emailDesc": "\u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a \u0639\u0628\u0631 \u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a",
+      "sms": "\u0631\u0633\u0627\u0626\u0644 \u0646\u0635\u064a\u0629",
+      "smsDesc": "\u0627\u0633\u062a\u0644\u0627\u0645 \u0631\u0633\u0627\u0626\u0644 SMS",
+      "inApp": "\u062f\u0627\u062e\u0644 \u0627\u0644\u062a\u0637\u0628\u064a\u0642",
+      "inAppDesc": "\u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a \u062f\u0627\u062e\u0644 \u0627\u0644\u0645\u0646\u0635\u0629"
+    },
+    "language": {
+      "title": "\u062a\u0641\u0636\u064a\u0644 \u0627\u0644\u0644\u063a\u0629",
+      "desc": "\u0627\u062e\u062a\u0631 \u0644\u063a\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a \u0648\u0648\u0627\u062c\u0647\u0629 \u0627\u0644\u0645\u0646\u0635\u0629."
+    },
+    "triggers": {
+      "title": "\u0645\u062d\u0641\u0651\u0632\u0627\u062a \u0627\u0644\u0625\u0634\u0639\u0627\u0631",
+      "desc": "\u0627\u062e\u062a\u0631 \u0627\u0644\u0623\u062d\u062f\u0627\u062b \u0627\u0644\u062a\u064a \u062a\u0631\u064a\u062f \u0625\u0634\u0639\u0627\u0631\u0643 \u0628\u0647\u0627.",
+      "claimStatusUpdates": "\u062a\u062d\u062f\u064a\u062b\u0627\u062a \u062d\u0627\u0644\u0629 \u0627\u0644\u0645\u0637\u0627\u0644\u0628\u0629",
+      "claimStatusUpdatesDesc": "\u0625\u0634\u0639\u0627\u0631\u0643 \u0639\u0646\u062f \u062a\u063a\u064a\u064a\u0631 \u062d\u0627\u0644\u0629 \u0645\u0637\u0627\u0644\u0628\u062a\u0643.",
+      "policyRenewalReminders": "\u062a\u0630\u0643\u064a\u0631\u0627\u062a \u062a\u062c\u062f\u064a\u062f \u0627\u0644\u0648\u062b\u064a\u0642\u0629",
+      "policyRenewalRemindersDesc": "\u062a\u0630\u0643\u064a\u0631\u0627\u062a \u0642\u0628\u0644 \u0627\u0646\u062a\u0647\u0627\u0621 \u0635\u0644\u0627\u062d\u064a\u0629 \u0648\u062b\u064a\u0642\u062a\u0643.",
+      "paymentConfirmations": "\u062a\u0623\u0643\u064a\u062f\u0627\u062a \u0627\u0644\u062f\u0641\u0639",
+      "paymentConfirmationsDesc": "\u062a\u0623\u0643\u064a\u062f \u0639\u0646\u062f \u0645\u0639\u0627\u0644\u062c\u0629 \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0627\u062a.",
+      "securityAlerts": "\u062a\u0646\u0628\u064a\u0647\u0627\u062a \u0627\u0644\u0623\u0645\u0627\u0646",
+      "securityAlertsDesc": "\u062a\u0646\u0628\u064a\u0647\u0627\u062a \u0644\u0644\u0646\u0634\u0627\u0637 \u0627\u0644\u0645\u0634\u0628\u0648\u0647 \u0623\u0648 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0645\u0646 \u062c\u0647\u0627\u0632 \u062c\u062f\u064a\u062f."
+    },
+    "savePreferences": "\u062d\u0641\u0638 \u0627\u0644\u062a\u0641\u0636\u064a\u0644\u0627\u062a",
+    "saving": "\u062c\u0627\u0631\u064d \u0627\u0644\u062d\u0641\u0638\u2026",
+    "savedSuccess": "\u062a\u0645 \u062d\u0641\u0638 \u0627\u0644\u062a\u0641\u0636\u064a\u0644\u0627\u062a \u0628\u0646\u062c\u0627\u062d!",
+    "savedError": "\u0641\u0634\u0644 \u062d\u0641\u0638 \u0627\u0644\u062a\u0641\u0636\u064a\u0644\u0627\u062a."
+  },
+  "policies": {
+    "title": "وثائقي",
+    "loadingPolicies": "جارٍ تحميل الوثائق...",
+    "policy": "وثيقة",
+    "policiesPlural": "وثائق",
+    "expiringSoon": "تنتهي قريبًا",
+    "expiringSoonBadge": "تنتهي قريبًا",
+    "searchPlaceholder": "البحث برقم الوثيقة أو النوع أو التغطية...",
+    "allStatus": "جميع الحالات",
+    "noPoliciesFound": "لا توجد وثائق",
+    "noPoliciesFiltered": "جرّب تعديل الفلاتر.",
+    "noPoliciesYet": "ليس لديك وثائق في حسابك.",
+    "viewDetails": "عرض التفاصيل",
+    "coverage": "التغطية",
+    "yearSuffix": "/ سنة",
+    "linkedClaim": "مطالبة مرتبطة",
+    "linkedClaims": "مطالبات مرتبطة",
+    "statuses": {
+      "ACTIVE": "نشط",
+      "EXPIRED": "منتهي",
+      "SUSPENDED": "موقوف",
+      "CANCELED": "ملغى"
+    },
+    "types": {
+      "AUTO": "تأمين السيارة",
+      "HOME": "تأمين المنزل",
+      "HEALTH": "التأمين الصحي",
+      "LIFE": "التأمين على الحياة"
+    }
+  },
+  "security": {
+    "contactVerification": {
+      "title": "التحقق من جهة الاتصال",
+      "desc": "تحقق من بريدك الإلكتروني لتأمين حسابك وتفعيل المصادقة الثنائية.",
+      "emailAddress": "عنوان البريد الإلكتروني",
+      "verified": "تم التحقق",
+      "verify": "تحقق",
+      "otpSent": "تم إرسال الرمز",
+      "enterCode": "أدخل الرمز المكون من 6 أرقام المرسل إلى {type}",
+      "resendIn": "إعادة الإرسال خلال {countdown}ث",
+      "resendOtp": "إعادة إرسال الرمز",
+      "cancel": "إلغاء",
+      "confirm": "تأكيد",
+      "otpSentSuccess": "تم إرسال الرمز إلى {type}"
+    },
+    "twoFactor": {
+      "title": "المصادقة الثنائية",
+      "desc": "اطلب رمز OTP في كل مرة تسجل فيها الدخول لأمان إضافي.",
+      "statusLabel": "حالة المصادقة الثنائية",
+      "verifyEmailFirst": "تحقق من بريدك أولاً لتفعيل المصادقة الثنائية.",
+      "activeCodes": "نشط — الرموز مرسلة عبر {method}",
+      "enableProtection": "فعّل للحصول على حماية أقوى عند تسجيل الدخول.",
+      "enabled": "مفعّل",
+      "disabled": "معطّل",
+      "chooseMethod": "اختر كيفية استلام الرمز:",
+      "notVerified": "(غير متحقق)",
+      "cancel": "إلغاء",
+      "enable": "تفعيل المصادقة الثنائية"
+    },
+    "password": {
+      "title": "تغيير كلمة المرور",
+      "desc": "اختر كلمة مرور قوية وفريدة.",
+      "currentPassword": "كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور الجديدة",
+      "update": "تحديث كلمة المرور",
+      "updating": "جارٍ التحديث…"
+    },
+    "strength": {
+      "veryWeak": "ضعيفة جداً",
+      "weak": "ضعيفة",
+      "fair": "مقبولة",
+      "good": "جيدة",
+      "strong": "قوية",
+      "veryStrong": "قوية جداً"
+    }
+  },
+  "documents": {
+    "upload": {
+      "title": "رفع الوثائق",
+      "desc": "الصيغ المدعومة: JPEG، PNG، PDF، DOC، DOCX — بحد أقصى 10 ميغا لكل ملف.",
+      "uploading": "جارٍ الرفع…",
+      "dragDrop": "اسحب وأفلت الملفات هنا، أو انقر للتصفح",
+      "formats": "JPEG · PNG · PDF · DOC · DOCX",
+      "success": "{count, plural, one {# ملف تم رفعه} other {# ملفات تم رفعها}}",
+      "failed": "فشل الرفع. يرجى المحاولة مرة أخرى."
+    },
+    "list": {
+      "title": "وثائقي",
+      "empty": "لم يتم رفع أي وثيقة بعد.",
+      "headers": {
+        "name": "الاسم",
+        "type": "النوع",
+        "uploadDate": "تاريخ الرفع",
+        "expiryDate": "تاريخ الانتهاء",
+        "status": "الحالة",
+        "actions": "إجراءات"
+      }
+    },
+    "types": {
+      "NATIONAL_ID": "بطاقة الهوية",
+      "PASSPORT": "جواز سفر",
+      "POLICY_DOCUMENT": "وثيقة التأمين",
+      "CLAIM_ATTACHMENT": "مرفق المطالبة",
+      "OTHER": "أخرى"
+    },
+    "statuses": {
+      "UPLOADED": "تم الرفع",
+      "PROCESSING": "جارٍ المعالجة",
+      "VERIFIED": "تم التحقق",
+      "REJECTED": "مرفوض",
+      "EXPIRED": "منتهي الصلاحية"
+    },
+    "delete": {
+      "success": "تم حذف الوثيقة.",
+      "failed": "فشل حذف الوثيقة."
+    },
+    "download": {
+      "downloading": "جارٍ تحميل {name}…"
+    },
+    "preview": {
+      "notAvailable": "المعاينة غير متاحة",
+      "downloadToView": "حمّل للعرض"
+    }
+  }
+}

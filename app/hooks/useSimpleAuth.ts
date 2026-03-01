@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from './useSession';
 
 interface Client {
   clientId: string;
@@ -33,43 +35,93 @@ export function useSimpleAuth() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  const handleSessionExpired = useCallback(() => {
+    localStorage.removeItem('clientToken');
+    setToken(null);
+    setUser(null);
+    setIsLoading(false);
+  }, []);
+
+  const handleTokenRefresh = useCallback((newToken: string) => {
+    setToken(newToken);
+    localStorage.setItem('clientToken', newToken);
+  }, []);
+
+  // Auto-refresh every 13 min + 30 min idle timeout
+  useSession({ type: 'client', onRefresh: handleTokenRefresh, onExpired: handleSessionExpired });
 
   useEffect(() => {
-    console.log('useSimpleAuth: Initializing auth state');
     const storedToken = localStorage.getItem('clientToken');
-    console.log('useSimpleAuth: Stored token exists:', !!storedToken);
-    
     if (storedToken) {
       setToken(storedToken);
-      fetchProfile(storedToken);
+      initAuth(storedToken);
     } else {
-      setIsLoading(false);
+      // No stored token — try silent refresh (refresh cookie may still be valid)
+      tryRefreshThenInit();
     }
   }, []);
 
-  const fetchProfile = async (authToken: string) => {
-    console.log('fetchProfile: Starting profile fetch');
+  /** Try to verify stored token; if 401, attempt refresh before giving up. */
+  const initAuth = async (authToken: string) => {
     try {
       const response = await fetch('/api/auth/profile', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
+        headers: { 'Authorization': `Bearer ${authToken}` },
       });
-      
-      console.log('fetchProfile: Response status:', response.status);
-      
+
       if (response.ok) {
         const result = await response.json();
-        console.log('fetchProfile: Profile data received:', !!result.data);
         setUser(result.data);
+        setIsLoading(false);
+        return;
+      }
+
+      if (response.status === 401) {
+        // Access token expired or invalid — try to refresh silently
+        await tryRefreshThenInit();
+        return;
+      }
+
+      // Server error — keep token, unblock UI
+      setIsLoading(false);
+    } catch {
+      // Network error — keep token, unblock UI
+      setIsLoading(false);
+    }
+  };
+
+  /** Call the refresh endpoint; if it succeeds, store new token + fetch profile. */
+  const tryRefreshThenInit = async () => {
+    try {
+      const res = await fetch('/api/auth/refresh', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        const newToken: string = data.accessToken;
+        localStorage.setItem('clientToken', newToken);
+        setToken(newToken);
+
+        // Fetch profile with fresh token
+        const profileRes = await fetch('/api/auth/profile', {
+          headers: { 'Authorization': `Bearer ${newToken}` },
+        });
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          setUser(profile.data);
+        } else {
+          // Refresh worked but profile failed — clear everything
+          localStorage.removeItem('clientToken');
+          setToken(null);
+        }
       } else {
-        console.log('fetchProfile: Token invalid, removing');
-        // Token might be invalid, remove it
+        // Refresh failed — no valid session at all
         localStorage.removeItem('clientToken');
         setToken(null);
       }
-    } catch (error) {
-      console.error('Failed to fetch profile:', error);
+    } catch {
+      // Network error — clear to be safe
+      localStorage.removeItem('clientToken');
+      setToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -109,13 +161,13 @@ export function useSimpleAuth() {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe = false) => {
     console.log('login: Attempting login for:', email);
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const result = await response.json();
@@ -169,12 +221,15 @@ export function useSimpleAuth() {
     return result;
   };
 
-  const logout = () => {
-    console.log('logout: Logging out user');
+  const logout = async () => {
+    // Clear state immediately so the dashboard stops rendering
     localStorage.removeItem('clientToken');
     setToken(null);
     setUser(null);
     setIsLoading(false);
+    // Best-effort server-side session revoke + cookie clear
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
+    router.replace('/auth/login');
   };
 
   const fetchActivityLogs = async (limit = 20, offset = 0) => {

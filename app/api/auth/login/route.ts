@@ -3,9 +3,9 @@ import { prisma } from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { generateOtp, storeOtp, sendEmailOtp } from '@/app/lib/otp';
+import { ACCESS_SECRET } from '@/app/lib/tokens';
 
-const JWT_SECRET    = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-const JWT_EXPIRES_IN = '7d';
+const JWT_SECRET = ACCESS_SECRET;
 
 /** Mask email - show first 3 chars and domain */
 function maskEmail(email: string): string {
@@ -17,7 +17,7 @@ function maskEmail(email: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, rememberMe = false } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -88,9 +88,9 @@ export async function POST(request: NextRequest) {
     storeOtp('2fa', client.clientId, code);
     await sendEmailOtp(client.email, code, '2fa');
 
-    // Short-lived pending token (5 min) - carries clientId only
+    // Short-lived pending token (5 min) — carries clientId + rememberMe preference
     const pendingToken = jwt.sign(
-      { clientId: client.clientId, type: 'PENDING_2FA' },
+      { clientId: client.clientId, type: 'PENDING_2FA', rememberMe: !!rememberMe },
       JWT_SECRET,
       { expiresIn: '5m' }
     );

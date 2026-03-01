@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { verifyAccessToken } from '@/app/lib/tokens';
 import bcrypt from 'bcryptjs';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
 // Verify admin token and return user info
 async function verifyAdminToken(request: NextRequest) {
@@ -15,8 +13,8 @@ async function verifyAdminToken(request: NextRequest) {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
+    const decoded = verifyAccessToken(token);
+
     if (decoded.type !== 'ADMIN') {
       return null;
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
+import { useAdminAuth } from '@/app/hooks/useAdminAuth';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
 import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
-  const { user, isLoading } = useSimpleAuth();
+  const { user, isLoading, logout } = useAdminAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [activeEntityTab, setActiveEntityTab] = useState('users');
@@ -79,7 +79,7 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/auth/login');
+      router.replace('/auth/admin');
     }
   }, [user, isLoading, router]);
 
@@ -188,6 +188,8 @@ export default function SuperAdminDashboard() {
       title="Super Admin Dashboard" 
       userRole="SUPER_ADMIN"
       navigation={navigation}
+      userProp={user}
+      logoutProp={logout}
     >
       {activeTab === 'overview' && (
         <>

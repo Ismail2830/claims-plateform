@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TRPCProvider } from './lib/trpc-client';
+import { Suspense } from 'react';
+import SessionGuard from './components/SessionGuard';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,6 +32,9 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <TRPCProvider>
+          <Suspense fallback={null}>
+            <SessionGuard />
+          </Suspense>
           {children}
         </TRPCProvider>
       </body>

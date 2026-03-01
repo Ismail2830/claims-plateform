@@ -54,6 +54,7 @@ function OtpBoxes({ value, onChange, disabled }: { value: string; onChange: (v: 
 export default function UnifiedLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [rememberMe, setRememberMe] = useState(false);
 
   // 2FA state
   const [step, setStep] = useState<'credentials' | '2fa'>('credentials');
@@ -68,6 +69,7 @@ export default function UnifiedLoginForm() {
   const searchParams = useSearchParams();
   const auth = useSimpleAuth();
   const wasRegistered = searchParams.get('registered') === 'true';
+  const wasReset = searchParams.get('reset') === 'success';
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -93,7 +95,7 @@ export default function UnifiedLoginForm() {
     setErrorMessage('');
 
     try {
-      const res = await auth.login(formData.email, formData.password);
+      const res = await auth.login(formData.email, formData.password, rememberMe);
 
       if (res.requires2FA) {
         setPendingToken(res.pendingToken);
@@ -137,7 +139,7 @@ export default function UnifiedLoginForm() {
     setOtp('');
 
     try {
-      const res = await auth.login(formData.email, formData.password);
+      const res = await auth.login(formData.email, formData.password, rememberMe);
       if (res.requires2FA) {
         setPendingToken(res.pendingToken);
         startResendTimer();
@@ -215,6 +217,17 @@ export default function UnifiedLoginForm() {
                   </motion.div>
                 )}
 
+                {wasReset && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <p className="text-sm text-green-800">
+                        <strong>Mot de passe mis à jour !</strong> Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Email */}
                   <div>
@@ -259,10 +272,13 @@ export default function UnifiedLoginForm() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                      <input id="remember-me" name="remember-me" type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
                       <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">Remember me</label>
                     </div>
-                    <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">Forgot password?</a>
+                    <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">Mot de passe oublié ?</Link>
                   </div>
 
                   <motion.button

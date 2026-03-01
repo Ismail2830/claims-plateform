@@ -15,6 +15,7 @@ export function Footer() {
             <a href="#" className="hover:text-blue-600 transition-colors">Confidentialité</a>
             <a href="#" className="hover:text-blue-600 transition-colors">Conditions d'utilisation</a>
             <a href="#" className="hover:text-blue-600 transition-colors">Contact</a>
+            <a href="/auth/admin" className="hover:text-blue-600 transition-colors">Administration</a>
           </div>
           <p className="text-xs sm:text-sm text-neutral-400 text-center md:text-right">© 2026 SinistreConnect. Tous droits réservés.</p>
         </div>

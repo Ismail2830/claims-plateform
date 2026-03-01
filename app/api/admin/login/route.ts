@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+import {
+  signAccessToken,
+  signRefreshToken,
+  hashToken,
+  parseDeviceName,
+  buildRefreshCookieOptions,
+  ADMIN_REFRESH_COOKIE,
+  ADMIN_ACCESS_COOKIE,
+  ACCESS_COOKIE_OPTIONS,
+} from '@/app/lib/tokens';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +19,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Login attempt for:', body.email);
     
-    const { email, password } = body;
+    const { email, password, rememberMe = false } = body;
 
     // Validate required fields
     if (!email || !password) {
@@ -73,19 +80,33 @@ export async function POST(request: NextRequest) {
       data: { lastLogin: new Date() }
     });
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: user.userId,
-        email: user.email,
-        role: user.role,
-        type: 'ADMIN'
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    // ── Issue 15-min access token ─────────────────────────────────
+    const accessToken = signAccessToken({
+      userId: user.userId,
+      email: user.email,
+      role: user.role,
+      type: 'ADMIN',
+    });
 
-    // Create audit log
+    // ── Issue refresh token with duration based on rememberMe ────────────────────────
+    const refreshDays = rememberMe ? 30 : 7;
+    const rawRefresh  = signRefreshToken({ userId: user.userId, type: 'ADMIN' }, `${refreshDays}d`);
+    const ipAddress   = request.headers.get('x-forwarded-for') ||
+                        request.headers.get('x-real-ip') || 'unknown';
+    const userAgent   = request.headers.get('user-agent') || 'unknown';
+
+    await prisma.session.create({
+      data: {
+        userId: user.userId,
+        hashedToken: hashToken(rawRefresh),
+        ipAddress,
+        userAgent,
+        deviceName: parseDeviceName(userAgent),
+        rememberMe,
+        expiresAt: new Date(Date.now() + refreshDays * 24 * 60 * 60 * 1000),
+      },
+    });
+
     await prisma.auditLog.create({
       data: {
         entityType: 'USER',
@@ -93,10 +114,8 @@ export async function POST(request: NextRequest) {
         action: 'LOGIN',
         description: `Admin user logged in: ${user.firstName} ${user.lastName} (${user.email})`,
         userId: user.userId,
-        ipAddress: request.headers.get('x-forwarded-for') || 
-                  request.headers.get('x-real-ip') || 
-                  'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
+        ipAddress,
+        userAgent,
         metadata: {
           loginTime: new Date().toISOString(),
           role: user.role,
@@ -107,17 +126,18 @@ export async function POST(request: NextRequest) {
 
     console.log('Admin login successful:', user.userId);
 
-    // Return user data without password hash
     const { passwordHash, ...userData } = user;
-    
-    return NextResponse.json({
+
+    const response = NextResponse.json({
       success: true,
       message: 'Login successful',
-      data: {
-        token,
-        user: userData
-      }
+      data: { token: accessToken, user: userData },
     });
+
+    response.cookies.set(ADMIN_REFRESH_COOKIE, rawRefresh, buildRefreshCookieOptions(rememberMe));
+    response.cookies.set(ADMIN_ACCESS_COOKIE,  accessToken, ACCESS_COOKIE_OPTIONS);
+
+    return response;
 
   } catch (error: any) {
     console.error('Admin login error:', error);

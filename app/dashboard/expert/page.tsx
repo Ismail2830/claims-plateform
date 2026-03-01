@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
+import { useAdminAuth } from '@/app/hooks/useAdminAuth';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
 import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
@@ -20,12 +20,12 @@ import {
 } from 'lucide-react';
 
 export default function ExpertDashboard() {
-  const { user, isLoading } = useSimpleAuth();
+  const { user, isLoading, logout } = useAdminAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/auth/login');
+      router.replace('/auth/admin');
 
     }
   }, [user, isLoading, router]);
@@ -139,6 +139,8 @@ export default function ExpertDashboard() {
       title="Expert Dashboard" 
       userRole="EXPERT"
       navigation={navigation}
+      userProp={user}
+      logoutProp={logout}
     >
       {/* Welcome Message */}
       <div className="mb-8">

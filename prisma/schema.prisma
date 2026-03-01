@@ -46,6 +46,8 @@ model Client {
   documents   ClaimDocument[] @relation("DocumentUploadedByClient")
   comments    ClaimComment[] @relation("CommentAuthorClient")
   auditLogs   AuditLog[] @relation("AuditLogClient")
+  passwordResetTokens PasswordResetToken[]
+  sessions    Session[]
 }
 
 model User {
@@ -70,6 +72,8 @@ model User {
   commentsAuthored ClaimComment[] @relation("CommentAuthorUser")
   commentsRead ClaimComment[] @relation("CommentReadBy")
   auditLogs AuditLog[] @relation("AuditLogUser")
+  passwordResetTokens PasswordResetToken[]
+  sessions    Session[]
 
   @@index([role], map: "idx_users_role")
   @@index([email], map: "idx_users_email")
@@ -77,20 +81,25 @@ model User {
 }
 
 model Policy {
-  policyId      String      @id @default(uuid()) @map("policy_id") @db.Uuid
-  clientId      String      @map("client_id") @db.Uuid
-  client        Client      @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  policyNumber  String      @unique @map("policy_number") @db.VarChar(50)
-  policyType    PolicyType  @map("policy_type")
-  coverageType  String?     @map("coverage_type") @db.VarChar(100)
-  startDate     DateTime    @map("start_date") @db.Date
-  endDate       DateTime    @map("end_date") @db.Date
-  premiumAmount Decimal     @map("premium_amount") @db.Decimal(12, 2)
-  insuredAmount Decimal     @map("insured_amount") @db.Decimal(12, 2)
-  deductible    Decimal     @default(0) @db.Decimal(12, 2)
-  status        PolicyStatus @default(ACTIVE)
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  policyId         String            @id @default(uuid()) @map("policy_id") @db.Uuid
+  clientId         String            @map("client_id") @db.Uuid
+  client           Client            @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  policyNumber     String            @unique @map("policy_number") @db.VarChar(50)
+  policyType       PolicyType        @map("policy_type")
+  coverageType     CoverageType?     @map("coverage_type")
+  startDate        DateTime          @map("start_date") @db.Date
+  endDate          DateTime          @map("end_date") @db.Date
+  renewalDate      DateTime?         @map("renewal_date") @db.Date
+  premiumAmount    Decimal           @map("premium_amount") @db.Decimal(12, 2)
+  insuredAmount    Decimal           @map("insured_amount") @db.Decimal(12, 2)
+  deductible       Decimal           @default(0) @db.Decimal(12, 2)
+  premiumFrequency PremiumFrequency  @default(ANNUAL) @map("premium_frequency")
+  isObligatory     Boolean           @default(false) @map("is_obligatory")
+  isTakaful        Boolean           @default(false) @map("is_takaful")
+  notes            String?           @db.Text
+  status           PolicyStatus      @default(ACTIVE)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
 
   // Relations
   claims        Claim[]
@@ -323,6 +332,48 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  hashedToken  String   @unique @map("hashed_token") @db.VarChar(255)
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent") @db.Text
+  deviceName   String?  @map("device_name") @db.VarChar(100)
+  rememberMe   Boolean  @default(false) @map("remember_me")
+  lastActivity DateTime @default(now()) @map("last_activity")
+  expiresAt    DateTime @map("expires_at")
+  isRevoked    Boolean  @default(false) @map("is_revoked")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Either a client or a staff user owns this session
+  clientId String? @map("client_id") @db.Uuid
+  client   Client? @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  userId   String? @map("user_id") @db.Uuid
+  user     User?   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([hashedToken], map: "idx_sessions_token")
+  @@index([clientId],    map: "idx_sessions_client")
+  @@index([userId],      map: "idx_sessions_user")
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.VarChar(255)  // SHA-256 hashed token
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Either a client or a user resets their password
+  clientId  String?  @map("client_id") @db.Uuid
+  client    Client?  @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  userId    String?  @map("user_id") @db.Uuid
+  user      User?    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([token], map: "idx_prt_token")
+  @@index([expiresAt], map: "idx_prt_expires")
+  @@map("password_reset_tokens")
+}
+
 enum ClaimType {
   ACCIDENT
   THEFT
@@ -357,10 +408,66 @@ enum DeclarationChannel {
 }
 
 enum PolicyType {
-  AUTO
-  HOME
-  HEALTH
-  LIFE
+  // ─── Non-Vie (Dommages) ───────────────────────
+  AUTO              // RC Auto / Tiers Plus / Tous Risques
+  HOME              // Multirisques Habitation / Incendie
+  PROFESSIONAL      // Multirisques Professionnelle
+  AGRICULTURE       // Grêle, Mortalité bétail
+  TRANSPORT         // Maritime, aérien, terrestre marchandises
+  CONSTRUCTION      // TRC + RCD (obligatoire depuis déc. 2024)
+  LIABILITY         // RC Générale / RC Décennale
+
+  // ─── Personnes (Vie) ─────────────────────────
+  HEALTH            // AMO / Complémentaire Santé
+  LIFE              // Décès / Épargne Vie / Retraite
+  ACCIDENT          // Accidents Corporels
+  ASSISTANCE        // Rapatriement, aide voyage
+
+  // ─── Crédit & Caution ─────────────────────────
+  CREDIT            // Assurance Crédit
+  SURETY            // Assurance Caution
+
+  // ─── Takaful ──────────────────────────────────
+  TAKAFUL_NON_VIE   // Takaful dommages
+  TAKAFUL_VIE       // Takaful vie / épargne
+}
+
+enum CoverageType {
+  // AUTO
+  RC_ONLY              // Responsabilité civile uniquement
+  THIRD_PARTY_PLUS     // Tiers plus (RC + vol + incendie)
+  COMPREHENSIVE        // Tous risques
+
+  // HOME
+  FIRE_ONLY
+  MULTIRISQUES
+  LANDLORD             // Propriétaire non-occupant
+
+  // HEALTH
+  AMO_BASIC
+  COMPLEMENTAIRE
+  FULL_COVER
+
+  // LIFE
+  TERM_LIFE            // Temporaire décès
+  WHOLE_LIFE           // Vie entière
+  SAVINGS              // Épargne / Capitalisation
+  RETIREMENT           // Retraite
+
+  // CONSTRUCTION
+  TRC_ONLY
+  RCD_ONLY
+  TRC_AND_RCD          // Combiné obligatoire
+
+  OTHER
+}
+
+
+enum PremiumFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
 }
 
 enum PolicyStatus {

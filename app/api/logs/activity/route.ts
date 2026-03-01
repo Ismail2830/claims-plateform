@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+import { verifyAccessToken } from '@/app/lib/tokens';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,9 +15,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
+    // Verify token using the correct access secret
+    let decoded: ReturnType<typeof verifyAccessToken>;
+    try {
+      decoded = verifyAccessToken(token);
+    } catch {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
     if (decoded.type !== 'CLIENT') {
       return NextResponse.json(
         { success: false, message: 'Invalid token type' },

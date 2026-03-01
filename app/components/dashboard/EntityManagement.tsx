@@ -14,6 +14,42 @@ import {
 } from '../../lib/api/superAdminAPI';
 import ClaimDetailsModal from './ClaimDetailsModal';
 import { useRealTimeUpdates } from '../../hooks/useRealTimeUpdates';
+
+// ── Coverage options keyed by policy type ─────────────────────────────────────
+const COVERAGE_BY_TYPE: Record<string, { value: string; label: string }[]> = {
+  AUTO: [
+    { value: 'RC_ONLY',         label: 'RC Uniquement' },
+    { value: 'THIRD_PARTY_PLUS',label: 'Tiers Plus (RC + Vol + Incendie)' },
+    { value: 'COMPREHENSIVE',   label: 'Tous Risques' },
+  ],
+  HOME: [
+    { value: 'FIRE_ONLY',    label: 'Incendie Uniquement' },
+    { value: 'MULTIRISQUES', label: 'Multirisques Habitation' },
+    { value: 'LANDLORD',     label: 'Propriétaire Non-Occupant' },
+  ],
+  HEALTH: [
+    { value: 'AMO_BASIC',      label: 'AMO Basique' },
+    { value: 'COMPLEMENTAIRE', label: 'Complémentaire Santé' },
+    { value: 'FULL_COVER',     label: 'Couverture Complète' },
+  ],
+  LIFE: [
+    { value: 'TERM_LIFE',   label: 'Temporaire Décès' },
+    { value: 'WHOLE_LIFE',  label: 'Vie Entière' },
+    { value: 'SAVINGS',     label: 'Épargne / Capitalisation' },
+    { value: 'RETIREMENT',  label: 'Retraite' },
+  ],
+  CONSTRUCTION: [
+    { value: 'TRC_ONLY',    label: 'TRC Uniquement' },
+    { value: 'RCD_ONLY',    label: 'RCD Uniquement' },
+    { value: 'TRC_AND_RCD', label: 'TRC + RCD (Combiné obligatoire)' },
+  ],
+};
+
+function generatePreviewPolicyNumber(): string {
+  const year = new Date().getFullYear();
+  const rand = String(Math.floor(100000 + Math.random() * 900000));
+  return `POL-${year}-${rand}`;
+}
 import { 
   Users, 
   UserPlus, 
@@ -93,6 +129,19 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
         return systemStats.claims?.stats?.filter((s: any) => !['CLOSED', 'REJECTED'].includes(s.status)).reduce((sum: number, s: any) => sum + s._count, 0) || 0;
       default:
         return 0;
+    }
+  };
+
+  // Returns the correct primary-key ID for the active entity tab.
+  // Using `||` chaining was wrong because policy/claim rows also contain
+  // a `clientId` field that would be picked up before `policyId`/`claimId`.
+  const getEntityId = (item: any): string => {
+    switch (activeEntityTab) {
+      case 'users':    return item.userId;
+      case 'clients':  return item.clientId;
+      case 'policies': return item.policyId;
+      case 'claims':   return item.claimId;
+      default:         return item.userId ?? item.clientId ?? item.policyId ?? item.claimId;
     }
   };
 
@@ -267,23 +316,29 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
         setShowEditModal(false);
         setEditingItem(null);
         loadEntityData();
+      } else if (result) {
+        // Throw so EditEntityModal can show the error inline
+        throw new Error(result.error || 'Update failed');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating entity:', error);
+      // Re-throw so the modal's catch block can surface it
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (item: any) => {
-    if (!confirm(`Are you sure you want to delete ${item.name || item.email || item.policyNumber || item.claimNumber}?`)) {
+    const label = item.policyNumber || item.claimNumber || item.email || item.name || getEntityId(item);
+    if (!confirm(`Are you sure you want to delete ${label}?`)) {
       return;
     }
 
     setLoading(true);
     try {
       let result;
-      const id = item.userId || item.clientId || item.policyId || item.claimId;
+      const id = getEntityId(item);
       
       switch (activeEntityTab) {
         case 'users':
@@ -302,9 +357,12 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
       
       if (result?.success) {
         loadEntityData();
+      } else if (result) {
+        alert(`Delete failed: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error deleting entity:', error);
+      alert('An unexpected error occurred while deleting.');
     } finally {
       setLoading(false);
     }
@@ -406,9 +464,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
                     checked={selectedItems.length === data.length && data.length > 0}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        const ids = data.map((item: any) => 
-                          item.userId || item.clientId || item.policyId || item.claimId
-                        );
+                        const ids = data.map((item: any) => getEntityId(item));
                         setSelectedItems(ids);
                       } else {
                         setSelectedItems([]);
@@ -421,7 +477,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {data.map((item: any, index: number) => {
-                const uniqueId = `${item.userId || item.clientId || item.policyId || item.claimId}-${index}`;
+                const uniqueId = `${getEntityId(item)}-${index}`;
                 return renderTableRow(item, uniqueId);
               })}
             </tbody>
@@ -478,7 +534,6 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workload</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </>
         );
@@ -522,7 +577,7 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
   };
 
   const renderTableRow = (item: any, uniqueId?: string) => {
-    const id = item.userId || item.clientId || item.policyId || item.claimId;
+    const id = getEntityId(item);
     const rowKey = uniqueId || id;
     
     return (
@@ -554,20 +609,24 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
               </button>
             </div>
           ) : (
-            <>
+            <div className="flex space-x-2">
               <button 
                 onClick={() => handleEdit(item)}
                 className="text-blue-600 hover:text-blue-900"
+                title="Edit"
               >
                 <Edit className="w-4 h-4" />
               </button>
-              <button 
-                onClick={() => handleDelete(item)}
-                className="text-red-600 hover:text-red-900"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </>
+              {activeEntityTab !== 'clients' && activeEntityTab !== 'users' && (
+                <button 
+                  onClick={() => handleDelete(item)}
+                  className="text-red-600 hover:text-red-900"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           )}
         </td>
       </tr>
@@ -605,9 +664,6 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               {item.currentWorkload} / {item.maxWorkload}
-            </td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {item.lastLogin ? new Date(item.lastLogin).toLocaleDateString() : 'Never'}
             </td>
           </>
         );
@@ -879,8 +935,8 @@ const EntityManagement: React.FC<EntityManagementProps> = ({ activeEntityTab, se
             setEditingItem(null);
           }}
           onSubmit={(data) => {
-            const id = editingItem.userId || editingItem.clientId || editingItem.policyId || editingItem.claimId;
-            handleUpdate(id, data);
+            const id = getEntityId(editingItem);
+            return handleUpdate(id, data);
           }}
         />
       )}
@@ -913,6 +969,14 @@ const CreateEntityModal: React.FC<{
   const [clients, setClients] = useState<Client[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [fetchingOptions, setFetchingOptions] = useState(false);
+  const [dateError, setDateError] = useState('');
+
+  // Pre-fill preview policy number when creating a policy
+  useEffect(() => {
+    if (entityType === 'policies') {
+      setFormData(prev => ({ ...prev, _policyPreview: generatePreviewPolicyNumber() }));
+    }
+  }, [entityType]);
 
   // Fetch clients and policies for dropdowns
   useEffect(() => {
@@ -940,9 +1004,12 @@ const CreateEntityModal: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (dateError) return;
     setLoading(true);
     try {
-      await onSubmit(formData);
+      // Strip UI-only fields before sending to API
+      const { _policyPreview, ...submitData } = formData;
+      await onSubmit(submitData);
       onClose();
     } catch (error) {
       console.error('Create error:', error);
@@ -1087,7 +1154,7 @@ const CreateEntityModal: React.FC<{
               <input
                 type="date"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={formData.dateOfBirth || ''}
+                value={toDateInput(formData.dateOfBirth)}
                 onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
                 required
               />
@@ -1124,14 +1191,31 @@ const CreateEntityModal: React.FC<{
                 />
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.status || 'ACTIVE'}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="PENDING_VERIFICATION">Pending Verification</option>
+                <option value="BLOCKED">Blocked</option>
+              </select>
+            </div>
           </div>
         );
 
       case 'policies':
         return (
           <div className="space-y-4">
+            {/* Client */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Client <span className="text-red-500">*</span>
+              </label>
               <select
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={formData.clientId || ''}
@@ -1139,97 +1223,249 @@ const CreateEntityModal: React.FC<{
                 required
                 disabled={fetchingOptions}
               >
-                <option value="">
-                  {fetchingOptions ? 'Loading clients...' : 'Select Client'}
-                </option>
-                {clients.map((client) => (
-                  <option key={client.clientId} value={client.clientId}>
-                    {client.firstName} {client.lastName} ({client.email})
+                <option value="">{fetchingOptions ? 'Chargement...' : 'Sélectionner un client'}</option>
+                {clients.map((c) => (
+                  <option key={c.clientId} value={c.clientId}>
+                    {c.firstName} {c.lastName} ({c.email})
                   </option>
                 ))}
               </select>
             </div>
+
+            {/* Policy Number – read-only preview */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Policy Number</label>
-              <input
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={formData.policyNumber || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, policyNumber: e.target.value }))}
-                required
-                placeholder="e.g., POL-2026-001234"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Numéro de police{' '}
+                <span className="text-xs text-gray-400 font-normal">(généré automatiquement)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly
+                  className="w-full p-2 pr-9 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                  value={formData._policyPreview || ''}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs select-none">🔒</span>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Policy Type</label>
-              <select
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={formData.policyType || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, policyType: e.target.value }))}
-                required
-              >
-                <option value="">Select Type</option>
-                <option value="HEALTH">Health Insurance</option>
-                <option value="LIFE">Life Insurance</option>
-                <option value="AUTO">Auto Insurance</option>
-                <option value="HOME">Home Insurance</option>
-                <option value="BUSINESS">Business Insurance</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Coverage Type</label>
-              <input
-                type="text"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={formData.coverageType || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, coverageType: e.target.value }))}
-              />
-            </div>
+
+            {/* Policy Type + Coverage Type */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type de police <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.policyType || ''}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, policyType: e.target.value, coverageType: '' }))
+                  }
+                  required
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="AUTO">Auto</option>
+                  <option value="HOME">Habitation (Home)</option>
+                  <option value="HEALTH">Santé (Health)</option>
+                  <option value="LIFE">Vie (Life)</option>
+                  <option value="CONSTRUCTION">Construction</option>
+                  <option value="PROFESSIONAL">Multirisques Pro</option>
+                  <option value="AGRICULTURE">Agriculture</option>
+                  <option value="TRANSPORT">Transport</option>
+                  <option value="LIABILITY">RC Générale</option>
+                  <option value="ACCIDENT">Accidents Corporels</option>
+                  <option value="ASSISTANCE">Assistance</option>
+                  <option value="CREDIT">Assurance Crédit</option>
+                  <option value="SURETY">Assurance Caution</option>
+                  <option value="TAKAFUL_NON_VIE">Takaful Non-Vie</option>
+                  <option value="TAKAFUL_VIE">Takaful Vie</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type de couverture <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
+                  value={formData.coverageType || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, coverageType: e.target.value }))}
+                  required
+                  disabled={!formData.policyType}
+                >
+                  <option value="">
+                    {formData.policyType ? 'Sélectionner' : '← Choisir un type d\'abord'}
+                  </option>
+                  {(COVERAGE_BY_TYPE[formData.policyType] || []).map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                  {!COVERAGE_BY_TYPE[formData.policyType] && formData.policyType && (
+                    <option value="OTHER">Autre</option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {/* Start Date + End Date */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date de début <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="date"
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={formData.startDate || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                  onChange={(e) => {
+                    const sd = e.target.value;
+                    setFormData(prev => ({ ...prev, startDate: sd }));
+                    if (formData.endDate && sd >= formData.endDate) {
+                      setDateError('La date de fin doit être après la date de début');
+                    } else {
+                      setDateError('');
+                    }
+                  }}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date de fin <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="date"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${dateError ? 'border-red-400' : 'border-gray-300'}`}
                   value={formData.endDate || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                  onChange={(e) => {
+                    const ed = e.target.value;
+                    setFormData(prev => ({ ...prev, endDate: ed }));
+                    if (formData.startDate && ed <= formData.startDate) {
+                      setDateError('La date de fin doit être après la date de début');
+                    } else {
+                      setDateError('');
+                    }
+                  }}
                   required
                 />
               </div>
             </div>
+            {dateError && <p className="text-red-500 text-xs -mt-2">{dateError}</p>}
+
+            {/* Renewal Date – computed from End Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date de renouvellement{' '}
+                <span className="text-xs text-gray-400 font-normal">(= Date de fin par défaut)</span>
+              </label>
+              <input
+                type="date"
+                className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                value={formData.renewalDate || formData.endDate || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, renewalDate: e.target.value }))}
+              />
+            </div>
+
+            {/* Premium Amount + Insured Amount */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Premium Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.premiumAmount || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, premiumAmount: parseFloat(e.target.value) }))}
-                  required
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Montant de la prime <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-full p-2 pr-14 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.premiumAmount || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, premiumAmount: parseFloat(e.target.value) }))}
+                    required
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">MAD</span>
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Insured Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.insuredAmount || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, insuredAmount: parseFloat(e.target.value) }))}
-                  required
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Montant assuré <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-full p-2 pr-14 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.insuredAmount || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, insuredAmount: parseFloat(e.target.value) }))}
+                    required
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">MAD</span>
+                </div>
               </div>
+            </div>
+
+            {/* Deductible + Premium Frequency */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Franchise (Déductible)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-full p-2 pr-14 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.deductible ?? ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, deductible: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">MAD</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fréquence de prime</label>
+                <select
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.premiumFrequency || 'ANNUAL'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, premiumFrequency: e.target.value }))}
+                >
+                  <option value="MONTHLY">Mensuel</option>
+                  <option value="QUARTERLY">Trimestriel</option>
+                  <option value="SEMI_ANNUAL">Semestriel</option>
+                  <option value="ANNUAL">Annuel</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Obligatoire + Takaful toggles */}
+            <div className="flex gap-6 pt-2">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded accent-blue-600"
+                  checked={!!formData.isObligatory}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isObligatory: e.target.checked }))}
+                />
+                <span className="text-sm text-gray-700">Police obligatoire</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded accent-blue-600"
+                  checked={!!formData.isTakaful}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isTakaful: e.target.checked }))}
+                />
+                <span className="text-sm text-gray-700">Produit Takaful</span>
+              </label>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optionnel)</label>
+              <textarea
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+                value={formData.notes || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Informations complémentaires..."
+              />
             </div>
           </div>
         );
@@ -1370,7 +1606,14 @@ const CreateEntityModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">Create New {entityType.slice(0, -1)}</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          {({
+            users:    'Créer un nouvel utilisateur',
+            clients:  'Créer un nouveau client',
+            policies: 'Créer une nouvelle police',
+            claims:   'Créer un nouveau sinistre',
+          } as Record<string, string>)[entityType] ?? `Create New ${entityType.slice(0, -1)}`}
+        </h3>
         <form onSubmit={handleSubmit}>
           {renderForm()}
           <div className="flex space-x-2 mt-6 pt-4 border-t">
@@ -1380,14 +1623,14 @@ const CreateEntityModal: React.FC<{
               className="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
               disabled={loading}
             >
-              Cancel
+              Annuler
             </button>
             <button 
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              disabled={loading}
+              disabled={loading || !!dateError}
             >
-              {loading ? 'Creating...' : 'Create'}
+              {loading ? 'Création...' : 'Créer'}
             </button>
           </div>
         </form>
@@ -1404,18 +1647,29 @@ const EditEntityModal: React.FC<{
 }> = ({ entityType, item, onClose, onSubmit }) => {
   const [formData, setFormData] = useState<Record<string, any>>(item);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [dateError, setDateError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (dateError) return;
     setLoading(true);
+    setError('');
     try {
       await onSubmit(formData);
       onClose();
-    } catch (error) {
-      console.error('Update error:', error);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update. Please try again.');
+      console.error('Update error:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper: format a date string to YYYY-MM-DD for <input type="date">
+  const toDateInput = (val: string | undefined) => {
+    if (!val) return '';
+    return val.slice(0, 10);
   };
 
   const renderForm = () => {
@@ -1493,6 +1747,384 @@ const EditEntityModal: React.FC<{
           </div>
         );
 
+      case 'policies':
+        return (
+          <div className="space-y-4">
+            {/* Policy Number – read-only */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Policy Number{' '}
+                <span className="text-xs text-gray-400 font-normal">(read-only)</span>
+              </label>
+              <input
+                type="text"
+                readOnly
+                className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                value={formData.policyNumber || ''}
+              />
+            </div>
+
+            {/* Policy Type + Coverage Type */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Policy Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.policyType || ''}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, policyType: e.target.value, coverageType: '' }))
+                  }
+                  required
+                >
+                  <option value="">Select</option>
+                  <option value="AUTO">Auto</option>
+                  <option value="HOME">Home</option>
+                  <option value="HEALTH">Health</option>
+                  <option value="LIFE">Life</option>
+                  <option value="CONSTRUCTION">Construction</option>
+                  <option value="PROFESSIONAL">Professional</option>
+                  <option value="AGRICULTURE">Agriculture</option>
+                  <option value="TRANSPORT">Transport</option>
+                  <option value="LIABILITY">Liability</option>
+                  <option value="ACCIDENT">Accident</option>
+                  <option value="ASSISTANCE">Assistance</option>
+                  <option value="CREDIT">Credit</option>
+                  <option value="SURETY">Surety</option>
+                  <option value="TAKAFUL_NON_VIE">Takaful Non-Vie</option>
+                  <option value="TAKAFUL_VIE">Takaful Vie</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Coverage Type</label>
+                <select
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
+                  value={formData.coverageType || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, coverageType: e.target.value }))}
+                  disabled={!formData.policyType}
+                >
+                  <option value="">
+                    {formData.policyType ? 'Select' : '← Choose type first'}
+                  </option>
+                  {(COVERAGE_BY_TYPE[formData.policyType] || []).map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                  {!COVERAGE_BY_TYPE[formData.policyType] && formData.policyType && (
+                    <option value="OTHER">Other</option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status <span className="text-red-500">*</span>
+              </label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.status || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                required
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="EXPIRED">Expired</option>
+                <option value="CANCELED">Canceled</option>
+                <option value="SUSPENDED">Suspended</option>
+              </select>
+            </div>
+
+            {/* Start Date + End Date */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={toDateInput(formData.startDate)}
+                  onChange={(e) => {
+                    const sd = e.target.value;
+                    setFormData(prev => ({ ...prev, startDate: sd }));
+                    if (formData.endDate && sd >= toDateInput(formData.endDate)) {
+                      setDateError('End date must be after start date');
+                    } else {
+                      setDateError('');
+                    }
+                  }}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  End Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${dateError ? 'border-red-400' : 'border-gray-300'}`}
+                  value={toDateInput(formData.endDate)}
+                  onChange={(e) => {
+                    const ed = e.target.value;
+                    setFormData(prev => ({ ...prev, endDate: ed }));
+                    if (formData.startDate && ed <= toDateInput(formData.startDate)) {
+                      setDateError('End date must be after start date');
+                    } else {
+                      setDateError('');
+                    }
+                  }}
+                  required
+                />
+              </div>
+            </div>
+            {dateError && <p className="text-red-500 text-xs -mt-2">{dateError}</p>}
+
+            {/* Renewal Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Renewal Date{' '}
+                <span className="text-xs text-gray-400 font-normal">(defaults to end date)</span>
+              </label>
+              <input
+                type="date"
+                className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50"
+                value={toDateInput(formData.renewalDate) || toDateInput(formData.endDate)}
+                onChange={(e) => setFormData(prev => ({ ...prev, renewalDate: e.target.value }))}
+              />
+            </div>
+
+            {/* Premium Amount + Insured Amount */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Premium Amount <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-full p-2 pr-14 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.premiumAmount ?? ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, premiumAmount: parseFloat(e.target.value) }))}
+                    required
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">MAD</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Insured Amount <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-full p-2 pr-14 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.insuredAmount ?? ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, insuredAmount: parseFloat(e.target.value) }))}
+                    required
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">MAD</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Deductible + Premium Frequency */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Deductible</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-full p-2 pr-14 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.deductible ?? ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, deductible: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">MAD</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Premium Frequency</label>
+                <select
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.premiumFrequency || 'ANNUAL'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, premiumFrequency: e.target.value }))}
+                >
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="QUARTERLY">Quarterly</option>
+                  <option value="SEMI_ANNUAL">Semi-Annual</option>
+                  <option value="ANNUAL">Annual</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Obligatory + Takaful toggles */}
+            <div className="flex gap-6 pt-2">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded accent-blue-600"
+                  checked={!!formData.isObligatory}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isObligatory: e.target.checked }))}
+                />
+                <span className="text-sm text-gray-700">Obligatory Policy</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded accent-blue-600"
+                  checked={!!formData.isTakaful}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isTakaful: e.target.checked }))}
+                />
+                <span className="text-sm text-gray-700">Takaful Product</span>
+              </label>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+              <textarea
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+                value={formData.notes || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Additional information..."
+              />
+            </div>
+          </div>
+        );
+
+      case 'clients':
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.firstName || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.lastName || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CIN</label>
+              <input
+                type="text"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.cin || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, cin: e.target.value }))}
+                required
+                placeholder="National ID Number"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.email || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                type="tel"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.phone || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+              <input
+                type="date"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={toDateInput(formData.dateOfBirth)}
+                onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+              <textarea
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.address || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                required
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.city || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.province || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, province: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+              <input
+                type="text"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.postalCode || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, postalCode: e.target.value }))}
+                placeholder="Optional"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.status || 'ACTIVE'}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="PENDING_VERIFICATION">Pending Verification</option>
+                <option value="BLOCKED">Blocked</option>
+              </select>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <p className="text-gray-600 mb-4">
@@ -1505,7 +2137,14 @@ const EditEntityModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">Edit {entityType.slice(0, -1)}</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          {{ policies: 'Edit Policy', clients: 'Edit Client', users: 'Edit User', claims: 'Edit Claim' }[entityType] ?? `Edit ${entityType.slice(0, -1)}`}
+        </h3>
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            {error}
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           {renderForm()}
           <div className="flex space-x-2 mt-6 pt-4 border-t">
@@ -1520,7 +2159,7 @@ const EditEntityModal: React.FC<{
             <button 
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              disabled={loading}
+              disabled={loading || !!dateError}
             >
               {loading ? 'Updating...' : 'Update'}
             </button>

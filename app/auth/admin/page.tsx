@@ -31,12 +31,20 @@ export default function AdminLoginForm() {
     setErrorMessage('');
 
     try {
-      console.log('AdminLoginForm: Calling auth.login');
-      await auth.login(formData.email, formData.password);
-      console.log('AdminLoginForm: Login successful, redirecting to super admin dashboard');
-      
-      // Use replace instead of push to prevent back button issues
-      router.replace('/dashboard/super-admin');
+      const result = await auth.login(formData.email, formData.password);
+      const role: string = result?.data?.user?.role ?? '';
+
+      // Redirect to the correct dashboard based on role
+      const roleRedirects: Record<string, string> = {
+        SUPER_ADMIN:      '/dashboard/super-admin',
+        ADMIN:            '/dashboard/admin',
+        MANAGER_SENIOR:   '/dashboard/manager-senior',
+        MANAGER_JUNIOR:   '/dashboard/manager-junior',
+        EXPERT:           '/dashboard/expert',
+      };
+
+      const destination = roleRedirects[role] ?? '/dashboard/admin';
+      router.replace(destination);
       
     } catch (error: any) {
       console.error('AdminLoginForm: Login error:', error);

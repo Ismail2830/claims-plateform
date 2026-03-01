@@ -3,29 +3,62 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { z } from 'zod';
 
-// Validation schemas
+// ── Validation schemas ───────────────────────────────────────────────────────
+const ALL_POLICY_TYPES = [
+  'AUTO', 'HOME', 'PROFESSIONAL', 'AGRICULTURE', 'TRANSPORT',
+  'CONSTRUCTION', 'LIABILITY', 'HEALTH', 'LIFE', 'ACCIDENT',
+  'ASSISTANCE', 'CREDIT', 'SURETY', 'TAKAFUL_NON_VIE', 'TAKAFUL_VIE',
+] as const;
+
+const ALL_COVERAGE_TYPES = [
+  'RC_ONLY', 'THIRD_PARTY_PLUS', 'COMPREHENSIVE',
+  'FIRE_ONLY', 'MULTIRISQUES', 'LANDLORD',
+  'AMO_BASIC', 'COMPLEMENTAIRE', 'FULL_COVER',
+  'TERM_LIFE', 'WHOLE_LIFE', 'SAVINGS', 'RETIREMENT',
+  'TRC_ONLY', 'RCD_ONLY', 'TRC_AND_RCD',
+  'OTHER',
+] as const;
+
+const PREMIUM_FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMI_ANNUAL', 'ANNUAL'] as const;
+
+/** Generate a unique-enough policy number: POL-YYYY-XXXXXX */
+function generatePolicyNumber(): string {
+  const year = new Date().getFullYear();
+  const rand = String(Math.floor(100000 + Math.random() * 900000));
+  return `POL-${year}-${rand}`;
+}
+
 const createPolicySchema = z.object({
-  clientId: z.string().uuid(),
-  policyNumber: z.string().min(1),
-  policyType: z.enum(['AUTO', 'HOME', 'HEALTH', 'LIFE']),
-  coverageType: z.string().optional(),
-  startDate: z.string().transform((str) => new Date(str)),
-  endDate: z.string().transform((str) => new Date(str)),
-  premiumAmount: z.number().positive(),
-  insuredAmount: z.number().positive(),
-  deductible: z.number().min(0).default(0),
+  clientId:         z.string().uuid(),
+  policyType:       z.enum(ALL_POLICY_TYPES),
+  coverageType:     z.enum(ALL_COVERAGE_TYPES).optional(),
+  startDate:        z.string().transform((s) => new Date(s)),
+  endDate:          z.string().transform((s) => new Date(s)),
+  renewalDate:      z.string().transform((s) => new Date(s)).optional(),
+  premiumAmount:    z.number().positive(),
+  insuredAmount:    z.number().positive(),
+  deductible:       z.number().min(0).default(0),
+  premiumFrequency: z.enum(PREMIUM_FREQUENCIES).default('ANNUAL'),
+  isObligatory:     z.boolean().default(false),
+  isTakaful:        z.boolean().default(false),
+  notes:            z.string().optional(),
 });
 
 const updatePolicySchema = z.object({
-  policyNumber: z.string().min(1).optional(),
-  policyType: z.enum(['AUTO', 'HOME', 'HEALTH', 'LIFE']).optional(),
-  coverageType: z.string().optional(),
-  startDate: z.string().transform((str) => new Date(str)).optional(),
-  endDate: z.string().transform((str) => new Date(str)).optional(),
-  premiumAmount: z.number().positive().optional(),
-  insuredAmount: z.number().positive().optional(),
-  deductible: z.number().min(0).optional(),
-  status: z.enum(['ACTIVE', 'EXPIRED', 'CANCELED', 'SUSPENDED']).optional(),
+  policyNumber:     z.string().min(1).optional(),
+  policyType:       z.enum(ALL_POLICY_TYPES).optional(),
+  coverageType:     z.enum(ALL_COVERAGE_TYPES).optional(),
+  startDate:        z.string().transform((s) => new Date(s)).optional(),
+  endDate:          z.string().transform((s) => new Date(s)).optional(),
+  renewalDate:      z.string().transform((s) => new Date(s)).optional(),
+  premiumAmount:    z.coerce.number().positive().optional(),
+  insuredAmount:    z.coerce.number().positive().optional(),
+  deductible:       z.coerce.number().min(0).optional(),
+  premiumFrequency: z.enum(PREMIUM_FREQUENCIES).optional(),
+  isObligatory:     z.boolean().optional(),
+  isTakaful:        z.boolean().optional(),
+  notes:            z.string().optional(),
+  status:           z.enum(['ACTIVE', 'EXPIRED', 'CANCELED', 'SUSPENDED']).optional(),
 });
 
 const transferPolicySchema = z.object({
@@ -175,18 +208,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if policy number already exists
-    const existingPolicy = await prisma.policy.findUnique({
-      where: { policyNumber: validatedData.policyNumber },
-    });
-
-    if (existingPolicy) {
-      return NextResponse.json(
-        { success: false, error: 'Policy number already exists' },
-        { status: 400 }
-      );
-    }
-
     // Validate dates
     if (validatedData.endDate <= validatedData.startDate) {
       return NextResponse.json(
@@ -195,10 +216,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Auto-generate unique policy number (retry up to 5 times on collision)
+    let policyNumber = '';
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const candidate = generatePolicyNumber();
+      const existing = await prisma.policy.findUnique({ where: { policyNumber: candidate } });
+      if (!existing) { policyNumber = candidate; break; }
+    }
+    if (!policyNumber) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to generate unique policy number, please retry' },
+        { status: 500 }
+      );
+    }
+
     // Create policy
+    const { renewalDate, ...rest } = validatedData;
     const policy = await prisma.policy.create({
       data: {
-        ...validatedData,
+        ...rest,
+        policyNumber,
+        renewalDate: renewalDate ?? validatedData.endDate,
         status: 'ACTIVE',
       },
       include: {
@@ -258,7 +296,24 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validatedData = updatePolicySchema.parse(body);
+
+    // Strip DB-only / relational fields and convert nulls to undefined
+    // so the schema's .optional() fields work correctly.
+    const {
+      policyId: _pid,
+      clientId: _cid,
+      client:   _cl,
+      _count,
+      createdAt: _ca,
+      updatedAt:  _ua,
+      ...updateFields
+    } = body;
+
+    const cleanBody = Object.fromEntries(
+      Object.entries(updateFields).filter(([, v]) => v !== null && v !== undefined && v !== '')
+    );
+
+    const validatedData = updatePolicySchema.parse(cleanBody);
 
     // Check if policy exists
     const existingPolicy = await prisma.policy.findUnique({

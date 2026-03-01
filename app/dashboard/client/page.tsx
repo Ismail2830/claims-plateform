@@ -36,6 +36,7 @@ function ClientDashboardContent() {
   const auth = useSimpleAuth();
   const router = useRouter();
   const { user, token, isLoading } = auth;
+  const isRedirecting = React.useRef(false);
 
   // Set up real-time updates for claim activities
   const realTimeUpdates = useClaimUpdates();
@@ -95,35 +96,21 @@ function ClientDashboardContent() {
     }
   }, [realTimeUpdates.lastEvent, user?.clientId, trpcUtils]);
 
-  // Debug logging
+  // Debug logging — stripped to avoid log spam
   useEffect(() => {
-    console.log('Dashboard Debug:', {
-      isAuthLoading: isLoading,
-      hasToken: !!token,
-      hasUser: !!user,
-      statsLoading,
-      activitiesLoading,
-      statsError: statsError?.message,
-      activitiesError: activitiesError?.message,
-      dashboardStats: dashboardStats?.success,
-      activitiesData: recentActivitiesData?.success,
-      realTimeConnected: realTimeUpdates.connected
-    });
-  }, [isLoading, token, user, statsLoading, activitiesLoading, statsError, activitiesError, dashboardStats, recentActivitiesData, realTimeUpdates.connected]);
+    if (statsError) console.error('Dashboard stats error:', statsError.message);
+    if (activitiesError) console.error('Activities error:', activitiesError.message);
+  }, [statsError, activitiesError]);
 
   useEffect(() => {
-    console.log('ClientDashboard: Auth state changed', {
-      isLoading,
-      hasToken: !!token,
-      hasUser: !!user
-    });
-    
     // Only redirect if we're not loading and don't have a token
-    if (!isLoading && !token) {
-      console.log('ClientDashboard: No token found, redirecting to login');
-      router.push('/auth/login');
+    if (!isLoading && !token && !isRedirecting.current) {
+      isRedirecting.current = true;
+      router.replace('/auth/login');
     }
-    
+    if (token) {
+      isRedirecting.current = false;
+    }
     // Check for success message
     if (searchParams.get('claim_created') === 'true') {
       setShowSuccess(true);

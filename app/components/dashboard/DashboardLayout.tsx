@@ -24,19 +24,25 @@ interface DashboardLayoutProps {
     icon: ReactNode;
     current?: boolean;
   }>;
+  /** Pass the authenticated user from the page's own auth hook (e.g. useAdminAuth) */
+  userProp?: { firstName?: string | null; lastName?: string | null } | null;
+  /** Pass the logout handler from the page's own auth hook */
+  logoutProp?: () => void | Promise<void>;
 }
 
-export function DashboardLayout({ children, title, userRole, navigation }: DashboardLayoutProps) {
-  const { user, isLoading } = useSimpleAuth();
+export function DashboardLayout({ children, title, userRole, navigation, userProp, logoutProp }: DashboardLayoutProps) {
+  // Always call useSimpleAuth (hooks must be called unconditionally).
+  // When userProp / logoutProp are provided by the page, those take priority.
+  const { user: clientUser, isLoading, logout: clientLogout } = useSimpleAuth();
+  const activeUser   = userProp   !== undefined ? userProp   : clientUser;
+  const activeLogout = logoutProp !== undefined ? logoutProp : clientLogout;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    try {
-      localStorage.removeItem('clientToken');
-      window.location.href = '/auth/login';
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    setLoggingOut(true);
+    await activeLogout();
   };
 
   return (
@@ -112,7 +118,7 @@ export function DashboardLayout({ children, title, userRole, navigation }: Dashb
                   </div>
                   <div className="ml-3">
                     <p className="text-sm font-medium text-gray-700">
-                      {user?.firstName} {user?.lastName}
+                      {activeUser?.firstName} {activeUser?.lastName}
                     </p>
                     <p className="text-xs font-medium text-gray-500">
                       {userRole.replace('_', ' ')}
@@ -123,9 +129,13 @@ export function DashboardLayout({ children, title, userRole, navigation }: Dashb
                   variant="ghost"
                   size="icon"
                   onClick={handleLogout}
-                  className="text-gray-400 hover:text-gray-600"
+                  disabled={loggingOut}
+                  title="Sign out"
+                  className="text-gray-400 hover:text-red-500 transition-colors"
                 >
-                  <LogOut className="h-4 w-4" />
+                  {loggingOut
+                    ? <span className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    : <LogOut className="h-4 w-4" />}
                 </Button>
               </div>
             </div>

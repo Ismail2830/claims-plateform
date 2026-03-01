@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import jwt from 'jsonwebtoken';
 import { verifyOtp } from '@/app/lib/otp';
+import {
+  signAccessToken,
+  signRefreshToken,
+  hashToken,
+  parseDeviceName,
+  buildRefreshCookieOptions,
+  CLIENT_REFRESH_COOKIE,
+  CLIENT_ACCESS_COOKIE,
+  ACCESS_COOKIE_OPTIONS,
+  ACCESS_SECRET,
+} from '@/app/lib/tokens';
 
-const JWT_SECRET    = process.env.JWT_SECRET   || 'your-super-secret-jwt-key-change-this-in-production';
-const JWT_EXPIRES_IN = '7d';
+const JWT_SECRET = ACCESS_SECRET; // pending-2FA token uses same secret
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,9 +28,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the pending token
-    let payload: { clientId: string; type: string };
+    let payload: { clientId: string; type: string; rememberMe?: boolean };
     try {
-      payload = jwt.verify(pendingToken, JWT_SECRET) as { clientId: string; type: string };
+      payload = jwt.verify(pendingToken, JWT_SECRET) as { clientId: string; type: string; rememberMe?: boolean };
     } catch {
       return NextResponse.json(
         { success: false, message: 'Session expired. Please log in again.' },
@@ -32,7 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Invalid session token' }, { status: 401 });
     }
 
-    const { clientId } = payload;
+    const { clientId, rememberMe = false } = payload;
 
     // Verify the OTP
     const valid = verifyOtp('2fa', clientId, String(otp).trim());
@@ -64,12 +74,31 @@ export async function POST(request: NextRequest) {
     // Update last login
     await prisma.client.update({ where: { clientId }, data: { lastLoginAt: new Date() } });
 
-    // Issue the real JWT
-    const token = jwt.sign(
-      { clientId: client.clientId, email: client.email, cin: client.cin, type: 'CLIENT' },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    // ── Issue 15-min access token ────────────────────────────────
+    const accessToken = signAccessToken({
+      clientId: client.clientId,
+      email: client.email,
+      cin: client.cin,
+      type: 'CLIENT',
+    });
+
+    // ── Issue refresh token with duration based on rememberMe ─────
+    const refreshDays = rememberMe ? 30 : 7;
+    const rawRefresh  = signRefreshToken({ clientId: client.clientId, type: 'CLIENT' }, `${refreshDays}d`);
+    const ipAddress   = request.headers.get('x-forwarded-for') || 'unknown';
+    const userAgent   = request.headers.get('user-agent') || '';
+
+    await prisma.session.create({
+      data: {
+        clientId: client.clientId,
+        hashedToken: hashToken(rawRefresh),
+        ipAddress,
+        userAgent,
+        deviceName: parseDeviceName(userAgent),
+        rememberMe,
+        expiresAt: new Date(Date.now() + refreshDays * 24 * 60 * 60 * 1000),
+      },
+    });
 
     // Audit log
     await prisma.auditLog.create({
@@ -79,19 +108,29 @@ export async function POST(request: NextRequest) {
         action: 'LOGIN',
         description: `Successful 2FA login: ${client.firstName} ${client.lastName}`,
         clientId: client.clientId,
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
+        ipAddress,
+        userAgent,
         metadata: { email: client.email, loginTime: new Date(), twoFactor: true, success: true },
       },
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Login successful',
-      data: { token, client },
+      // accessToken returned in body so existing localStorage code continues to work
+      data: { token: accessToken, client },
     });
+
+    // Set cookies for middleware + auto-refresh
+    response.cookies.set(CLIENT_REFRESH_COOKIE, rawRefresh, buildRefreshCookieOptions(rememberMe));
+    response.cookies.set(CLIENT_ACCESS_COOKIE,  accessToken, ACCESS_COOKIE_OPTIONS);
+
+    return response;
   } catch (error) {
     console.error('2FA verify error:', error);
-    return NextResponse.json({ success: false, message: '2FA verification failed' }, { status: 500 });
+    const message = process.env.NODE_ENV === 'development'
+      ? `2FA verification failed: ${error instanceof Error ? error.message : String(error)}`
+      : '2FA verification failed';
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }

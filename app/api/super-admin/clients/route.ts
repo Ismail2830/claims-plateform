@@ -273,7 +273,33 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validatedData = updateClientSchema.parse(body);
+
+    // Strip DB-only / relational fields and convert nulls to undefined
+    const {
+      clientId: _cid,
+      passwordHash: _ph,
+      password: _pw,
+      policies: _pol,
+      claims: _cl,
+      _count,
+      createdAt: _ca,
+      updatedAt: _ua,
+      lastLoginAt: _lla,
+      emailVerified: _ev,
+      phoneVerified: _pv,
+      documentVerified: _dv,
+      lifetimeValue: _lv,
+      riskScore: _rs,
+      totalClaims: _tc,
+      rejectedClaims: _rc,
+      ...updateFields
+    } = body;
+
+    const cleanBody = Object.fromEntries(
+      Object.entries(updateFields).filter(([, v]) => v !== null && v !== undefined && v !== '')
+    );
+
+    const validatedData = updateClientSchema.parse(cleanBody);
 
     // Check if client exists
     const existingClient = await prisma.client.findUnique({

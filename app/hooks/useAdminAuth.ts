@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from './useSession';
 
 interface User {
   userId: string;
@@ -15,9 +17,25 @@ interface User {
 }
 
 export function useAdminAuth() {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleSessionExpired = useCallback(() => {
+    localStorage.removeItem('adminToken');
+    setToken(null);
+    setUser(null);
+    setIsLoading(false);
+  }, []);
+
+  const handleTokenRefresh = useCallback((newToken: string) => {
+    setToken(newToken);
+    localStorage.setItem('adminToken', newToken);
+  }, []);
+
+  // Auto-refresh every 13 min + 30 min idle timeout
+  useSession({ type: 'admin', onRefresh: handleTokenRefresh, onExpired: handleSessionExpired });
 
   useEffect(() => {
     console.log('useAdminAuth: Initializing auth state');
@@ -129,12 +147,14 @@ export function useAdminAuth() {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     console.log('logout: Logging out admin user');
+    try { await fetch('/api/admin/logout', { method: 'POST' }); } catch { /* best-effort */ }
     localStorage.removeItem('adminToken');
     setToken(null);
     setUser(null);
     setIsLoading(false);
+    router.replace('/auth/admin');
   };
 
   const createUser = async (userData: {

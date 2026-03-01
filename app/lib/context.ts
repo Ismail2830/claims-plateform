@@ -1,5 +1,9 @@
 import { NextRequest } from 'next/server';
-import { validateClientToken, validateStaffToken, ClientTokenPayload, StaffTokenPayload } from './auth';
+import { verifyAccessToken, AccessTokenPayload } from './tokens';
+
+// Use the same token types as the login/auth routes (type: 'CLIENT' | 'ADMIN')
+export type ClientTokenPayload = Extract<AccessTokenPayload, { type: 'CLIENT' }>;
+export type StaffTokenPayload = Extract<AccessTokenPayload, { type: 'ADMIN' }>;
 
 export interface Context {
   req?: NextRequest;
@@ -23,18 +27,18 @@ export async function createTRPCContext(opts: { req?: NextRequest }): Promise<Co
   }
 
   try {
-    // Try to validate as client token first
-    const clientToken = validateClientToken(token);
-    return { req, clientToken };
-  } catch (clientError) {
-    try {
-      // If client validation fails, try staff token
-      const staffToken = validateStaffToken(token);
-      return { req, staffToken };
-    } catch (staffError) {
-      // If both fail, return empty context
-      return { req };
+    // Use verifyAccessToken which uses JWT_ACCESS_SECRET || JWT_SECRET
+    // — the same secret used by the login/verify-2fa routes
+    const payload = verifyAccessToken(token);
+    if (payload.type === 'CLIENT') {
+      return { req, clientToken: payload };
+    } else if (payload.type === 'ADMIN') {
+      return { req, staffToken: payload };
     }
+    return { req };
+  } catch {
+    // Token invalid or expired
+    return { req };
   }
 }
 

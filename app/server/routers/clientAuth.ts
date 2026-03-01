@@ -624,7 +624,8 @@ export const clientAuthRouter = createTRPCRouter({
             approvedClaims,
             rejectedClaims,
             activePolicies,
-            totalCoverage: totalCoverage._sum.insuredAmount || 0,
+            // Convert Prisma Decimal to plain number for safe serialization
+            totalCoverage: Number(totalCoverage._sum.insuredAmount) || 0,
           },
         };
       } catch (error) {

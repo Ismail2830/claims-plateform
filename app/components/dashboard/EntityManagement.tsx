@@ -50,6 +50,12 @@ function generatePreviewPolicyNumber(): string {
   const rand = String(Math.floor(100000 + Math.random() * 900000));
   return `POL-${year}-${rand}`;
 }
+
+// Format an ISO date/datetime string to YYYY-MM-DD for <input type="date">
+function toDateInput(val: string | undefined | null): string {
+  if (!val) return '';
+  return val.slice(0, 10);
+}
 import { 
   Users, 
   UserPlus, 
@@ -1664,12 +1670,6 @@ const EditEntityModal: React.FC<{
     } finally {
       setLoading(false);
     }
-  };
-
-  // Helper: format a date string to YYYY-MM-DD for <input type="date">
-  const toDateInput = (val: string | undefined) => {
-    if (!val) return '';
-    return val.slice(0, 10);
   };
 
   const renderForm = () => {

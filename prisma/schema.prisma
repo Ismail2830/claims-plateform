@@ -48,6 +48,7 @@ model Client {
   auditLogs   AuditLog[] @relation("AuditLogClient")
   passwordResetTokens PasswordResetToken[]
   sessions    Session[]
+  whatsappSessions WhatsappSession[]
 }
 
 model User {
@@ -150,6 +151,7 @@ model Claim {
   
   // Metadata
   declarationChannel DeclarationChannel? @map("declaration_channel")
+  source            ClaimSource @default(WEB)
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
@@ -405,6 +407,49 @@ enum DeclarationChannel {
   MOBILE
   PHONE
   API
+}
+
+// ─── WhatsApp Chatbot Models ───────────────────────────────────────────────────
+
+model WhatsappSession {
+  id          String   @id @default(uuid()) @db.Uuid
+  phone       String   @unique @db.VarChar(20)
+  clientId    String?  @map("client_id") @db.Uuid
+  client      Client?  @relation(fields: [clientId], references: [clientId], onDelete: SetNull)
+  currentStep String   @default("MENU") @map("current_step") @db.VarChar(50)
+  context     Json     @default("{}")
+  lastMessage DateTime @default(now()) @map("last_message")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([phone],    map: "idx_wa_sessions_phone")
+  @@index([clientId], map: "idx_wa_sessions_client")
+  @@map("whatsapp_sessions")
+}
+
+model WhatsappMessage {
+  id        String             @id @default(uuid()) @db.Uuid
+  phone     String             @db.VarChar(20)
+  direction WhatsappDirection
+  content   String             @db.Text
+  intent    String?            @db.VarChar(30)
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  @@index([phone],     map: "idx_wa_messages_phone")
+  @@index([direction], map: "idx_wa_messages_direction")
+  @@index([createdAt], map: "idx_wa_messages_date")
+  @@map("whatsapp_messages")
+}
+
+enum WhatsappDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum ClaimSource {
+  WEB
+  WHATSAPP
+  MOBILE
+  AGENT
 }
 
 enum PolicyType {

@@ -17,6 +17,7 @@ export type Intent =
   | 'SINISTRE'
   | 'STATUT'
   | 'RENOUVELLEMENT'
+  | 'POLICE'
   | 'MENU'
   | 'AGENT'
   | 'UNKNOWN';
@@ -28,6 +29,7 @@ const KEYWORD_MAP: Record<Intent, RegExp> = {
   SINISTRE: /sinistre|accident|déclar|declarer|incident|dommage|vol|incendie|bris|panne|crash|urgence|حادث|تصريح|خسارة|سرقة|حريق|ضرر/i,
   STATUT: /statut|état|etat|suivi|dossier|où en|avancement|numéro|numero|كيفاش|ملف|متابعة|حالة|وين/i,
   RENOUVELLEMENT: /renouvell|échéance|echeance|expir|renouvel|expire|rappel|تجديد|انتهاء|تمديد/i,
+  POLICE: /police|polices|contrat|contrats|mes polices|mes contrats|voir police|consulter|وثيقة|وثائق|عقد|عقود|بوليصة|تأميناتي/i,
   MENU: /menu|accueil|début|debut|start|bonjour|salam|salut|bonsoir|aide|help|مرحبا|السلام|مساعدة|ابدأ|الرئيسية/i,
   AGENT: /agent|humain|conseiller|personne|opérateur|operateur|parler à|speak|عامل|موظف|إنسان|تحدث مع/i,
   UNKNOWN: /^$/, // never matches
@@ -45,6 +47,7 @@ function matchKeywords(text: string): Intent | null {
     'SINISTRE',
     'STATUT',
     'RENOUVELLEMENT',
+    'POLICE',
     'DEVIS',
   ];
 
@@ -75,11 +78,12 @@ Analyse le message de l'utilisateur et retourne UNIQUEMENT l'une de ces intentio
 - SINISTRE: l'utilisateur veut déclarer un sinistre ou un accident
 - STATUT: l'utilisateur veut connaître l'état de son dossier ou sinistre
 - RENOUVELLEMENT: l'utilisateur parle du renouvellement ou de l'échéance de son contrat
+- POLICE: l'utilisateur veut consulter ses polices/contrats d'assurance
 - MENU: l'utilisateur veut voir le menu principal, dit bonjour, ou demande de l'aide
 - AGENT: l'utilisateur veut parler à un agent humain
 - UNKNOWN: aucune intention claire
 
-Réponds avec UN SEUL mot parmi: DEVIS, SINISTRE, STATUT, RENOUVELLEMENT, MENU, AGENT, UNKNOWN`;
+Réponds avec UN SEUL mot parmi: DEVIS, SINISTRE, STATUT, RENOUVELLEMENT, POLICE, MENU, AGENT, UNKNOWN`;
 
 async function classifyWithOpenAI(text: string): Promise<Intent> {
   try {
@@ -99,6 +103,7 @@ async function classifyWithOpenAI(text: string): Promise<Intent> {
       'SINISTRE',
       'STATUT',
       'RENOUVELLEMENT',
+      'POLICE',
       'MENU',
       'AGENT',
       'UNKNOWN',

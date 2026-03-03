@@ -32,7 +32,7 @@ const T = {
     menuGreet:
       '🌟 *Bonjour! Je suis Nour*, votre assistante assurance.\n\nComment puis-je vous aider aujourd\'hui?',
     menuExtra:
-      'Vous pouvez aussi taper:\n• *renouvellement* – rappel d\'échéance\n• *agent* – parler à un conseiller',
+      'Vous pouvez aussi taper:\n• *police* – consulter mes contrats\n• *renouvellement* – rappel d\'echéance\n• *agent* – parler à un conseiller',
     menuBtn1: '📋 Demander un devis',
     menuBtn2: '🚨 Déclarer un sinistre',
     menuBtn3: '🔍 Suivre mon dossier',
@@ -66,7 +66,10 @@ const T = {
       `🗂️ *Vos derniers dossiers:*\n\n${lines}\n\nTapez *agent* pour parler à un conseiller.`,
     noPolicies: '✅ Aucune police n\'arrive à échéance dans les 60 prochains jours.',
     renewTitle: (lines: string, agent: string) =>
-      `📅 *Vos polices à renouveler:*\n\n${lines}\n\nContactez-nous pour renouveler: ${agent}\nOu tapez *agent*.`,
+      `📋 *Vos polices proches de l'échéance:*\n\n${lines}\n\nContactez-nous pour renouveler: ${agent}\nOu tapez *agent*.`,
+    policeTitle: (lines: string) =>
+      `📁 *Vos polices d'assurance actives:*\n\n${lines}\n\nTapez *agent* pour toute question.`,
+    noPoliciesActive: '📂 Aucune police d\'assurance active trouvée sur votre compte.\n\nTapez *devis* pour souscrire.',
     agentMsg: (agent: string) =>
       `🧑‍💼 *Transfert vers un conseiller humain*\n\nVous allez être mis en relation avec l'un de nos agents.\n\n📞 Téléphone direct: *${agent}*\n🕐 Disponible: Lun–Ven 8h–18h | Sam 9h–13h\n\nUn conseiller vous contactera dans les prochaines minutes.\n\nTapez *menu* pour revenir à l'accueil.`,
     imgReceived: '📸 Image reçue. Tapez *menu* pour voir les options disponibles.',
@@ -81,7 +84,7 @@ const T = {
     menuGreet:
       '🌟 *مرحباً! أنا نور*، مساعدتكم في التأمين.\n\nكيف يمكنني مساعدتك اليوم؟',
     menuExtra:
-      'يمكنك أيضاً كتابة:\n• *تجديد* – تذكير بانتهاء الوثيقة\n• *وكيل* – التحدث مع مستشار',
+      'يمكنك أيضاً كتابة:\n• *وثيقة* – عرض عقود تأميني\n• *تجديد* – تذكير بانتهاء الوثيقة\n• *وكيل* – التحدث مع مستشار',
     menuBtn1: '📋 طلب عرض سعر',
     menuBtn2: '🚨 الإبلاغ عن حادثة',
     menuBtn3: '🔍 متابعة ملفي',
@@ -115,7 +118,10 @@ const T = {
       `🗂️ *آخر ملفاتك:*\n\n${lines}\n\nاكتب *وكيل* للتحدث مع مستشار.`,
     noPolicies: '✅ لا توجد وثائق تأمين تنتهي خلال الستين يوماً القادمة.',
     renewTitle: (lines: string, agent: string) =>
-      `📅 *وثائق التأمين المطلوب تجديدها:*\n\n${lines}\n\nاتصل بنا للتجديد: ${agent}\nأو اكتب *وكيل*.`,
+      `📋 *وثائق تأمينك القريبة من الانتهاء:*\n\n${lines}\n\nاتصل بنا للتجديد: ${agent}\nأو اكتب *وكيل*.`,
+    policeTitle: (lines: string) =>
+      `📁 *وثائق تأمينك النشطة:*\n\n${lines}\n\nاكتب *وكيل* لأي سؤال.`,
+    noPoliciesActive: '📂 لا توجد وثائق تأمين نشطة على حسابك.\n\nاكتب *تأمين* للاشتراك.',
     agentMsg: (agent: string) =>
       `🧑‍💼 *التحويل إلى مستشار بشري*\n\nسيتم التواصل معك من قِبل أحد مستشارينا.\n\n📞 الهاتف المباشر: *${agent}*\n🕐 متاح: الإثنين–الجمعة 8ص–6م | السبت 9ص–1م\n\nسيتصل بك مستشار خلال دقائق.\n\nاكتب *قائمة* للعودة للقائمة الرئيسية.`,
     imgReceived: '📸 تم استلام الصورة. اكتب *قائمة* لرؤية الخيارات.',
@@ -232,6 +238,9 @@ export async function handleIncoming(phone: string, text: string): Promise<void>
       break;
     case 'STATUT':
       await handleStatut(phone, lang);
+      break;
+    case 'POLICE':
+      await handlePolice(phone, lang);
       break;
     case 'RENOUVELLEMENT':
       await handleRenouvellement(phone, lang);
@@ -546,8 +555,61 @@ async function handleStatut(phone: string, lang: Lang): Promise<void> {
   await sendWhatsAppText(phone, t.statutTitle(lines));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RENOUVELLEMENT Flow
+// ─────────────────────────────────────────────────────────────────────────────// #5 CONSULTER MA POLICE
+// ─────────────────────────────────────────────────────────────────────────────────
+
+async function handlePolice(phone: string, lang: Lang): Promise<void> {
+  const t = T[lang];
+  const client = await prisma.client.findUnique({ where: { phone } });
+
+  if (!client) {
+    await sendWhatsAppText(phone, t.noAccountShort(AGENT_PHONE));
+    return;
+  }
+
+  const policies = await prisma.policy.findMany({
+    where:   { clientId: client.clientId, status: 'ACTIVE' },
+    orderBy: { startDate: 'desc' },
+    take:    5,
+    select:  {
+      policyNumber: true,
+      policyType:   true,
+      status:       true,
+      startDate:    true,
+      endDate:      true,
+      premiumAmount: true,
+    },
+  });
+
+  if (policies.length === 0) {
+    await sendWhatsAppText(phone, t.noPoliciesActive);
+    return;
+  }
+
+  const POLICY_TYPE_LABELS: Record<string, string> = {
+    AUTO:         lang === 'ar' ? '🚗 سيارة'   : '🚗 Auto',
+    HOME:         lang === 'ar' ? '🏠 منزل'    : '🏠 Habitation',
+    HEALTH:       lang === 'ar' ? '🏥 صحة'     : '🏥 Santé',
+    LIFE:         lang === 'ar' ? '💗 حياة'    : '💗 Vie',
+    TRAVEL:       lang === 'ar' ? '✈️ سفر'      : '✈️ Voyage',
+    PROFESSIONAL: lang === 'ar' ? '💼 مهني'    : '💼 Pro',
+  };
+
+  const lines = policies.map((p, i) => {
+    const start  = p.startDate.toLocaleDateString('fr-MA');
+    const end    = p.endDate.toLocaleDateString('fr-MA');
+    const premium = p.premiumAmount
+      ? `${Number(p.premiumAmount).toLocaleString('fr-MA')} MAD`
+      : lang === 'ar' ? 'غير محدد' : 'N/A';
+    const typeLabel = POLICY_TYPE_LABELS[p.policyType] ?? p.policyType;
+    const separator = lang === 'ar' ? '│' : '|';
+    return `${i + 1}. *${p.policyNumber}*\n   ${typeLabel} ${separator} ${premium}/an\n   📅 ${start} → ${end}`;
+  }).join('\n\n');
+
+  await sendWhatsAppText(phone, t.policeTitle(lines));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────// RENOUVELLEMENT Flow
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function handleRenouvellement(phone: string, lang: Lang): Promise<void> {

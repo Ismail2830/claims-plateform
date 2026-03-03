@@ -43,6 +43,65 @@ export default function ClaimDetailsModal({
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // AI score local state — initialised from claim prop, refreshed by polling
+  const [aiScore, setAiScore] = useState<{
+    scoreRisque:    number | null;
+    labelRisque:    string | null;
+    decisionIa:     string | null;
+    scoreConfidence: number | null;
+    scoredAt:       string | null;
+  }>({
+    scoreRisque:    claim?.scoreRisque    ?? null,
+    labelRisque:    claim?.labelRisque    ?? null,
+    decisionIa:     claim?.decisionIa     ?? null,
+    scoreConfidence: claim?.scoreConfidence ?? null,
+    scoredAt:       claim?.scoredAt       ?? null,
+  });
+
+  // Sync AI score when a new claim is opened
+  useEffect(() => {
+    if (claim) {
+      setAiScore({
+        scoreRisque:    claim.scoreRisque    ?? null,
+        labelRisque:    claim.labelRisque    ?? null,
+        decisionIa:     claim.decisionIa     ?? null,
+        scoreConfidence: claim.scoreConfidence ?? null,
+        scoredAt:       claim.scoredAt       ?? null,
+      });
+    }
+  }, [claim?.claimId]);
+
+  // Poll until score arrives
+  useEffect(() => {
+    if (!isOpen || !claim?.claimNumber) return;
+    if (aiScore.scoreRisque !== null) return; // already scored
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `/api/super-admin/claims?search=${encodeURIComponent(claim.claimNumber)}&limit=1`
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        const found = json?.data?.claims?.[0];
+        if (found && found.scoreRisque !== null && found.scoreRisque !== undefined) {
+          setAiScore({
+            scoreRisque:    found.scoreRisque,
+            labelRisque:    found.labelRisque,
+            decisionIa:     found.decisionIa,
+            scoreConfidence: found.scoreConfidence,
+            scoredAt:       found.scoredAt,
+          });
+          clearInterval(interval);
+        }
+      } catch {
+        // silent — keep polling
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, claim?.claimNumber, aiScore.scoreRisque]);
+
   useEffect(() => {
     if (claim && isOpen) {
       setEditData({
@@ -494,30 +553,30 @@ export default function ClaimDetailsModal({
               Analyse IA du risque
             </h3>
 
-            {claim.scoreRisque !== null && claim.scoreRisque !== undefined ? (
+            {aiScore.scoreRisque !== null && aiScore.scoreRisque !== undefined ? (
               <div className="space-y-4">
                 {/* Score row */}
                 <div className="flex items-center gap-4 flex-wrap">
                   <RiskBadge
-                    label={claim.labelRisque === 'FAIBLE' ? 'Faible'
-                      : claim.labelRisque === 'MOYEN' ? 'Moyen'
-                      : claim.labelRisque === 'ELEVE' ? 'Élevé'
-                      : claim.labelRisque === 'SUSPICIEUX' ? 'Suspicieux'
-                      : (claim.labelRisque ?? 'Faible')}
-                    score={claim.scoreRisque}
+                    label={aiScore.labelRisque === 'FAIBLE' ? 'Faible'
+                      : aiScore.labelRisque === 'MOYEN' ? 'Moyen'
+                      : aiScore.labelRisque === 'ELEVE' ? 'Élevé'
+                      : aiScore.labelRisque === 'SUSPICIEUX' ? 'Suspicieux'
+                      : (aiScore.labelRisque ?? 'Faible')}
+                    score={aiScore.scoreRisque}
                     size="lg"
                   />
-                  {claim.scoredAt && (
+                  {aiScore.scoredAt && (
                     <span className="text-xs text-gray-400">
-                      Analysé le {new Date(claim.scoredAt).toLocaleString('fr-FR')}
+                      Analysé le {new Date(aiScore.scoredAt).toLocaleString('fr-FR')}
                     </span>
                   )}
                 </div>
 
                 {/* Decision panel */}
                 <DecisionPanel
-                  decision={claim.decisionIa ?? 'REVISION_MANUELLE'}
-                  confidence={claim.scoreConfidence ?? 0}
+                  decision={aiScore.decisionIa ?? 'REVISION_MANUELLE'}
+                  confidence={aiScore.scoreConfidence ?? 0}
                 />
               </div>
             ) : (

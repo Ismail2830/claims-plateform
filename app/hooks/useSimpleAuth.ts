@@ -53,6 +53,13 @@ export function useSimpleAuth() {
   useSession({ type: 'client', onRefresh: handleTokenRefresh, onExpired: handleSessionExpired });
 
   useEffect(() => {
+    // Don't attempt client auth on admin/super-admin routes
+    const pathname = window.location.pathname;
+    if (pathname.includes('/admin') || pathname.includes('/super-admin')) {
+      setIsLoading(false);
+      return;
+    }
+
     const storedToken = localStorage.getItem('clientToken');
     if (storedToken) {
       setToken(storedToken);

@@ -59,6 +59,7 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  try {
   const { id } = await params;
 
   // 1. Fetch claim + client + policy
@@ -85,12 +86,21 @@ export async function POST(
     );
   }
 
+  if (!claim.client) {
+    return NextResponse.json(
+      { error: 'Client associé introuvable.' },
+      { status: 422 },
+    );
+  }
+
+  // Guard: montant must be > 0 for ML model
+  const montant = Math.max(1, Number(claim.claimedAmount ?? 0));
+
   // 2. Calculate delai (days between incident and declaration)
   const delai = Math.floor(
     (claim.declarationDate.getTime() - claim.incidentDate.getTime()) / 86_400_000,
   );
 
-  // 3. Calculate historique_score
   const { nbSinistresPasses, montantTotalPasse, ancienneteAnnees } = claim.client;
   const historique =
     nbSinistresPasses * (Number(montantTotalPasse) / (ancienneteAnnees + 1));
@@ -107,7 +117,7 @@ export async function POST(
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        montant_declare:   Number(claim.claimedAmount ?? 0),
+        montant_declare:   montant,
         type_sinistre:     mlType,
         delai_declaration: Math.max(0, delai),
         historique_score:  Math.max(0, historique),
@@ -154,4 +164,11 @@ export async function POST(
     scoreConfidence: updated.scoreConfidence,
     scoredAt:       updated.scoredAt,
   });
+  } catch (err) {
+    console.error('[score/route] Unhandled error:', err);
+    return NextResponse.json(
+      { error: 'Erreur interne lors du scoring.', detail: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
+  }
 }

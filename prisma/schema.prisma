@@ -445,6 +445,21 @@ enum WhatsappDirection {
   OUTBOUND
 }
 
+// Admin-managed premium rate table — fetched by chatbot for estimations
+model PremiumRate {
+  id          String   @id @default(uuid()) @db.Uuid
+  policyType  String   @unique @map("policy_type") @db.VarChar(50)
+  basePremium Decimal  @map("base_premium") @db.Decimal(10, 2)
+  ratePerYear Decimal  @map("rate_per_year") @db.Decimal(8, 2)
+  description String?  @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([policyType], map: "idx_premium_rates_type")
+  @@map("premium_rates")
+}
+
 enum ClaimSource {
   WEB
   WHATSAPP

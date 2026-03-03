@@ -70,6 +70,7 @@ const T = {
     policeTitle: (lines: string) =>
       `📁 *Vos polices d'assurance actives:*\n\n${lines}\n\nTapez *agent* pour toute question.`,
     noPoliciesActive: '📂 Aucune police d\'assurance active trouvée sur votre compte.\n\nTapez *devis* pour souscrire.',
+    devisNoRate: '⚠️ Estimation indisponible pour ce type. Un conseiller vous contactera pour un devis précis.\n\nTapez *menu* pour revenir.',
     agentMsg: (agent: string) =>
       `🧑‍💼 *Transfert vers un conseiller humain*\n\nVous allez être mis en relation avec l'un de nos agents.\n\n📞 Téléphone direct: *${agent}*\n🕐 Disponible: Lun–Ven 8h–18h | Sam 9h–13h\n\nUn conseiller vous contactera dans les prochaines minutes.\n\nTapez *menu* pour revenir à l'accueil.`,
     imgReceived: '📸 Image reçue. Tapez *menu* pour voir les options disponibles.',
@@ -122,6 +123,7 @@ const T = {
     policeTitle: (lines: string) =>
       `📁 *وثائق تأمينك النشطة:*\n\n${lines}\n\nاكتب *وكيل* لأي سؤال.`,
     noPoliciesActive: '📂 لا توجد وثائق تأمين نشطة على حسابك.\n\nاكتب *تأمين* للاشتراك.',
+    devisNoRate: '⚠️ التقدير غير متاح لهذا النوع. سيتصل بك مستشار لعرض سعر دقيق.\n\nاكتب *قائمة* للعودة.',
     agentMsg: (agent: string) =>
       `🧑‍💼 *التحويل إلى مستشار بشري*\n\nسيتم التواصل معك من قِبل أحد مستشارينا.\n\n📞 الهاتف المباشر: *${agent}*\n🕐 متاح: الإثنين–الجمعة 8ص–6م | السبت 9ص–1م\n\nسيتصل بك مستشار خلال دقائق.\n\nاكتب *قائمة* للعودة للقائمة الرئيسية.`,
     imgReceived: '📸 تم استلام الصورة. اكتب *قائمة* لرؤية الخيارات.',
@@ -134,23 +136,23 @@ const T = {
   },
 };
 
-// ─── Premium Estimation Table ─────────────────────────────────────────────────
+// ─── Premium Estimation — fetched from DB (admin-configurable) ───────────────
 
-const PREMIUM_TABLE: Record<string, { base: number; perYear: number }> = {
-  AUTO:   { base: 1200, perYear: 15 },
-  HOME:   { base: 800,  perYear: 10 },
-  HEALTH: { base: 2400, perYear: 30 },
-  LIFE:   { base: 600,  perYear: 20 },
-};
+async function estimatePremium(policyType: string, dateOfBirth: string): Promise<string | null> {
+  try {
+    const rate = await prisma.premiumRate.findFirst({
+      where: { policyType: policyType.toUpperCase(), isActive: true },
+      select: { basePremium: true, ratePerYear: true },
+    });
+    if (!rate) return null;
 
-function estimatePremium(policyType: string, dateOfBirth: string): string {
-  const table = PREMIUM_TABLE[policyType.toUpperCase()];
-  if (!table) return 'Non disponible';
-
-  const birth = new Date(dateOfBirth);
-  const age = new Date().getFullYear() - birth.getFullYear();
-  const premium = table.base + age * table.perYear;
-  return `${premium.toLocaleString('fr-MA')} MAD/an`;
+    const birth = new Date(dateOfBirth);
+    const age = new Date().getFullYear() - birth.getFullYear();
+    const premium = Number(rate.basePremium) + age * Number(rate.ratePerYear);
+    return `${premium.toLocaleString('fr-MA')} MAD/an`;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Claim Number Generator ───────────────────────────────────────────────────
@@ -369,9 +371,13 @@ async function handleDevisDOB(
   }
 
   const policyType = session.context.policyType ?? 'AUTO';
-  const premium = estimatePremium(policyType, dob);
+  const premium = await estimatePremium(policyType, dob);
 
   await setSession(phone, { step: 'MENU', context: { lang } });
+  if (!premium) {
+    await sendWhatsAppText(phone, t.devisNoRate);
+    return;
+  }
   await sendWhatsAppText(phone, t.devisResult(policyType, premium));
 }
 

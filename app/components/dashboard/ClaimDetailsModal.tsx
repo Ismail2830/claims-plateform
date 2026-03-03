@@ -15,8 +15,12 @@ import {
   Edit,
   Trash2,
   Save,
-  XCircle
+  XCircle,
+  Brain,
+  Loader2
 } from 'lucide-react';
+import { RiskBadge } from '@/components/sinistres/RiskBadge';
+import { DecisionPanel } from '@/components/sinistres/DecisionPanel';
 
 interface ClaimDetailsModalProps {
   claim: any;
@@ -479,6 +483,47 @@ export default function ClaimDetailsModal({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Additional notes"
                 />
+              </div>
+            )}
+          </div>
+
+          {/* AI Risk Analysis */}
+          <div className="mt-8">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Brain className="w-5 h-5 text-purple-600" />
+              Analyse IA du risque
+            </h3>
+
+            {claim.scoreRisque !== null && claim.scoreRisque !== undefined ? (
+              <div className="space-y-4">
+                {/* Score row */}
+                <div className="flex items-center gap-4 flex-wrap">
+                  <RiskBadge
+                    label={claim.labelRisque === 'FAIBLE' ? 'Faible'
+                      : claim.labelRisque === 'MOYEN' ? 'Moyen'
+                      : claim.labelRisque === 'ELEVE' ? 'Élevé'
+                      : claim.labelRisque === 'SUSPICIEUX' ? 'Suspicieux'
+                      : (claim.labelRisque ?? 'Faible')}
+                    score={claim.scoreRisque}
+                    size="lg"
+                  />
+                  {claim.scoredAt && (
+                    <span className="text-xs text-gray-400">
+                      Analysé le {new Date(claim.scoredAt).toLocaleString('fr-FR')}
+                    </span>
+                  )}
+                </div>
+
+                {/* Decision panel */}
+                <DecisionPanel
+                  decision={claim.decisionIa ?? 'REVISION_MANUELLE'}
+                  confidence={claim.scoreConfidence ?? 0}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-4">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Analyse en cours — résultat disponible dans quelques secondes…
               </div>
             )}
           </div>

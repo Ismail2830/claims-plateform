@@ -36,6 +36,11 @@ model Client {
   twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
   twoFactorMethod  String?  @map("two_factor_method") // "email" | "phone"
 
+  // Historique sinistres — used by ML risk scoring
+  nbSinistresPasses  Int     @default(0) @map("nb_sinistres_passes")
+  montantTotalPasse  Decimal @default(0) @map("montant_total_passe") @db.Decimal(12, 2)
+  ancienneteAnnees   Int     @default(0) @map("anciennete_annees")
+
   createdAt   DateTime @default(now())
   lastLoginAt DateTime?
   updatedAt   DateTime @updatedAt
@@ -145,9 +150,16 @@ model Claim {
   assignedTo        String?     @map("assigned_to") @db.Uuid
   assignedUser      User?       @relation(fields: [assignedTo], references: [userId])
   
-  // AI Scoring
+  // AI Scoring (legacy)
   riskScore         Decimal?    @map("risk_score") @db.Decimal(5, 2)
   fraudScore        Decimal?    @map("fraud_score") @db.Decimal(5, 2)
+
+  // AI Risk Scoring — ML microservice
+  scoreRisque       Int?        @map("score_risque")
+  labelRisque       RiskLabel?  @map("label_risque")
+  decisionIa        DecisionIA? @map("decision_ia")
+  scoreConfidence   Float?      @map("score_confidence")
+  scoredAt          DateTime?   @map("scored_at")
   
   // Metadata
   declarationChannel DeclarationChannel? @map("declaration_channel")
@@ -465,6 +477,19 @@ enum ClaimSource {
   WHATSAPP
   MOBILE
   AGENT
+}
+
+enum RiskLabel {
+  FAIBLE
+  MOYEN
+  ELEVE
+  SUSPICIEUX
+}
+
+enum DecisionIA {
+  AUTO_APPROUVER
+  REVISION_MANUELLE
+  ESCALADER
 }
 
 enum PolicyType {

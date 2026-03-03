@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import { RiskLabel, DecisionIA, PolicyType } from '@prisma/client';
+import type { PolicyType } from '@prisma/client';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -31,19 +31,19 @@ const POLICY_TYPE_TO_ML: Record<PolicyType, string> = {
   TAKAFUL_VIE:     'LIFE',
 };
 
-/** Maps ML label string to Prisma RiskLabel enum. */
-const LABEL_TO_ENUM: Record<string, RiskLabel> = {
-  'Faible':     RiskLabel.FAIBLE,
-  'Moyen':      RiskLabel.MOYEN,
-  'Élevé':      RiskLabel.ELEVE,
-  'Suspicieux': RiskLabel.SUSPICIEUX,
+/** Maps ML label string → DB string value (Prisma RiskLabel enum). */
+const LABEL_TO_DB: Record<string, string> = {
+  'Faible':     'FAIBLE',
+  'Moyen':      'MOYEN',
+  'Élevé':      'ELEVE',
+  'Suspicieux': 'SUSPICIEUX',
 };
 
-/** Maps ML decision string to Prisma DecisionIA enum. */
-const DECISION_TO_ENUM: Record<string, DecisionIA> = {
-  'Auto-approuver':       DecisionIA.AUTO_APPROUVER,
-  'Révision manuelle':    DecisionIA.REVISION_MANUELLE,
-  'Escalader / Enquête':  DecisionIA.ESCALADER,
+/** Maps ML decision string → DB string value (Prisma DecisionIA enum). */
+const DECISION_TO_DB: Record<string, string> = {
+  'Auto-approuver':       'AUTO_APPROUVER',
+  'Révision manuelle':    'REVISION_MANUELLE',
+  'Escalader / Enquête':  'ESCALADER',
 };
 
 // ─── ML response type ─────────────────────────────────────────────────────────
@@ -140,9 +140,9 @@ export async function POST(
     );
   }
 
-  // 6. Map to Prisma enums
-  const labelRisque  = LABEL_TO_ENUM[mlResult.label]    ?? RiskLabel.FAIBLE;
-  const decisionIa   = DECISION_TO_ENUM[mlResult.decision] ?? DecisionIA.REVISION_MANUELLE;
+  // 6. Map to DB enum strings (Prisma accepts string values for enums)
+  const labelRisque = (LABEL_TO_DB[mlResult.label]    ?? 'FAIBLE')   as any;
+  const decisionIa  = (DECISION_TO_DB[mlResult.decision] ?? 'REVISION_MANUELLE') as any;
 
   // 7. Persist score to DB
   const updated = await prisma.claim.update({

@@ -1,12 +1,14 @@
 /**
  * Nour – WhatsApp Chatbot Flow Engine
- * Moroccan Insurance Platform
+ * Moroccan Insurance Platform — Bilingual (FR / AR)
  *
  * Flows:
- *   MENU          → Welcome + 4 action buttons
+ *   LANG_SELECT   → Choose language (FR / AR) — first interaction
+ *   MENU          → Welcome + 3 action buttons
  *   DEVIS         → Collect policy type → DOB → show premium estimate
  *   SINISTRE      → Collect type → date → description → photo → create Claim
  *   STATUT        → Show last 3 claims for this phone
+ *   RENOUVELLEMENT→ Policies expiring in 60 days
  *   AGENT         → Notify human agent + provide contact
  */
 
@@ -14,6 +16,117 @@ import { prisma } from '@/app/lib/prisma';
 import { getSession, setSession, clearSession, UserSession } from './session-store';
 import { sendWhatsAppText, sendWhatsAppButtons } from './whatsapp';
 import { detectIntent } from './intent-detector';
+
+// ─── Language Type ────────────────────────────────────────────────────────────
+
+type Lang = 'fr' | 'ar';
+
+function getLang(session: UserSession): Lang {
+  return (session.context.lang as Lang) ?? 'fr';
+}
+
+// ─── Translations ─────────────────────────────────────────────────────────────
+
+const T = {
+  fr: {
+    menuGreet:
+      '🌟 *Bonjour! Je suis Nour*, votre assistante assurance.\n\nComment puis-je vous aider aujourd\'hui?',
+    menuExtra:
+      'Vous pouvez aussi taper:\n• *renouvellement* – rappel d\'échéance\n• *agent* – parler à un conseiller',
+    menuBtn1: '📋 Demander un devis',
+    menuBtn2: '🚨 Déclarer un sinistre',
+    menuBtn3: '🔍 Suivre mon dossier',
+    devisTitle: '📋 *Devis d\'assurance*\n\nQuel type d\'assurance vous intéresse?',
+    devisLife: 'Tapez *VIE* pour une assurance vie.',
+    devisInvalidType: '❌ Type non reconnu. Veuillez choisir: AUTO, HOME, HEALTH ou VIE.',
+    devisAskDOB: (type: string) =>
+      `✅ Assurance *${type}* sélectionnée.\n\n📅 Quelle est votre date de naissance? (format: JJ/MM/AAAA)`,
+    devisInvalidDOB: '❌ Format invalide. Utilisez JJ/MM/AAAA (ex: 15/06/1990).',
+    devisResult: (type: string, premium: string) =>
+      `📊 *Estimation de votre prime*\n\n• Type: ${type}\n• Prime estimée: *${premium}*\n\n⚠️ _Il s'agit d'une estimation. Un conseiller vous contactera pour un devis précis._\n\nTapez *menu* pour revenir à l'accueil.`,
+    sinistreTitle: '🚨 *Déclaration de sinistre*\n\nQuel type de sinistre souhaitez-vous déclarer?',
+    sinistreExtra: 'Tapez *4* pour Dégâts des eaux.',
+    sinistreInvalidType: '❌ Type non reconnu. Tapez: 1 (Accident), 2 (Vol), 3 (Incendie), 4 (Dégâts eaux).',
+    sinistreAskDate: (type: string) =>
+      `📅 *${type}* enregistré.\n\nQuelle est la date du sinistre? (format: JJ/MM/AAAA)`,
+    sinistreInvalidDate: '❌ Format invalide. Utilisez JJ/MM/AAAA (ex: 15/06/2025).',
+    sinistreAskDesc: '📝 Décrivez brièvement le sinistre (lieu, circonstances, dommages):',
+    sinistreDescShort: '❌ Description trop courte. Veuillez fournir plus de détails.',
+    sinistreAskPhoto: '📸 Envoyez une photo des dégâts (optionnel).\n\nTapez *non* ou *passer* pour ignorer.',
+    sinistreSuccess: (num: string, type: string, date: string) =>
+      `✅ *Sinistre déclaré avec succès!*\n\n📋 Numéro de dossier: *${num}*\n📌 Type: ${type}\n📅 Date incident: ${date}\n\nUn expert vous contactera dans les 48h.\nPour suivre votre dossier, tapez *statut*.\n\nTapez *menu* pour revenir à l'accueil.`,
+    sinistreError: (agent: string) =>
+      `❌ Une erreur est survenue. Veuillez réessayer ou appeler le ${agent}.`,
+    noAccount: (agent: string) =>
+      `❌ Aucun compte trouvé pour ce numéro.\n\nVeuillez vous inscrire sur notre plateforme ou appeler le ${agent}.`,
+    noAccountShort: (agent: string) =>
+      `❌ Aucun compte trouvé pour ce numéro.\n\nContactez-nous: ${agent}`,
+    noClaims: '📂 Vous n\'avez aucun dossier sinistre enregistré.\n\nTapez *sinistre* pour en déclarer un.',
+    statutTitle: (lines: string) =>
+      `🗂️ *Vos derniers dossiers:*\n\n${lines}\n\nTapez *agent* pour parler à un conseiller.`,
+    noPolicies: '✅ Aucune police n\'arrive à échéance dans les 60 prochains jours.',
+    renewTitle: (lines: string, agent: string) =>
+      `📅 *Vos polices à renouveler:*\n\n${lines}\n\nContactez-nous pour renouveler: ${agent}\nOu tapez *agent*.`,
+    agentMsg: (agent: string) =>
+      `🧑‍💼 *Transfert vers un conseiller humain*\n\nVous allez être mis en relation avec l'un de nos agents.\n\n📞 Téléphone direct: *${agent}*\n🕐 Disponible: Lun–Ven 8h–18h | Sam 9h–13h\n\nUn conseiller vous contactera dans les prochaines minutes.\n\nTapez *menu* pour revenir à l'accueil.`,
+    imgReceived: '📸 Image reçue. Tapez *menu* pour voir les options disponibles.',
+    statusLabels: {
+      DECLARED: '📩 Déclaré', ANALYZING: '🔍 En analyse',
+      DOCS_REQUIRED: '📄 Documents requis', UNDER_EXPERTISE: '🔬 En expertise',
+      IN_DECISION: '⚖️ En décision', APPROVED: '✅ Approuvé',
+      IN_PAYMENT: '💳 En paiement', CLOSED: '🔒 Clôturé', REJECTED: '❌ Rejeté',
+    } as Record<string, string>,
+  },
+  ar: {
+    menuGreet:
+      '🌟 *مرحباً! أنا نور*، مساعدتكم في التأمين.\n\nكيف يمكنني مساعدتك اليوم؟',
+    menuExtra:
+      'يمكنك أيضاً كتابة:\n• *تجديد* – تذكير بانتهاء الوثيقة\n• *وكيل* – التحدث مع مستشار',
+    menuBtn1: '📋 طلب عرض سعر',
+    menuBtn2: '🚨 الإبلاغ عن حادثة',
+    menuBtn3: '🔍 متابعة ملفي',
+    devisTitle: '📋 *عرض سعر التأمين*\n\nما نوع التأمين الذي يهمك؟',
+    devisLife: 'اكتب *حياة* لتأمين الحياة.',
+    devisInvalidType: '❌ النوع غير معروف. اختر: سيارة، منزل، صحة أو حياة.',
+    devisAskDOB: (type: string) =>
+      `✅ تم اختيار تأمين *${type}*.\n\n📅 ما هو تاريخ ميلادك؟ (الصيغة: يي/شش/سسسس)`,
+    devisInvalidDOB: '❌ صيغة غير صحيحة. استخدم يي/شش/سسسس (مثال: 15/06/1990).',
+    devisResult: (type: string, premium: string) =>
+      `📊 *تقدير قسط التأمين*\n\n• النوع: ${type}\n• القسط المقدر: *${premium}*\n\n⚠️ _هذا تقدير فقط. سيتصل بك مستشار لعرض سعر دقيق._\n\nاكتب *قائمة* للعودة للقائمة الرئيسية.`,
+    sinistreTitle: '🚨 *الإبلاغ عن حادثة*\n\nما هو نوع الحادثة؟',
+    sinistreExtra: 'اكتب *4* لأضرار المياه.',
+    sinistreInvalidType: '❌ النوع غير معروف. اكتب: 1 (حادث)، 2 (سرقة)، 3 (حريق)، 4 (أضرار مياه).',
+    sinistreAskDate: (type: string) =>
+      `📅 تم تسجيل *${type}*.\n\nما هو تاريخ الحادثة؟ (الصيغة: يي/شش/سسسس)`,
+    sinistreInvalidDate: '❌ صيغة غير صحيحة. استخدم يي/شش/سسسس (مثال: 15/06/2025).',
+    sinistreAskDesc: '📝 صف الحادثة باختصار (المكان، الظروف، الأضرار):',
+    sinistreDescShort: '❌ الوصف قصير جداً. يرجى تقديم المزيد من التفاصيل.',
+    sinistreAskPhoto: '📸 أرسل صورة للأضرار (اختياري).\n\nاكتب *لا* أو *تجاوز* للتخطي.',
+    sinistreSuccess: (num: string, type: string, date: string) =>
+      `✅ *تم الإبلاغ عن الحادثة بنجاح!*\n\n📋 رقم الملف: *${num}*\n📌 النوع: ${type}\n📅 تاريخ الحادثة: ${date}\n\nسيتصل بك خبير خلال 48 ساعة.\nلمتابعة ملفك، اكتب *حالة*.\n\nاكتب *قائمة* للعودة للقائمة الرئيسية.`,
+    sinistreError: (agent: string) =>
+      `❌ حدث خطأ. يرجى المحاولة مجدداً أو الاتصال بـ ${agent}.`,
+    noAccount: (agent: string) =>
+      `❌ لا يوجد حساب لهذا الرقم.\n\nيرجى التسجيل في منصتنا أو الاتصال بـ ${agent}.`,
+    noAccountShort: (agent: string) =>
+      `❌ لا يوجد حساب لهذا الرقم.\n\nاتصل بنا: ${agent}`,
+    noClaims: '📂 ليس لديك أي ملفات حوادث مسجلة.\n\nاكتب *حادثة* للإبلاغ عن حادثة.',
+    statutTitle: (lines: string) =>
+      `🗂️ *آخر ملفاتك:*\n\n${lines}\n\nاكتب *وكيل* للتحدث مع مستشار.`,
+    noPolicies: '✅ لا توجد وثائق تأمين تنتهي خلال الستين يوماً القادمة.',
+    renewTitle: (lines: string, agent: string) =>
+      `📅 *وثائق التأمين المطلوب تجديدها:*\n\n${lines}\n\nاتصل بنا للتجديد: ${agent}\nأو اكتب *وكيل*.`,
+    agentMsg: (agent: string) =>
+      `🧑‍💼 *التحويل إلى مستشار بشري*\n\nسيتم التواصل معك من قِبل أحد مستشارينا.\n\n📞 الهاتف المباشر: *${agent}*\n🕐 متاح: الإثنين–الجمعة 8ص–6م | السبت 9ص–1م\n\nسيتصل بك مستشار خلال دقائق.\n\nاكتب *قائمة* للعودة للقائمة الرئيسية.`,
+    imgReceived: '📸 تم استلام الصورة. اكتب *قائمة* لرؤية الخيارات.',
+    statusLabels: {
+      DECLARED: '📩 مُعلَن', ANALYZING: '🔍 قيد التحليل',
+      DOCS_REQUIRED: '📄 وثائق مطلوبة', UNDER_EXPERTISE: '🔬 قيد الخبرة',
+      IN_DECISION: '⚖️ قيد القرار', APPROVED: '✅ موافق عليه',
+      IN_PAYMENT: '💳 قيد الدفع', CLOSED: '🔒 مغلق', REJECTED: '❌ مرفوض',
+    } as Record<string, string>,
+  },
+};
 
 // ─── Premium Estimation Table ─────────────────────────────────────────────────
 
@@ -46,32 +159,61 @@ function generateClaimNumber(): string {
 // ─── Claim Type Mapping ───────────────────────────────────────────────────────
 
 const CLAIM_TYPE_MAP: Record<string, string> = {
-  '1': 'ACCIDENT',
-  '2': 'THEFT',
-  '3': 'FIRE',
-  '4': 'WATER_DAMAGE',
-  'accident':     'ACCIDENT',
-  'vol':          'THEFT',
-  'incendie':     'FIRE',
-  'dégât':        'WATER_DAMAGE',
-  'degat':        'WATER_DAMAGE',
-  'dégats':       'WATER_DAMAGE',
-  'degats':       'WATER_DAMAGE',
-  'inondation':   'WATER_DAMAGE',
+  '1': 'ACCIDENT', '2': 'THEFT', '3': 'FIRE', '4': 'WATER_DAMAGE',
+  'accident': 'ACCIDENT', 'حادث': 'ACCIDENT',
+  'vol': 'THEFT', 'سرقة': 'THEFT',
+  'incendie': 'FIRE', 'حريق': 'FIRE',
+  'dégât': 'WATER_DAMAGE', 'degat': 'WATER_DAMAGE',
+  'dégats': 'WATER_DAMAGE', 'degats': 'WATER_DAMAGE',
+  'inondation': 'WATER_DAMAGE', 'أضرار': 'WATER_DAMAGE', 'مياه': 'WATER_DAMAGE',
 };
 
 // ─── Human Agent Contact ──────────────────────────────────────────────────────
 
 const AGENT_PHONE = process.env.AGENT_PHONE_NUMBER ?? '+212522XXXXXX';
 
+// ─── Language Selection ───────────────────────────────────────────────────────
+
+async function sendLanguageSelect(phone: string): Promise<void> {
+  await sendWhatsAppButtons(
+    phone,
+    '🌍 *Bienvenue chez ISM Assurance!*\n\nVeuillez choisir votre langue.\nالرجاء اختيار لغتك.',
+    [
+      { id: 'LANG_FR', title: '🇫🇷 Français' },
+      { id: 'LANG_AR', title: '🇲🇦 العربية' },
+    ],
+  );
+}
+
 // ─── Main Incoming Message Handler ───────────────────────────────────────────
 
 export async function handleIncoming(phone: string, text: string): Promise<void> {
   const session = await getSession(phone);
 
+  // ── Language selection gate ───────────────────────────────────────────────
+  if (!session.context.lang) {
+    const lower = text.trim().toLowerCase();
+    const isFr = text === 'LANG_FR' || lower === 'fr' || lower === 'français' || lower === 'francais';
+    const isAr = text === 'LANG_AR' || lower === 'ar' || lower === 'عربية' || lower === 'عربي';
+    if (isFr) {
+      await setSession(phone, { ...session, context: { ...session.context, lang: 'fr' } });
+      await sendMenu(phone, 'fr');
+      return;
+    }
+    if (isAr) {
+      await setSession(phone, { ...session, context: { ...session.context, lang: 'ar' } });
+      await sendMenu(phone, 'ar');
+      return;
+    }
+    await sendLanguageSelect(phone);
+    return;
+  }
+
+  const lang = getLang(session);
+
   // If the user is mid-flow, continue that flow instead of re-detecting intent
   if (session.step !== 'MENU' && session.step !== 'AWAITING_INTENT') {
-    await continueFlow(phone, text, session);
+    await continueFlow(phone, text, session, lang);
     return;
   }
 
@@ -80,25 +222,25 @@ export async function handleIncoming(phone: string, text: string): Promise<void>
 
   switch (intent) {
     case 'MENU':
-      await sendMenu(phone);
+      await sendMenu(phone, lang);
       break;
     case 'DEVIS':
-      await startDevis(phone);
+      await startDevis(phone, lang, session);
       break;
     case 'SINISTRE':
-      await startSinistre(phone);
+      await startSinistre(phone, lang, session);
       break;
     case 'STATUT':
-      await handleStatut(phone);
+      await handleStatut(phone, lang);
       break;
     case 'RENOUVELLEMENT':
-      await handleRenouvellement(phone);
+      await handleRenouvellement(phone, lang);
       break;
     case 'AGENT':
-      await handleAgent(phone);
+      await handleAgent(phone, lang);
       break;
     default:
-      await sendMenu(phone);
+      await sendMenu(phone, lang);
   }
 }
 
@@ -108,34 +250,30 @@ async function continueFlow(
   phone: string,
   text: string,
   session: UserSession,
+  lang: Lang,
 ): Promise<void> {
   switch (session.step) {
-    // ── DEVIS flow ─────────────────────────────────────────────────
     case 'DEVIS_POLICY_TYPE':
-      await handleDevisPolicyType(phone, text, session);
+      await handleDevisPolicyType(phone, text, session, lang);
       break;
     case 'DEVIS_DOB':
-      await handleDevisDOB(phone, text, session);
+      await handleDevisDOB(phone, text, session, lang);
       break;
-
-    // ── SINISTRE flow ──────────────────────────────────────────────
     case 'SINISTRE_TYPE':
-      await handleSinistreType(phone, text, session);
+      await handleSinistreType(phone, text, session, lang);
       break;
     case 'SINISTRE_DATE':
-      await handleSinistreDate(phone, text, session);
+      await handleSinistreDate(phone, text, session, lang);
       break;
     case 'SINISTRE_DESC':
-      await handleSinistreDesc(phone, text, session);
+      await handleSinistreDesc(phone, text, session, lang);
       break;
     case 'SINISTRE_PHOTO':
-      await handleSinistrePhoto(phone, text, session);
+      await handleSinistrePhoto(phone, text, session, lang);
       break;
-
     default:
-      // Unrecognised step → reset to menu
       await clearSession(phone);
-      await sendMenu(phone);
+      await sendMenu(phone, lang);
   }
 }
 
@@ -143,95 +281,68 @@ async function continueFlow(
 // MENU Flow
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function sendMenu(phone: string): Promise<void> {
-  await setSession(phone, { step: 'MENU', context: {} });
+async function sendMenu(phone: string, lang: Lang): Promise<void> {
+  const t = T[lang];
+  await setSession(phone, { step: 'MENU', context: { lang } });
 
-  await sendWhatsAppButtons(
-    phone,
-    '🌟 *Bonjour! Je suis Nour*, votre assistante assurance.\n\nComment puis-je vous aider aujourd\'hui?',
-    [
-      { id: 'DEVIS',    title: '📋 Demander un devis' },
-      { id: 'SINISTRE', title: '🚨 Déclarer un sinistre' },
-      { id: 'STATUT',   title: '🔍 Suivre mon dossier' },
-    ],
-  );
-
-  // Send a second row for Agent (buttons max 3, so we send a follow-up text)
-  await sendWhatsAppText(
-    phone,
-    'Vous pouvez aussi taper:\n• *renouvellement* – rappel d\'échéance\n• *agent* – parler à un conseiller',
-  );
+  await sendWhatsAppButtons(phone, t.menuGreet, [
+    { id: 'DEVIS',    title: t.menuBtn1 },
+    { id: 'SINISTRE', title: t.menuBtn2 },
+    { id: 'STATUT',   title: t.menuBtn3 },
+  ]);
+  await sendWhatsAppText(phone, t.menuExtra);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEVIS Flow
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function startDevis(phone: string): Promise<void> {
-  await setSession(phone, { step: 'DEVIS_POLICY_TYPE', context: {} });
+async function startDevis(phone: string, lang: Lang, session: UserSession): Promise<void> {
+  const t = T[lang];
+  await setSession(phone, { step: 'DEVIS_POLICY_TYPE', context: { lang } });
 
-  await sendWhatsAppButtons(
-    phone,
-    '📋 *Devis d\'assurance*\n\nQuel type d\'assurance vous intéresse?',
-    [
-      { id: 'AUTO',   title: '🚗 Auto' },
-      { id: 'HOME',   title: '🏠 Habitation' },
-      { id: 'HEALTH', title: '🏥 Santé' },
-    ],
-  );
-  await sendWhatsAppText(phone, 'Tapez *VIE* pour une assurance vie.');
+  await sendWhatsAppButtons(phone, t.devisTitle, [
+    { id: 'AUTO',   title: lang === 'ar' ? '🚗 سيارة' : '🚗 Auto' },
+    { id: 'HOME',   title: lang === 'ar' ? '🏠 منزل'  : '🏠 Habitation' },
+    { id: 'HEALTH', title: lang === 'ar' ? '🏥 صحة'   : '🏥 Santé' },
+  ]);
+  await sendWhatsAppText(phone, t.devisLife);
 }
 
 async function handleDevisPolicyType(
   phone: string,
   text: string,
   session: UserSession,
+  lang: Lang,
 ): Promise<void> {
+  const t = T[lang];
   const typeMap: Record<string, string> = {
-    auto:        'AUTO',
-    '🚗':        'AUTO',
-    home:        'HOME',
-    habitation:  'HOME',
-    '🏠':        'HOME',
-    santé:       'HEALTH',
-    sante:       'HEALTH',
-    health:      'HEALTH',
-    '🏥':        'HEALTH',
-    vie:         'LIFE',
-    life:        'LIFE',
+    auto: 'AUTO', 'سيارة': 'AUTO',
+    home: 'HOME', habitation: 'HOME', 'منزل': 'HOME',
+    santé: 'HEALTH', sante: 'HEALTH', health: 'HEALTH', 'صحة': 'HEALTH',
+    vie: 'LIFE', life: 'LIFE', 'حياة': 'LIFE',
   };
 
-  // Also handle button_reply ID
   const normalised = text.trim().toLowerCase();
-  const policyType =
-    typeMap[normalised] ??
-    typeMap[text.toUpperCase() as keyof typeof typeMap] ??
-    text.toUpperCase();
+  const policyType = typeMap[normalised] ?? typeMap[text.trim()] ?? text.toUpperCase();
 
   const valid = ['AUTO', 'HOME', 'HEALTH', 'LIFE'];
   if (!valid.includes(policyType)) {
-    await sendWhatsAppText(phone, '❌ Type non reconnu. Veuillez choisir: AUTO, HOME, HEALTH ou VIE.');
+    await sendWhatsAppText(phone, t.devisInvalidType);
     return;
   }
 
-  await setSession(phone, {
-    ...session,
-    step: 'DEVIS_DOB',
-    context: { ...session.context, policyType },
-  });
-
-  await sendWhatsAppText(
-    phone,
-    `✅ Assurance *${policyType}* sélectionnée.\n\n📅 Quelle est votre date de naissance? (format: JJ/MM/AAAA)`,
-  );
+  await setSession(phone, { ...session, step: 'DEVIS_DOB', context: { lang, policyType } });
+  await sendWhatsAppText(phone, t.devisAskDOB(policyType));
 }
 
 async function handleDevisDOB(
   phone: string,
   text: string,
   session: UserSession,
+  lang: Lang,
 ): Promise<void> {
-  // Accept DD/MM/YYYY or YYYY-MM-DD
+  const t = T[lang];
   const ddmm = /^(\d{2})\/(\d{2})\/(\d{4})$/;
   const iso  = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -244,79 +355,58 @@ async function handleDevisDOB(
   } else if (m2) {
     dob = text.trim();
   } else {
-    await sendWhatsAppText(phone, '❌ Format invalide. Utilisez JJ/MM/AAAA (ex: 15/06/1990).');
+    await sendWhatsAppText(phone, t.devisInvalidDOB);
     return;
   }
 
   const policyType = session.context.policyType ?? 'AUTO';
   const premium = estimatePremium(policyType, dob);
 
-  await clearSession(phone);
-
-  await sendWhatsAppText(
-    phone,
-    `📊 *Estimation de votre prime*\n\n` +
-    `• Type: ${policyType}\n` +
-    `• Prime estimée: *${premium}*\n\n` +
-    `⚠️ _Il s'agit d'une estimation. Un conseiller vous contactera pour un devis précis._\n\n` +
-    `Tapez *menu* pour revenir à l'accueil.`,
-  );
+  await setSession(phone, { step: 'MENU', context: { lang } });
+  await sendWhatsAppText(phone, t.devisResult(policyType, premium));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SINISTRE Flow
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function startSinistre(phone: string): Promise<void> {
-  await setSession(phone, { step: 'SINISTRE_TYPE', context: {} });
+async function startSinistre(phone: string, lang: Lang, session: UserSession): Promise<void> {
+  const t = T[lang];
+  await setSession(phone, { step: 'SINISTRE_TYPE', context: { lang } });
 
-  await sendWhatsAppButtons(
-    phone,
-    '🚨 *Déclaration de sinistre*\n\nQuel type de sinistre souhaitez-vous déclarer?',
-    [
-      { id: '1', title: '🚗 Accident' },
-      { id: '2', title: '🔒 Vol' },
-      { id: '3', title: '🔥 Incendie' },
-    ],
-  );
-  await sendWhatsAppText(phone, 'Tapez *4* pour Dégâts des eaux.');
+  await sendWhatsAppButtons(phone, t.sinistreTitle, [
+    { id: '1', title: lang === 'ar' ? '🚗 حادث'  : '🚗 Accident' },
+    { id: '2', title: lang === 'ar' ? '🔒 سرقة'  : '🔒 Vol' },
+    { id: '3', title: lang === 'ar' ? '🔥 حريق'  : '🔥 Incendie' },
+  ]);
+  await sendWhatsAppText(phone, t.sinistreExtra);
 }
 
 async function handleSinistreType(
   phone: string,
   text: string,
   session: UserSession,
+  lang: Lang,
 ): Promise<void> {
-  const claimType =
-    CLAIM_TYPE_MAP[text.trim().toLowerCase()] ??
-    CLAIM_TYPE_MAP[text.trim()] ??
-    null;
+  const t = T[lang];
+  const claimType = CLAIM_TYPE_MAP[text.trim().toLowerCase()] ?? CLAIM_TYPE_MAP[text.trim()] ?? null;
 
   if (!claimType) {
-    await sendWhatsAppText(
-      phone,
-      '❌ Type non reconnu. Tapez: 1 (Accident), 2 (Vol), 3 (Incendie), 4 (Dégâts eaux).',
-    );
+    await sendWhatsAppText(phone, t.sinistreInvalidType);
     return;
   }
 
-  await setSession(phone, {
-    ...session,
-    step: 'SINISTRE_DATE',
-    context: { ...session.context, claimType },
-  });
-
-  await sendWhatsAppText(
-    phone,
-    `📅 *${claimType}* enregistré.\n\nQuelle est la date du sinistre? (format: JJ/MM/AAAA)`,
-  );
+  await setSession(phone, { ...session, step: 'SINISTRE_DATE', context: { lang, claimType } });
+  await sendWhatsAppText(phone, t.sinistreAskDate(claimType));
 }
 
 async function handleSinistreDate(
   phone: string,
   text: string,
   session: UserSession,
+  lang: Lang,
 ): Promise<void> {
+  const t = T[lang];
   const ddmm = /^(\d{2})\/(\d{2})\/(\d{4})$/;
   const iso  = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -329,54 +419,46 @@ async function handleSinistreDate(
   } else if (m2) {
     incidentDate = text.trim();
   } else {
-    await sendWhatsAppText(phone, '❌ Format invalide. Utilisez JJ/MM/AAAA (ex: 15/06/2025).');
+    await sendWhatsAppText(phone, t.sinistreInvalidDate);
     return;
   }
 
   await setSession(phone, {
-    ...session,
-    step: 'SINISTRE_DESC',
-    context: { ...session.context, incidentDate },
+    ...session, step: 'SINISTRE_DESC',
+    context: { lang, claimType: session.context.claimType, incidentDate },
   });
-
-  await sendWhatsAppText(
-    phone,
-    '📝 Décrivez brièvement le sinistre (lieu, circonstances, dommages):',
-  );
+  await sendWhatsAppText(phone, t.sinistreAskDesc);
 }
 
 async function handleSinistreDesc(
   phone: string,
   text: string,
   session: UserSession,
+  lang: Lang,
 ): Promise<void> {
+  const t = T[lang];
   if (text.trim().length < 10) {
-    await sendWhatsAppText(phone, '❌ Description trop courte. Veuillez fournir plus de détails.');
+    await sendWhatsAppText(phone, t.sinistreDescShort);
     return;
   }
 
   await setSession(phone, {
-    ...session,
-    step: 'SINISTRE_PHOTO',
+    ...session, step: 'SINISTRE_PHOTO',
     context: { ...session.context, description: text.trim() },
   });
-
-  await sendWhatsAppText(
-    phone,
-    '📸 Envoyez une photo des dégâts (optionnel).\n\nTapez *non* ou *passer* pour ignorer.',
-  );
+  await sendWhatsAppText(phone, t.sinistreAskPhoto);
 }
 
 async function handleSinistrePhoto(
   phone: string,
   text: string,
   session: UserSession,
+  lang: Lang,
 ): Promise<void> {
-  // text will be either image media_id (from webhook) or "non"/"passer"
-  const hasPhoto = !['non', 'passer', 'skip', 'no'].includes(text.trim().toLowerCase());
+  const skipWords = ['non', 'passer', 'skip', 'no', 'لا', 'تجاوز'];
+  const hasPhoto = !skipWords.includes(text.trim().toLowerCase());
   const photoRef = hasPhoto ? text.trim() : undefined;
-
-  await createClaim(phone, session, photoRef);
+  await createClaim(phone, session, lang, photoRef);
 }
 
 // ─── Create Claim in Database ─────────────────────────────────────────────────
@@ -384,20 +466,17 @@ async function handleSinistrePhoto(
 async function createClaim(
   phone: string,
   session: UserSession,
+  lang: Lang,
   photoRef?: string,
 ): Promise<void> {
+  const t = T[lang];
   const { claimType, incidentDate, description } = session.context;
 
-  // Find the client by phone
   const client = await prisma.client.findUnique({ where: { phone } });
 
   if (!client) {
-    await clearSession(phone);
-    await sendWhatsAppText(
-      phone,
-      '❌ Aucun compte trouvé pour ce numéro.\n\n' +
-      `Veuillez vous inscrire sur notre plateforme ou appeler le ${AGENT_PHONE}.`,
-    );
+    await setSession(phone, { step: 'MENU', context: { lang } });
+    await sendWhatsAppText(phone, t.noAccount(AGENT_PHONE));
     return;
   }
 
@@ -416,25 +495,12 @@ async function createClaim(
       },
     });
 
-    await clearSession(phone);
-
-    await sendWhatsAppText(
-      phone,
-      `✅ *Sinistre déclaré avec succès!*\n\n` +
-      `📋 Numéro de dossier: *${claimNumber}*\n` +
-      `📌 Type: ${claimType}\n` +
-      `📅 Date incident: ${incidentDate}\n\n` +
-      `Un expert vous contactera dans les 48h.\n` +
-      `Pour suivre votre dossier, tapez *statut*.\n\n` +
-      `Tapez *menu* pour revenir à l'accueil.`,
-    );
+    await setSession(phone, { step: 'MENU', context: { lang } });
+    await sendWhatsAppText(phone, t.sinistreSuccess(claimNumber, claimType, incidentDate));
   } catch (err) {
     console.error('[Chatbot] createClaim error:', err);
-    await clearSession(phone);
-    await sendWhatsAppText(
-      phone,
-      `❌ Une erreur est survenue. Veuillez réessayer ou appeler le ${AGENT_PHONE}.`,
-    );
+    await setSession(phone, { step: 'MENU', context: { lang } });
+    await sendWhatsAppText(phone, t.sinistreError(AGENT_PHONE));
   }
 }
 
@@ -442,14 +508,12 @@ async function createClaim(
 // STATUT Flow
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function handleStatut(phone: string): Promise<void> {
+async function handleStatut(phone: string, lang: Lang): Promise<void> {
+  const t = T[lang];
   const client = await prisma.client.findUnique({ where: { phone } });
 
   if (!client) {
-    await sendWhatsAppText(
-      phone,
-      `❌ Aucun compte trouvé pour ce numéro.\n\nContactez-nous: ${AGENT_PHONE}`,
-    );
+    await sendWhatsAppText(phone, t.noAccountShort(AGENT_PHONE));
     return;
   }
 
@@ -467,51 +531,31 @@ async function handleStatut(phone: string): Promise<void> {
   });
 
   if (claims.length === 0) {
-    await sendWhatsAppText(
-      phone,
-      '📂 Vous n\'avez aucun dossier sinistre enregistré.\n\nTapez *sinistre* pour en déclarer un.',
-    );
+    await sendWhatsAppText(phone, t.noClaims);
     return;
   }
-
-  const STATUS_LABELS: Record<string, string> = {
-    DECLARED:        '📩 Déclaré',
-    ANALYZING:       '🔍 En analyse',
-    DOCS_REQUIRED:   '📄 Documents requis',
-    UNDER_EXPERTISE: '🔬 En expertise',
-    IN_DECISION:     '⚖️ En décision',
-    APPROVED:        '✅ Approuvé',
-    IN_PAYMENT:      '💳 En paiement',
-    CLOSED:          '🔒 Clôturé',
-    REJECTED:        '❌ Rejeté',
-  };
 
   const lines = claims
     .map((c, i) => {
       const date = c.incidentDate.toLocaleDateString('fr-MA');
-      const statusLabel = STATUS_LABELS[c.status] ?? c.status;
+      const statusLabel = t.statusLabels[c.status] ?? c.status;
       return `${i + 1}. *${c.claimNumber}*\n   📌 ${c.claimType} | ${statusLabel}\n   📅 ${date}`;
     })
     .join('\n\n');
 
-  await sendWhatsAppText(
-    phone,
-    `🗂️ *Vos derniers dossiers:*\n\n${lines}\n\nTapez *agent* pour parler à un conseiller.`,
-  );
+  await sendWhatsAppText(phone, t.statutTitle(lines));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RENOUVELLEMENT Flow
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function handleRenouvellement(phone: string): Promise<void> {
+async function handleRenouvellement(phone: string, lang: Lang): Promise<void> {
+  const t = T[lang];
   const client = await prisma.client.findUnique({ where: { phone } });
 
   if (!client) {
-    await sendWhatsAppText(
-      phone,
-      `❌ Aucun compte trouvé pour ce numéro.\n\nContactez-nous: ${AGENT_PHONE}`,
-    );
+    await sendWhatsAppText(phone, t.noAccountShort(AGENT_PHONE));
     return;
   }
 
@@ -530,55 +574,38 @@ async function handleRenouvellement(phone: string): Promise<void> {
   });
 
   if (policies.length === 0) {
-    await sendWhatsAppText(
-      phone,
-      '✅ Aucune police n\'arrive à échéance dans les 60 prochains jours.',
-    );
+    await sendWhatsAppText(phone, t.noPolicies);
     return;
   }
 
   const lines = policies.map((p) => {
     const end = p.endDate.toLocaleDateString('fr-MA');
     const daysLeft = Math.ceil((p.endDate.getTime() - today.getTime()) / 86400000);
-    return `• *${p.policyNumber}* (${p.policyType}) – expire le ${end} (J-${daysLeft})`;
+    return `• *${p.policyNumber}* (${p.policyType}) – ${end} (J-${daysLeft})`;
   }).join('\n');
 
-  await sendWhatsAppText(
-    phone,
-    `📅 *Vos polices à renouveler:*\n\n${lines}\n\n` +
-    `Contactez-nous pour renouveler: ${AGENT_PHONE}\nOu tapez *agent*.`,
-  );
+  await sendWhatsAppText(phone, t.renewTitle(lines, AGENT_PHONE));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AGENT Transfer
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function handleAgent(phone: string): Promise<void> {
-  await clearSession(phone);
-
-  await sendWhatsAppText(
-    phone,
-    `🧑‍💼 *Transfert vers un conseiller humain*\n\n` +
-    `Vous allez être mis en relation avec l'un de nos agents.\n\n` +
-    `📞 Téléphone direct: *${AGENT_PHONE}*\n` +
-    `🕐 Disponible: Lun–Ven 8h–18h | Sam 9h–13h\n\n` +
-    `Un conseiller vous contactera dans les prochaines minutes.\n\n` +
-    `Tapez *menu* pour revenir à l'accueil.`,
-  );
+async function handleAgent(phone: string, lang: Lang): Promise<void> {
+  const t = T[lang];
+  await setSession(phone, { step: 'MENU', context: { lang } });
+  await sendWhatsAppText(phone, t.agentMsg(AGENT_PHONE));
 }
 
 // ─── Handle Image Messages ────────────────────────────────────────────────────
 
 export async function handleImageMessage(phone: string, mediaId: string): Promise<void> {
   const session = await getSession(phone);
+  const lang = getLang(session);
 
   if (session.step === 'SINISTRE_PHOTO') {
-    await handleSinistrePhoto(phone, mediaId, session);
+    await handleSinistrePhoto(phone, mediaId, session, lang);
   } else {
-    await sendWhatsAppText(
-      phone,
-      '📸 Image reçue. Tapez *menu* pour voir les options disponibles.',
-    );
+    await sendWhatsAppText(phone, T[lang].imgReceived);
   }
 }

@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { handleIncoming, handleImageMessage } from '@/app/lib/chatbot-flows';
 
+export const maxDuration = 30;
+
 // ─── GET – Meta Webhook Verification ─────────────────────────────────────────
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -32,11 +34,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 // ─── POST – Inbound Message Handler ──────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // Always return 200 immediately — Meta will retry if response takes > 20s
   const body = await req.json().catch(() => null);
 
-  // Process asynchronously (fire-and-forget pattern for serverless)
-  processWebhook(body).catch((err) =>
+  // Await processing — Vercel kills fire-and-forget before completion
+  await processWebhook(body).catch((err) =>
     console.error('[WhatsApp Webhook] Processing error:', err),
   );
 

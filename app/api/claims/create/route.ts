@@ -154,6 +154,14 @@ export async function POST(request: NextRequest) {
       return newClaim;
     });
 
+    // Fire-and-forget: trigger AI risk scoring in background, don't block response
+    const origin = request.nextUrl.origin;
+    fetch(`${origin}/api/claims/${result.claimId}/score`, { method: 'POST' })
+      .catch((err: unknown) => {
+        // Non-blocking — scoring failure never prevents claim creation
+        void err;
+      });
+
     return NextResponse.json({
       success: true,
       message: 'Claim created successfully',

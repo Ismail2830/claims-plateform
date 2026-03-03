@@ -76,7 +76,17 @@ export default function ClaimDetailsModal({
     if (!isOpen || !claim?.claimNumber) return;
     if (aiScore.scoreRisque !== null) return; // already scored
 
+    let pollCount = 0;
+
     const interval = setInterval(async () => {
+      pollCount++;
+
+      // After first poll with no result, trigger the score endpoint directly
+      if (pollCount === 2 && claim?.claimId) {
+        fetch(`/api/claims/${claim.claimId}/score`, { method: 'POST' })
+          .catch(() => { /* silent */ });
+      }
+
       try {
         const res = await fetch(
           `/api/super-admin/claims?search=${encodeURIComponent(claim.claimNumber)}&limit=1`

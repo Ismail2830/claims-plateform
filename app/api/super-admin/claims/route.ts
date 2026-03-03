@@ -388,6 +388,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Fire-and-forget: trigger AI risk scoring in background
+    const origin = request.nextUrl.origin;
+    fetch(`${origin}/api/claims/${claim.claimId}/score`, { method: 'POST' })
+      .catch(() => { /* non-blocking */ });
+
     return NextResponse.json({
       success: true,
       data: claim,

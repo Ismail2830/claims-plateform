@@ -2,46 +2,28 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAdminAuth } from '@/app/hooks/useAdminAuth';
-import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
 import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
 import EntityManagement from '@/app/components/dashboard/EntityManagement';
-import { 
-  userAPI, 
-  clientAPI, 
-  policyAPI, 
-  claimAPI, 
-  getSystemStats
-} from '../../lib/api/superAdminAPI';
+import { getSystemStats } from '../../lib/api/superAdminAPI';
 import { useRealTimeUpdates } from '../../hooks/useRealTimeUpdates';
 import { 
-  Settings,
   Users, 
   Shield,
-  Database,
-  BarChart,
   FileText,
   UserPlus,
-  Globe,
-  Lock,
-  TrendingUp,
-  AlertTriangle,
-  Server,
-  Activity,
-  CreditCard,
   RefreshCw
 } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
-  const { user, isLoading, logout } = useAdminAuth();
-  const router = useRouter();
+  const { user } = useAdminAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [activeEntityTab, setActiveEntityTab] = useState('users');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [systemStats, setSystemStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Real-time updates
-  const { events, connected, connecting, error } = useRealTimeUpdates({
+  const { events, connected, connecting } = useRealTimeUpdates({
     entityTypes: ['USER', 'CLIENT', 'POLICY', 'CLAIM'],
     autoReconnect: true
   });
@@ -70,79 +52,11 @@ export default function SuperAdminDashboard() {
     if (events.length > 0) {
       const latestEvent = events[events.length - 1];
       if (['entity_created', 'entity_updated', 'entity_deleted', 'bulk_operation'].includes(latestEvent.type)) {
-        // Debounced refresh to avoid too many API calls
         const timeoutId = setTimeout(loadSystemStats, 1000);
         return () => clearTimeout(timeoutId);
       }
     }
   }, [events, loadSystemStats]);
-
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.replace('/auth/admin');
-    }
-  }, [user, isLoading, router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  const navigation = [
-    {
-      name: 'Overview',
-      href: '/dashboard/super-admin',
-      icon: <BarChart className="w-5 h-5" />,
-      current: activeTab === 'overview',
-    },
-    {
-      name: 'Entity Management',
-      href: '#',
-      icon: <Database className="w-5 h-5" />,
-      current: activeTab === 'entities',
-      children: [
-        { name: 'Users', icon: <Users className="w-4 h-4" />, key: 'users' },
-        { name: 'Clients', icon: <UserPlus className="w-4 h-4" />, key: 'clients' },
-        { name: 'Policies', icon: <Shield className="w-4 h-4" />, key: 'policies' },
-        { name: 'Claims', icon: <FileText className="w-4 h-4" />, key: 'claims' },
-      ],
-    },
-    {
-      name: 'System Settings',
-      href: '/dashboard/super-admin/settings',
-      icon: <Settings className="w-5 h-5" />,
-    },
-    {
-      name: 'Security & Audit',
-      href: '/dashboard/super-admin/security',
-      icon: <Lock className="w-5 h-5" />,
-    },
-    {
-      name: 'System Monitoring',
-      href: '/dashboard/super-admin/monitoring',
-      icon: <Activity className="w-5 h-5" />,
-    },
-    {
-      name: 'Financial Overview',
-      href: '/dashboard/super-admin/financial',
-      icon: <CreditCard className="w-5 h-5" />,
-    },
-  ];
-
-  const recentActivities = events.slice(-5).map((event) => ({
-    id: event.id,
-    type: event.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    description: `${event.entityType} ${event.type.replace('_', ' ')} - ID: ${event.entityId}`,
-    timestamp: new Date(event.timestamp).toLocaleString(),
-    status: (event.riskLevel === 'HIGH' ? 'error' : event.riskLevel === 'MEDIUM' ? 'warning' : 'success') as 'error' | 'warning' | 'success' | 'info',
-  }));
 
   // For Super Admin: Show user activities from audit logs instead of system events
   const userActivities = [
@@ -184,13 +98,7 @@ export default function SuperAdminDashboard() {
   ];
 
   return (
-    <DashboardLayout 
-      title="Super Admin Dashboard" 
-      userRole="SUPER_ADMIN"
-      navigation={navigation}
-      userProp={user}
-      logoutProp={logout}
-    >
+    <div>
       {activeTab === 'overview' && (
         <>
           {/* Welcome Message */}
@@ -415,6 +323,6 @@ export default function SuperAdminDashboard() {
           />
         </>
       )}
-    </DashboardLayout>
+    </div>
   );
 }

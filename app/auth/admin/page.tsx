@@ -171,12 +171,6 @@ export default function AdminLoginForm() {
             </motion.button>
           </form>
 
-          {/* Dev Note */}
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              <strong>Development Note:</strong> To create the first admin account, use the registration API at <code>/api/admin/register</code> or create a database seeding script.
-            </p>
-          </div>
         </div>
 
         {/* Footer */}

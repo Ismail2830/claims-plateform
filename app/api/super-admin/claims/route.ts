@@ -26,18 +26,18 @@ const updateClaimSchema = z.object({
   incidentLocation: z.string().optional(),
   description: z.string().min(1).optional(),
   damageDescription: z.string().optional(),
-  claimedAmount: z.union([z.string(), z.number()]).transform((val) => 
-    typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
+  claimedAmount: z.union([z.string(), z.number(), z.null()]).transform((val) => 
+    val === null ? null : typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
   ).optional(),
-  estimatedAmount: z.union([z.string(), z.number()]).transform((val) => 
-    typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
+  estimatedAmount: z.union([z.string(), z.number(), z.null()]).transform((val) => 
+    val === null ? null : typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
   ).optional(),
-  approvedAmount: z.union([z.string(), z.number()]).transform((val) => 
-    typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
+  approvedAmount: z.union([z.string(), z.number(), z.null()]).transform((val) => 
+    val === null ? null : typeof val === 'string' ? (val === '' ? null : parseFloat(val)) : val
   ).optional(),
   status: z.enum(['DECLARED', 'ANALYZING', 'DOCS_REQUIRED', 'UNDER_EXPERTISE', 'IN_DECISION', 'APPROVED', 'IN_PAYMENT', 'CLOSED', 'REJECTED']).optional(),
   priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).optional(),
-  assignedTo: z.string().uuid().nullable().optional(),
+  assignedTo: z.union([z.string().uuid(), z.literal(''), z.null()]).transform((val) => val === '' ? null : val).optional(),
 });
 
 const reassignClaimsSchema = z.object({
@@ -427,7 +427,32 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validatedData = updateClaimSchema.parse(body);
+
+    // Strip relational / read-only fields before validation
+    const {
+      claimId: _cid,
+      claimNumber: _cn,
+      clientId: _clid,
+      client: _cl,
+      policy: _pol,
+      assignedUser: _au,
+      _count,
+      createdAt: _ca,
+      updatedAt: _ua,
+      declarationDate: _dd,
+      riskScore: _rs,
+      fraudScore: _fs,
+      scoreRisque: _sr,
+      labelRisque: _lr,
+      decisionIa: _di,
+      scoreConfidence: _sc,
+      scoredAt: _sat,
+      source: _src,
+      declarationChannel: _dc,
+      ...updateFields
+    } = body;
+
+    const validatedData = updateClaimSchema.parse(updateFields);
 
     // Check if claim exists
     const existingClaim = await prisma.claim.findUnique({

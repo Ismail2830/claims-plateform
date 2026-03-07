@@ -80,6 +80,7 @@ model User {
   auditLogs AuditLog[] @relation("AuditLogUser")
   passwordResetTokens PasswordResetToken[]
   sessions    Session[]
+  teamMembers TeamMember[]
 
   @@index([role], map: "idx_users_role")
   @@index([email], map: "idx_users_email")
@@ -637,4 +638,64 @@ enum RiskLevel {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+// ─── Teams & Routing ──────────────────────────────────────────────────────────
+
+enum TeamRole {
+  LEAD
+  MEMBER
+}
+
+model Team {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  claimTypes  String[] @map("claim_types")
+  maxWorkload Int      @default(20) @map("max_workload")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members      TeamMember[]
+  routingRules RoutingRule[]
+
+  @@index([isActive], map: "idx_teams_active")
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @map("team_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      TeamRole @default(MEMBER)
+  maxClaims Int      @default(20) @map("max_claims")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId], map: "idx_team_members_team")
+  @@index([userId], map: "idx_team_members_user")
+  @@map("team_members")
+}
+
+model RoutingRule {
+  id           String   @id @default(uuid()) @db.Uuid
+  claimType    String?  @map("claim_type") @db.VarChar(50)
+  minRiskScore Int?     @map("min_risk_score")
+  maxRiskScore Int?     @map("max_risk_score")
+  minAmount    Decimal? @map("min_amount") @db.Decimal(12, 2)
+  targetTeamId String   @map("target_team_id") @db.Uuid
+  targetRole   String?  @map("target_role") @db.VarChar(50)
+  priority     Int      @default(1)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  targetTeam Team @relation(fields: [targetTeamId], references: [id])
+
+  @@index([isActive, priority], map: "idx_routing_rules_active_priority")
+  @@index([targetTeamId], map: "idx_routing_rules_team")
+  @@map("routing_rules")
 }

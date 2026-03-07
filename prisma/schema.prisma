@@ -81,6 +81,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   sessions    Session[]
   teamMembers TeamMember[]
+  documentAccessLogs DocumentAccessLog[]
 
   @@index([role], map: "idx_users_role")
   @@index([email], map: "idx_users_email")
@@ -202,8 +203,12 @@ model ClaimDocument {
   uploadedByClientRef Client? @relation("DocumentUploadedByClient", fields: [uploadedByClient], references: [clientId])
   
   status        DocumentStatus @default(UPLOADED)
+  uploadedVia   UploadSource   @default(WEB) @map("uploaded_via")
   description   String?     @db.Text
+  rejectionNote String?     @db.Text @map("rejection_note")
+  expiresAt     DateTime?   @map("expires_at")
   isRequired    Boolean     @default(false) @map("is_required")
+  isArchived    Boolean     @default(false) @map("is_archived")
   verifiedAt    DateTime?   @map("verified_at")
   verifiedBy    String?     @map("verified_by") @db.Uuid
   verifiedByUser User?      @relation("DocumentVerifiedBy", fields: [verifiedBy], references: [userId])
@@ -211,10 +216,26 @@ model ClaimDocument {
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
+  accessLogs    DocumentAccessLog[]
+
   @@index([claimId], map: "idx_claim_documents_claim")
   @@index([fileType], map: "idx_claim_documents_type")
   @@index([status], map: "idx_claim_documents_status")
   @@map("claim_documents")
+}
+
+model DocumentAccessLog {
+  id         String       @id @default(uuid()) @db.Uuid
+  documentId String       @map("document_id") @db.Uuid
+  userId     String       @map("user_id") @db.Uuid
+  action     AccessAction
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  document   ClaimDocument @relation(fields: [documentId], references: [documentId])
+  user       User          @relation(fields: [userId], references: [userId])
+
+  @@index([documentId])
+  @@map("document_access_logs")
 }
 
 model ClaimStatusHistory {
@@ -589,6 +610,15 @@ enum DocumentType {
   MEDICAL_REPORT
   IDENTITY_DOCUMENT
   INSURANCE_CERTIFICATE
+  CONSTAT
+  EXPERTISE_REPORT
+  DEATH_CERTIFICATE
+  HOSPITAL_BILL
+  PRESCRIPTION
+  VEHICLE_REGISTRATION
+  DRIVERS_LICENSE
+  BANK_DETAILS
+  LEGAL_DOCUMENT
   OTHER
 }
 
@@ -598,6 +628,24 @@ enum DocumentStatus {
   VERIFIED
   REJECTED
   EXPIRED
+  ARCHIVED
+  PENDING_RESUBMIT
+}
+
+enum UploadSource {
+  WEB
+  WHATSAPP
+  MOBILE
+  AGENT
+}
+
+enum AccessAction {
+  VIEW
+  DOWNLOAD
+  VERIFY
+  REJECT
+  DELETE
+  UPLOAD
 }
 
 enum CommentType {

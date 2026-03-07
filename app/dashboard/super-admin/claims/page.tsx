@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { ClaimDetailPanel } from '@/app/components/dashboard/claims/ClaimDetailPanel';
 import { useAdminAuth } from '@/app/hooks/useAdminAuth';
 import { claimAPI, type Claim } from '@/app/lib/api/superAdminAPI';
 import {
@@ -521,6 +522,7 @@ export default function ClaimsPage() {
   const [editTarget, setEditTarget]   = useState<Claim | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Claim | null>(null);
   const [deleting, setDeleting]       = useState(false);
+  const [panelClaimId, setPanelClaimId] = useState<string | null>(null);
 
   // Supporting data
   const [clients, setClients]   = useState<any[]>([]);
@@ -736,7 +738,11 @@ export default function ClaimsPage() {
                 </tr>
               ) : (
                 claims.map(claim => (
-                  <tr key={claim.claimId} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={claim.claimId}
+                    className={`hover:bg-gray-50 transition-colors cursor-pointer${panelClaimId === claim.claimId ? ' bg-blue-50 hover:bg-blue-50' : ''}`}
+                    onClick={() => setPanelClaimId(claim.claimId)}
+                  >
                     <td className="px-4 py-3">
                       <div className="font-mono text-xs font-semibold text-gray-900">{claim.claimNumber}</div>
                       <div className="text-xs text-gray-400 mt-0.5">{fmtDate(claim.declarationDate)}</div>
@@ -798,14 +804,14 @@ export default function ClaimsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={() => setEditTarget(claim)}
+                          onClick={(e) => { e.stopPropagation(); setEditTarget(claim); }}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
                           title="Modifier"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setDeleteTarget(claim)}
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(claim); }}
                           className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
                           title="Supprimer"
                         >
@@ -905,6 +911,13 @@ export default function ClaimsPage() {
           </div>
         </div>
       )}
+
+      {/* Detail Panel */}
+      <ClaimDetailPanel
+        claimId={panelClaimId}
+        onClose={() => setPanelClaimId(null)}
+        onUpdated={() => fetchClaims(pagination.page)}
+      />
     </div>
   );
 }

@@ -10,8 +10,10 @@ import { sendWhatsAppTemplate } from '@/app/lib/whatsapp';
 
 function auth(req: NextRequest) {
   const h = req.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return verifyToken(h.substring(7)); } catch { return null; }
+  const cookieToken = req.cookies.get('admin_at')?.value;
+  const token = h?.startsWith('Bearer ') ? h.substring(7) : cookieToken;
+  if (!token) return null;
+  try { return verifyToken(token); } catch { return null; }
 }
 
 export async function PATCH(
@@ -20,7 +22,8 @@ export async function PATCH(
 ) {
   const decoded = auth(req);
   if (!decoded) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  if (decoded.type !== 'STAFF') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+  if (decoded.type === 'CLIENT') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+  const staffDecoded = decoded as import('@/app/lib/auth').StaffTokenPayload;
 
   const { documentId } = await params;
   const body = await req.json() as { status: string; rejectionNote?: string };
@@ -42,7 +45,7 @@ export async function PATCH(
 
   if (body.status === 'VERIFIED') {
     updateData.verifiedAt = new Date();
-    updateData.verifiedBy = decoded.userId;
+    updateData.verifiedBy = staffDecoded.userId;
   }
 
   if (body.status === 'REJECTED') {
@@ -59,7 +62,7 @@ export async function PATCH(
     prisma.documentAccessLog.create({
       data: {
         documentId,
-        userId: decoded.userId,
+        userId: staffDecoded.userId,
         action: body.status === 'VERIFIED' ? 'VERIFY' : 'REJECT',
       },
     }),

@@ -18,7 +18,7 @@ export interface StaffTokenPayload {
   userId: string;
   email: string;
   role: 'SUPER_ADMIN' | 'MANAGER_SENIOR' | 'MANAGER_JUNIOR' | 'EXPERT';
-  type: 'STAFF';
+  type: 'STAFF' | 'ADMIN';
 }
 
 export type TokenPayload = ClientTokenPayload | StaffTokenPayload;

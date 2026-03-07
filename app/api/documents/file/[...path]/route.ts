@@ -11,8 +11,10 @@ import { verifyToken } from '@/app/lib/auth';
 
 function auth(req: NextRequest) {
   const h = req.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return verifyToken(h.substring(7)); } catch { return null; }
+  const cookieToken = req.cookies.get('admin_at')?.value;
+  const token = h?.startsWith('Bearer ') ? h.substring(7) : cookieToken;
+  if (!token) return null;
+  try { return verifyToken(token); } catch { return null; }
 }
 
 export async function GET(

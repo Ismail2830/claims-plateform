@@ -10,8 +10,10 @@ import { verifyToken } from '@/app/lib/auth';
 
 function auth(req: NextRequest) {
   const h = req.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return verifyToken(h.substring(7)); } catch { return null; }
+  const cookieToken = req.cookies.get('admin_at')?.value;
+  const token = h?.startsWith('Bearer ') ? h.substring(7) : cookieToken;
+  if (!token) return null;
+  try { return verifyToken(token); } catch { return null; }
 }
 
 export async function POST(
@@ -20,7 +22,8 @@ export async function POST(
 ) {
   const decoded = auth(req);
   if (!decoded) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  if (decoded.type !== 'STAFF') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+  if (decoded.type === 'CLIENT') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+  const staffDecoded = decoded as import('@/app/lib/auth').StaffTokenPayload;
 
   const { documentId } = await params;
   const body = await req.json() as { action: string };
@@ -37,7 +40,7 @@ export async function POST(
   await prisma.documentAccessLog.create({
     data: {
       documentId,
-      userId: decoded.userId,
+      userId: staffDecoded.userId,
       action: body.action as 'VIEW' | 'DOWNLOAD' | 'VERIFY' | 'REJECT' | 'DELETE' | 'UPLOAD',
     },
   });

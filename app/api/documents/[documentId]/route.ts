@@ -9,8 +9,10 @@ import { verifyToken } from '@/app/lib/auth';
 
 function auth(req: NextRequest) {
   const h = req.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return verifyToken(h.substring(7)); } catch { return null; }
+  const cookieToken = req.cookies.get('admin_at')?.value;
+  const token = h?.startsWith('Bearer ') ? h.substring(7) : cookieToken;
+  if (!token) return null;
+  try { return verifyToken(token); } catch { return null; }
 }
 
 export async function GET(
@@ -54,8 +56,9 @@ export async function DELETE(
 ) {
   const decoded = auth(req);
   if (!decoded) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  if (decoded.type !== 'STAFF') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-  if (!['SUPER_ADMIN', 'MANAGER_SENIOR'].includes(decoded.role)) {
+  if (decoded.type === 'CLIENT') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+  const staffDecoded = decoded as import('@/app/lib/auth').StaffTokenPayload;
+  if (!['SUPER_ADMIN', 'MANAGER_SENIOR'].includes(staffDecoded.role)) {
     return NextResponse.json({ error: 'Droits insuffisants' }, { status: 403 });
   }
 
@@ -72,7 +75,7 @@ export async function DELETE(
     prisma.documentAccessLog.create({
       data: {
         documentId,
-        userId: decoded.userId,
+        userId: staffDecoded.userId,
         action: 'DELETE',
       },
     }),

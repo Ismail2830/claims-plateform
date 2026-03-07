@@ -20,7 +20,8 @@ const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 interface OpenClaim {
   claimId:     string;
   claimNumber: string;
-  client?:     { firstName: string; lastName: string };
+  status:      string;
+  client?:     { clientId: string; firstName: string; lastName: string };
 }
 
 interface UploadDocumentModalProps {
@@ -36,8 +37,9 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
   const [claimId,     setClaimId]     = useState('');
   const [description, setDescription] = useState('');
   const [expiresAt,   setExpiresAt]   = useState('');
-  const [claims,      setClaims]      = useState<OpenClaim[]>([]);
-  const [claimsLoaded, setClaimsLoaded] = useState(false);
+  const [claims,       setClaims]       = useState<OpenClaim[]>([]);
+  const [claimsLoaded,  setClaimsLoaded]  = useState(false);
+  const [claimsLoading, setClaimsLoading] = useState(false);
   const [uploading,   setUploading]   = useState(false);
   const [progress,    setProgress]    = useState(0);
   const [errors,      setErrors]      = useState<Record<string, string>>({});
@@ -45,19 +47,29 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
 
-  // Load open claims on first open
+  // Load open claims on first open — fetch all active statuses in parallel
   const loadClaims = useCallback(async () => {
     if (claimsLoaded) return;
+    setClaimsLoading(true);
+    const activeStatuses = ['DECLARED', 'ANALYZING', 'DOCS_REQUIRED', 'UNDER_EXPERTISE', 'IN_DECISION', 'APPROVED', 'IN_PAYMENT'];
     try {
-      const res = await fetch('/api/claims?limit=200&status=DECLARED,ANALYZING,DOCS_REQUIRED,UNDER_EXPERTISE,IN_DECISION', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (res.ok) {
-        const data = await res.json() as { claims?: OpenClaim[]; items?: OpenClaim[] };
-        setClaims(data.claims ?? data.items ?? []);
-      }
+      const results = await Promise.all(
+        activeStatuses.map(s =>
+          fetch(`/api/super-admin/claims?limit=200&status=${s}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          }).then(r => r.ok ? r.json() as Promise<{ data?: { claims?: OpenClaim[] }; claims?: OpenClaim[] }> : { data: { claims: [] } }),
+        ),
+      );
+      // Response is nested: { success, data: { claims, pagination, ... } }
+      const all: OpenClaim[] = results.flatMap(r => r.data?.claims ?? r.claims ?? []);
+      // Deduplicate by claimId and sort by claimNumber
+      const seen = new Set<string>();
+      const unique = all.filter(c => { if (seen.has(c.claimId)) return false; seen.add(c.claimId); return true; });
+      unique.sort((a, b) => a.claimNumber.localeCompare(b.claimNumber));
+      setClaims(unique);
     } finally {
       setClaimsLoaded(true);
+      setClaimsLoading(false);
     }
   }, [claimsLoaded, token]);
 
@@ -130,8 +142,10 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
           onClose();
         }, 1200);
       } else {
-        const data = await res.json() as { error?: string };
-        setErrors({ submit: data.error ?? 'Erreur lors de l\'upload.' });
+        const text = await res.text();
+        let message = 'Erreur lors de l\'upload.';
+        try { message = (JSON.parse(text) as { error?: string }).error ?? message; } catch { /* non-JSON response */ }
+        setErrors({ submit: message });
       }
     } catch {
       setErrors({ submit: 'Erreur réseau. Veuillez réessayer.' });
@@ -150,6 +164,9 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
     setErrors({});
     setProgress(0);
     setSuccess(false);
+    // Allow fresh claim list on next open
+    setClaimsLoaded(false);
+    setClaims([]);
   }
 
   function handleClose() {
@@ -261,9 +278,12 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
               <select
                 value={claimId}
                 onChange={e => setClaimId(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                disabled={claimsLoading}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white disabled:opacity-60"
               >
-                <option value="">— Sélectionner un dossier —</option>
+                <option value="">
+                  {claimsLoading ? 'Chargement des dossiers…' : claims.length === 0 ? 'Aucun dossier actif trouvé' : '— Sélectionner un dossier —'}
+                </option>
                 {claims.map(c => (
                   <option key={c.claimId} value={c.claimId}>
                     {c.claimNumber}{c.client ? ` — ${c.client.firstName} ${c.client.lastName}` : ''}

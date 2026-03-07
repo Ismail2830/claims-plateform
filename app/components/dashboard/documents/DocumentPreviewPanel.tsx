@@ -199,7 +199,7 @@ export function DocumentPreviewPanel({ documentId, onClose, onUpdated }: Documen
 
   function copyLink() {
     if (!detail) return;
-    const url = `${window.location.origin}/api/documents/file${detail.filePath}`;
+    const url = `${window.location.origin}/api/documents/file/${detail.filePath.replace(/^\/uploads\//, '')}`;
     navigator.clipboard.writeText(url).then(() => {
       setFeedback({ type: 'ok', msg: 'Lien copié dans le presse-papier.' });
     }).catch(() => {});
@@ -207,7 +207,7 @@ export function DocumentPreviewPanel({ documentId, onClose, onUpdated }: Documen
 
   const renderPreview = () => {
     if (!detail) return null;
-    const src = `/api/documents/file${detail.filePath}`;
+    const src = `/api/documents/file/${detail.filePath.replace(/^\/uploads\//, '')}`;
 
     if (detail.mimeType.startsWith('image/')) {
       return (
@@ -464,7 +464,7 @@ export function DocumentPreviewPanel({ documentId, onClose, onUpdated }: Documen
         {detail && (
           <div className="shrink-0 border-t border-gray-100 px-5 py-3 flex items-center gap-2">
             <a
-              href={`/api/documents/file${detail.filePath}`}
+              href={`/api/documents/file/${detail.filePath.replace(/^\/uploads\//, '')}`}
               download={detail.originalName}
               onClick={logDownload}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50"

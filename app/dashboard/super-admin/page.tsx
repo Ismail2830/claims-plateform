@@ -1,18 +1,35 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import useSWR from 'swr';
 import { useAdminAuth } from '@/app/hooks/useAdminAuth';
 import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
 import EntityManagement from '@/app/components/dashboard/EntityManagement';
 import { getSystemStats } from '../../lib/api/superAdminAPI';
 import { useRealTimeUpdates } from '../../hooks/useRealTimeUpdates';
+import { KanbanBoard, KanbanData, KanbanFilters } from '@/app/components/dashboard/kanban/KanbanBoard';
 import { 
   Users, 
   Shield,
   FileText,
   UserPlus,
-  RefreshCw
+  RefreshCw,
+  LayoutGrid,
 } from 'lucide-react';
+
+// ─── Empty kanban data shape ──────────────────────────────────────────────────
+const EMPTY_KANBAN: KanbanData = {
+  DECLARED: [], IN_PROGRESS: [], DECISION: [],
+  APPROVED: [], REJECTED: [], ESCALATED: [],
+};
+
+// SWR fetcher with cookie-based auth
+async function kanbanFetcher(url: string) {
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) throw new Error('Erreur kanban');
+  const json = await res.json() as { success: boolean; data: KanbanData };
+  return json.data;
+}
 
 export default function SuperAdminDashboard() {
   const { user } = useAdminAuth();
@@ -21,6 +38,44 @@ export default function SuperAdminDashboard() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [systemStats, setSystemStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // ── Kanban state ────────────────────────────────────────────────────────────
+  const [kanbanFilters, setKanbanFilters] = useState<KanbanFilters>({});
+  const [managers, setManagers] = useState<{ userId: string; firstName: string; lastName: string }[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const kanbanUrl = (() => {
+    const params = new URLSearchParams();
+    if (kanbanFilters.typeSinistre) params.set('typeSinistre', kanbanFilters.typeSinistre);
+    if (kanbanFilters.managerId)    params.set('managerId',    kanbanFilters.managerId);
+    if (kanbanFilters.priority)     params.set('priority',     kanbanFilters.priority);
+    const qs = params.toString();
+    return `/api/dashboard/kanban${qs ? `?${qs}` : ''}`;
+  })();
+
+  const { data: kanbanData, mutate: refreshKanban, isLoading: kanbanLoading } = useSWR<KanbanData>(
+    kanbanUrl,
+    kanbanFetcher,
+    {
+      refreshInterval: 30000,
+      onSuccess: () => setLastUpdated(new Date()),
+    }
+  );
+
+  // Load managers list for filter dropdown
+  useEffect(() => {
+    fetch('/api/admin/users?role=MANAGER_SENIOR,MANAGER_JUNIOR,EXPERT&limit=100', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((json) => {
+        const list = (json.users ?? json.data?.users ?? []) as { userId: string; firstName: string; lastName: string }[];
+        setManagers(list);
+      })
+      .catch(() => {/* ignore - filter will just stay empty */});
+  }, []);
+
+  const secondsAgo = lastUpdated
+    ? Math.floor((Date.now() - lastUpdated.getTime()) / 1000)
+    : null;
 
   // Real-time updates
   const { events, connected, connecting } = useRealTimeUpdates({
@@ -199,6 +254,109 @@ export default function SuperAdminDashboard() {
               }}
             />
           </div>
+
+          {/* ──────────────────────── Kanban Section ──────────────────────── */}
+          <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
+            {/* Section header */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                  <LayoutGrid className="h-5 w-5 text-blue-600" />
+                  Suivi des dossiers en temps réel
+                </h3>
+                <p className="text-sm text-gray-500 mt-0.5">Vue pipeline de tous les sinistres actifs</p>
+              </div>
+
+              {/* Controls */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Type filter */}
+                <select
+                  value={kanbanFilters.typeSinistre ?? ''}
+                  onChange={(e) => setKanbanFilters((f) => ({ ...f, typeSinistre: e.target.value || undefined }))}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Tous les types</option>
+                  <option value="AUTO">AUTO</option>
+                  <option value="HOME">HABITATION</option>
+                  <option value="HEALTH">SANTÉ</option>
+                  <option value="LIFE">VIE</option>
+                </select>
+
+                {/* Manager filter */}
+                <select
+                  value={kanbanFilters.managerId ?? ''}
+                  onChange={(e) => setKanbanFilters((f) => ({ ...f, managerId: e.target.value || undefined }))}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Tous les managers</option>
+                  {managers.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.firstName} {m.lastName}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Priority filter */}
+                <select
+                  value={kanbanFilters.priority ?? ''}
+                  onChange={(e) => setKanbanFilters((f) => ({ ...f, priority: e.target.value || undefined }))}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Toutes priorités</option>
+                  <option value="NORMAL">NORMALE</option>
+                  <option value="HIGH">HAUTE</option>
+                  <option value="URGENT">URGENTE</option>
+                </select>
+
+                {/* Refresh button */}
+                <button
+                  onClick={() => refreshKanban()}
+                  disabled={kanbanLoading}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${kanbanLoading ? 'animate-spin' : ''}`} />
+                  Actualiser
+                </button>
+              </div>
+            </div>
+
+            {/* Last updated timestamp */}
+            {secondsAgo !== null && (
+              <p className="text-xs text-gray-400 mb-3">
+                Mis à jour il y a {secondsAgo < 60 ? `${secondsAgo} secondes` : `${Math.floor(secondsAgo / 60)} minute(s)`}
+              </p>
+            )}
+
+            {/* Board — mobile: list-only, md+: kanban */}
+            <div className="hidden md:block">
+              <KanbanBoard
+                data={kanbanData ?? EMPTY_KANBAN}
+                filters={kanbanFilters}
+                loading={kanbanLoading}
+                onCardClick={() => {/* navigation handled inside card */}}
+                canDrag={user?.role === 'SUPER_ADMIN' || user?.role === 'MANAGER_SENIOR'}
+                onOptimisticMove={() => {/* optimistic already done inside board */}}
+              />
+            </div>
+            {/* Mobile: scroll list fallback */}
+            <div className="md:hidden space-y-3">
+              {(kanbanLoading ? [] : Object.values(kanbanData ?? EMPTY_KANBAN).flat()).map((claim) => (
+                <div key={claim.claimId} className="bg-white rounded-lg border border-gray-200 p-3 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-xs text-gray-400">{claim.claimNumber}</span>
+                    <span className="text-xs text-gray-500">{claim.status}</span>
+                  </div>
+                  <p className="font-medium text-gray-800 mt-1">
+                    {claim.client.prenom} {claim.client.nom}
+                  </p>
+                </div>
+              ))}
+              {!kanbanLoading && Object.values(kanbanData ?? EMPTY_KANBAN).flat().length === 0 && (
+                <p className="text-sm text-center text-gray-400 py-6">Aucun dossier actif</p>
+              )}
+            </div>
+          </div>
+          {/* ──────────────────────────────────────────────────────────────── */}
 
           {/* Expert Workload Overview */}
           {systemStats?.claims?.workload && systemStats.claims.workload.length > 0 && (

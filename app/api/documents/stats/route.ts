@@ -9,14 +9,17 @@ import { verifyToken } from '@/app/lib/auth';
 
 function auth(req: NextRequest) {
   const h = req.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return verifyToken(h.substring(7)); } catch { return null; }
+  const cookieToken = req.cookies.get('admin_at')?.value;
+  const token = h?.startsWith('Bearer ') ? h.substring(7) : cookieToken;
+  if (!token) return null;
+  try { return verifyToken(token); } catch { return null; }
 }
 
 export async function GET(req: NextRequest) {
   const decoded = auth(req);
   if (!decoded) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
 
+  try {
   const [
     total,
     sizeAgg,
@@ -74,4 +77,9 @@ export async function GET(req: NextRequest) {
     byStatus,
     bySource,
   });
+  } catch (err) {
+    console.error('[GET /api/documents/stats] error:', err);
+    const message = err instanceof Error ? err.message : 'Erreur serveur';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

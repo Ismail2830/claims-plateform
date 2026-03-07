@@ -16,13 +16,8 @@ import {
   Eye,
   Search,
   RefreshCw,
-  Globe,
-  MessageCircle,
-  Smartphone,
-  UserCircle,
   ChevronLeft,
   ChevronRight,
-  ArrowUpDown,
   MessageSquare,
 } from 'lucide-react';
 import { useAdminAuth } from '@/app/hooks/useAdminAuth';
@@ -31,9 +26,6 @@ import { UploadDocumentModal } from '@/app/components/dashboard/documents/Upload
 import { DocumentCategoryBadge } from '@/app/components/dashboard/documents/DocumentCategoryBadge';
 import { DocumentStatusBadge } from '@/app/components/dashboard/documents/DocumentStatusBadge';
 import {
-  formatBytes,
-  getFileIcon,
-  getFileIconColor,
   fmtRelativeTime,
 } from '@/app/components/dashboard/documents/document-utils';
 import {
@@ -99,12 +91,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'EXPIRED',          label: 'Expirés',         icon: <AlertTriangle className="w-3.5 h-3.5" /> },
 ];
 
-const SOURCE_ICONS: Record<UploadSource, React.ReactNode> = {
-  WEB:      <Globe         className="w-3.5 h-3.5 text-blue-500"   />,
-  WHATSAPP: <MessageCircle className="w-3.5 h-3.5 text-green-500"  />,
-  MOBILE:   <Smartphone    className="w-3.5 h-3.5 text-purple-500" />,
-  AGENT:    <UserCircle    className="w-3.5 h-3.5 text-orange-500" />,
-};
+const SOURCE_ICONS_UNUSED = null; // kept for future use
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
@@ -146,7 +133,7 @@ function RowSkeleton() {
     <>
       {Array.from({ length: 8 }).map((_, i) => (
         <tr key={i}>
-          {Array.from({ length: 11 }).map((_, j) => (
+          {Array.from({ length: 8 }).map((_, j) => (
             <td key={j} className="px-4 py-3">
               <div className={cn('h-4 bg-gray-100 rounded animate-pulse', j === 0 ? 'w-4' : '')} />
             </td>
@@ -233,14 +220,15 @@ export default function DocumentsPage() {
 
   const fetchMissing = useCallback(async () => {
     try {
-      const res = await fetch('/api/claims?status=DOCS_REQUIRED&limit=50', {
+      const res = await fetch('/api/super-admin/claims?status=DOCS_REQUIRED&limit=50', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) return;
       const data = await res.json() as {
+        data?: { claims?: { claimId: string; claimNumber: string; client?: { firstName: string; lastName: string } }[] };
         claims?: { claimId: string; claimNumber: string; client?: { firstName: string; lastName: string } }[];
       };
-      const claimList = data.claims ?? [];
+      const claimList = data.data?.claims ?? data.claims ?? [];
       const results = await Promise.allSettled(
         claimList.map(c =>
           fetch(`/api/documents/missing/${c.claimId}`, {
@@ -576,7 +564,7 @@ export default function DocumentsPage() {
                 onClick={() => {
                   docs.filter(d => selected.has(d.documentId)).forEach(doc => {
                     const link = document.createElement('a');
-                    link.href     = `/api/documents/file${doc.filePath}`;
+                    link.href     = `/api/documents/file/${doc.filePath.replace(/^\/uploads\//, '')}`;
                     link.download = doc.originalName;
                     link.click();
                   });
@@ -617,31 +605,12 @@ export default function DocumentsPage() {
                       className="rounded border-gray-300"
                     />
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    <button className="flex items-center gap-1 hover:text-gray-700" onClick={() => handleSort('fileName')}>
-                      Nom {sortBy === 'fileName' && <ArrowUpDown className="w-3 h-3" />}
-                    </button>
-                  </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Dossier</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Source</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    <button className="flex items-center gap-1 ml-auto hover:text-gray-700" onClick={() => handleSort('fileSize')}>
-                      Taille {sortBy === 'fileSize' && <ArrowUpDown className="w-3 h-3" />}
-                    </button>
-                  </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Uploadé par</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    <button className="flex items-center gap-1 hover:text-gray-700" onClick={() => handleSort('createdAt')}>
-                      Date {sortBy === 'createdAt' && <ArrowUpDown className="w-3 h-3" />}
-                    </button>
-                  </th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    <button className="flex items-center gap-1 mx-auto hover:text-gray-700" onClick={() => handleSort('status')}>
-                      Statut {sortBy === 'status' && <ArrowUpDown className="w-3 h-3" />}
-                    </button>
-                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Statut</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -652,7 +621,7 @@ export default function DocumentsPage() {
                   <RowSkeleton />
                 ) : sortedDocs().length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-4 py-16 text-center">
+                    <td colSpan={8} className="px-4 py-16 text-center">
                       <FolderOpen className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                       <p className="text-sm font-medium text-gray-400">Aucun document trouvé</p>
                       <p className="text-xs text-gray-300 mt-1">Modifiez les filtres ou uploadez un nouveau document</p>
@@ -660,8 +629,6 @@ export default function DocumentsPage() {
                   </tr>
                 ) : (
                   sortedDocs().map(doc => {
-                    const Icon      = getFileIcon(doc.mimeType);
-                    const iconColor = getFileIconColor(doc.mimeType);
                     const uploader  = doc.uploadedByUser
                       ? `${doc.uploadedByUser.firstName} ${doc.uploadedByUser.lastName}`
                       : doc.uploadedByClientRef
@@ -689,17 +656,6 @@ export default function DocumentsPage() {
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
-                              <Icon className={cn('w-4 h-4', iconColor)} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-gray-900 truncate max-w-40">{doc.originalName}</p>
-                              <p className="text-xs text-gray-400 truncate max-w-40">{doc.fileName}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
                           <DocumentCategoryBadge fileType={doc.fileType} size="sm" />
                         </td>
                         <td className="px-4 py-3">
@@ -720,15 +676,6 @@ export default function DocumentsPage() {
                             ? `${doc.claim.client.firstName} ${doc.claim.client.lastName}`
                             : '—'}
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            {SOURCE_ICONS[doc.uploadedVia] ?? null}
-                            <span className="text-xs text-gray-600">
-                              {UPLOAD_SOURCE_LABELS[doc.uploadedVia] ?? doc.uploadedVia}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right text-xs text-gray-600">{formatBytes(doc.fileSize)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
@@ -770,7 +717,7 @@ export default function DocumentsPage() {
                               </button>
                             )}
                             <a
-                              href={`/api/documents/file${doc.filePath}`}
+                              href={`/api/documents/file/${doc.filePath.replace(/^\/uploads\//, '')}`}
                               download={doc.originalName}
                               className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                               title="Télécharger"

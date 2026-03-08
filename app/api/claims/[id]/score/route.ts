@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import type { PolicyType } from '@prisma/client';
+import { scoreLocally, isLocalMLService } from '@/app/lib/ml-scoring';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -110,34 +111,38 @@ export async function POST(
     ? (POLICY_TYPE_TO_ML[claim.policy.policyType] ?? 'AUTO')
     : 'AUTO';
 
-  // 5. Call ML microservice
+  // 5. Call ML microservice (or inline scoring when service is not configured)
+  const mlPayload = {
+    montant_declare:   montant,
+    type_sinistre:     mlType,
+    delai_declaration: Math.max(0, delai),
+    historique_score:  Math.max(0, historique),
+  };
+
   let mlResult: MLScoreResponse;
-  try {
-    const response = await fetch(`${ML_SERVICE_URL}/score`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        montant_declare:   montant,
-        type_sinistre:     mlType,
-        delai_declaration: Math.max(0, delai),
-        historique_score:  Math.max(0, historique),
-      }),
-    });
 
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`ML service responded ${response.status}: ${detail}`);
+  if (isLocalMLService(ML_SERVICE_URL)) {
+    // Inline TypeScript scoring — works on Vercel serverless without any external service
+    mlResult = scoreLocally(mlPayload);
+  } else {
+    try {
+      const response = await fetch(`${ML_SERVICE_URL}/score`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mlPayload),
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`ML service responded ${response.status}: ${detail}`);
+      }
+
+      mlResult = await response.json() as MLScoreResponse;
+    } catch {
+      // External service unreachable — fall back to inline scoring
+      mlResult = scoreLocally(mlPayload);
     }
-
-    mlResult = await response.json() as MLScoreResponse;
-  } catch (err) {
-    return NextResponse.json(
-      {
-        error: 'Le service de scoring IA est temporairement indisponible. Veuillez réessayer dans quelques instants.',
-        detail: err instanceof Error ? err.message : String(err),
-      },
-      { status: 503 },
-    );
   }
 
   // 6. Map to DB enum strings (Prisma accepts string values for enums)

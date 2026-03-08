@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import type { PolicyType } from '@prisma/client';
+import { scoreBatch, isLocalMLService } from '@/app/lib/ml-scoring';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -98,30 +99,31 @@ export async function POST() {
       };
     });
 
-    // 3. Call ML service batch endpoint
+    // 3. Call ML service batch endpoint (or fall back to inline scoring)
     let mlResults: MLSingleResult[];
-    try {
-      const response = await fetch(`${ML_SERVICE_URL}/score/batch`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payloads),
-        signal:  AbortSignal.timeout(30_000),
-      });
 
-      if (!response.ok) {
-        throw new Error(`ML service responded ${response.status}`);
+    if (isLocalMLService(ML_SERVICE_URL)) {
+      // Inline TypeScript scoring — no HTTP call needed
+      mlResults = scoreBatch(payloads);
+    } else {
+      try {
+        const response = await fetch(`${ML_SERVICE_URL}/score/batch`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payloads),
+          signal:  AbortSignal.timeout(30_000),
+        });
+
+        if (!response.ok) {
+          throw new Error(`ML service responded ${response.status}`);
+        }
+
+        const batchResponse = (await response.json()) as MLBatchResponse;
+        mlResults = batchResponse.results;
+      } catch {
+        // External service unreachable — fall back to inline scoring
+        mlResults = scoreBatch(payloads);
       }
-
-      const batchResponse = (await response.json()) as MLBatchResponse;
-      mlResults = batchResponse.results;
-    } catch (mlErr) {
-      return NextResponse.json(
-        {
-          error:  'Service IA indisponible',
-          detail: mlErr instanceof Error ? mlErr.message : String(mlErr),
-        },
-        { status: 503 },
-      );
     }
 
     // 4. Persist scores with batch updates

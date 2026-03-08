@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import { verifyToken } from '@/app/lib/auth';
+import { verifyAccessToken } from '@/app/lib/tokens';
 import { Prisma } from '@prisma/client';
 
 function auth(req: NextRequest) {
@@ -14,7 +14,7 @@ function auth(req: NextRequest) {
   const cookieToken = req.cookies.get('admin_at')?.value;
   const token = h?.startsWith('Bearer ') ? h.substring(7) : cookieToken;
   if (!token) return null;
-  try { return verifyToken(token); } catch { return null; }
+  try { return verifyAccessToken(token); } catch { return null; }
 }
 
 // Map kanban column keys to real DB ClaimStatus values

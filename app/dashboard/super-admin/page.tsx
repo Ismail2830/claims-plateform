@@ -23,9 +23,15 @@ const EMPTY_KANBAN: KanbanData = {
   APPROVED: [], REJECTED: [], ESCALATED: [],
 };
 
-// SWR fetcher with cookie-based auth
+// SWR fetcher — sends both the admin_at cookie and the Bearer token from
+// localStorage so the kanban API succeeds regardless of which auth path the
+// production environment resolves first.
 async function kanbanFetcher(url: string) {
-  const res = await fetch(url, { credentials: 'include' });
+  const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error('Erreur kanban');
   const json = await res.json() as { success: boolean; data: KanbanData };
   return json.data;

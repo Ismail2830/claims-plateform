@@ -82,6 +82,8 @@ model User {
   sessions    Session[]
   teamMembers TeamMember[]
   documentAccessLogs DocumentAccessLog[]
+  generatedReports GeneratedReport[] @relation("ReportGenerator")
+  reportSchedules  ReportSchedule[]  @relation("ReportScheduleCreator")
 
   @@index([role], map: "idx_users_role")
   @@index([email], map: "idx_users_email")
@@ -746,4 +748,86 @@ model RoutingRule {
   @@index([isActive, priority], map: "idx_routing_rules_active_priority")
   @@index([targetTeamId], map: "idx_routing_rules_team")
   @@map("routing_rules")
+}
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
+enum ReportType {
+  MONTHLY_ACTIVITY
+  SINISTRALITE
+  FINANCIAL
+  ACAPS_COMPLIANCE
+  MANAGER_PERFORMANCE
+  CUSTOM
+}
+
+enum ReportFormat {
+  PDF
+  EXCEL
+  CSV
+}
+
+enum ReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+  SENT
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+model GeneratedReport {
+  id           String         @id @default(uuid()) @db.Uuid
+  name         String         @db.VarChar(255)
+  type         ReportType
+  format       ReportFormat
+  period       String         @db.VarChar(100)
+  dateFrom     DateTime       @map("date_from")
+  dateTo       DateTime       @map("date_to")
+  filePath     String?        @map("file_path")
+  fileSize     Int?           @map("file_size")
+  generatedBy  String?        @map("generated_by") @db.Uuid
+  sentTo       String[]       @map("sent_to")
+  status       ReportStatus   @default(PENDING)
+  errorMessage String?        @map("error_message") @db.Text
+  sections     String[]
+  scheduleId   String?        @map("schedule_id") @db.Uuid
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  generator    User?          @relation("ReportGenerator", fields: [generatedBy], references: [userId])
+  schedule     ReportSchedule? @relation(fields: [scheduleId], references: [id])
+
+  @@index([type],      map: "idx_generated_reports_type")
+  @@index([status],    map: "idx_generated_reports_status")
+  @@index([createdAt], map: "idx_generated_reports_date")
+  @@map("generated_reports")
+}
+
+model ReportSchedule {
+  id             String            @id @default(uuid()) @db.Uuid
+  name           String            @db.VarChar(255)
+  type           ReportType
+  format         ReportFormat
+  frequency      ScheduleFrequency
+  cronExpression String            @map("cron_expression") @db.VarChar(100)
+  recipients     String[]
+  sections       String[]
+  isActive       Boolean           @default(true) @map("is_active")
+  lastRunAt      DateTime?         @map("last_run_at")
+  nextRunAt      DateTime?         @map("next_run_at")
+  createdBy      String            @map("created_by") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  creator        User              @relation("ReportScheduleCreator", fields: [createdBy], references: [userId])
+  reports        GeneratedReport[]
+
+  @@index([isActive, nextRunAt], map: "idx_report_schedules_active_next")
+  @@map("report_schedules")
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import { verifyToken } from '@/app/lib/auth';
+import { verifyAccessToken } from '@/app/lib/tokens';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,8 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decoded = await verifyToken(token);
+    let decoded;
+    try { decoded = verifyAccessToken(token); } catch { decoded = null; }
     
     if (!decoded || decoded.type !== 'CLIENT') {
       return NextResponse.json(
@@ -199,7 +200,8 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decoded = await verifyToken(token);
+    let decoded;
+    try { decoded = verifyAccessToken(token); } catch { decoded = null; }
     
     if (!decoded || decoded.type !== 'CLIENT') {
       return NextResponse.json(

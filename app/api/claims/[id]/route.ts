@@ -10,12 +10,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import { verifyToken } from '@/app/lib/auth';
+import { verifyAccessToken } from '@/app/lib/tokens';
 
 async function authenticate(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
-  return verifyToken(authHeader.substring(7));
+  try { return verifyAccessToken(authHeader.substring(7)); } catch { return null; }
 }
 
 export async function GET(

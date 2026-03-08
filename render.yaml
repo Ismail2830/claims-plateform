@@ -1,0 +1,20 @@
+# render.yaml — Infrastructure-as-code for Render deployment
+# Docs: https://render.com/docs/blueprint-spec
+#
+# This declares ONE web service: the Python FastAPI ML scoring microservice.
+# The Next.js app is deployed separately on Vercel.
+
+services:
+  - type: web
+    name: ism-ml-scoring
+    runtime: docker
+    dockerfilePath: ./ml-service/Dockerfile
+    dockerContext: ./ml-service
+    region: frankfurt           # closest to Morocco; change to oregon/singapore if needed
+    plan: free                  # upgrade to starter ($7/mo) to avoid cold-start spin-down
+    healthCheckPath: /health
+
+    # After deploying, copy the service URL into Vercel as ML_SERVICE_URL
+    envVars:
+      - key: PORT
+        value: 8000

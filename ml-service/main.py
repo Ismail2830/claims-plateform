@@ -8,6 +8,7 @@ Endpoints:
   POST /score/batch   → score a list of sinistres
 """
 
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -22,9 +23,15 @@ app = FastAPI(
 )
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
+# ALLOWED_ORIGIN env var: set to your Vercel URL in Render dashboard,
+# e.g. "https://claims-plateform.vercel.app"
+# Defaults to * for local development.
+_allowed_origin = os.environ.get("ALLOWED_ORIGIN", "*")
+_cors_origins = ["*"] if _allowed_origin == "*" else [_allowed_origin, "http://localhost:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

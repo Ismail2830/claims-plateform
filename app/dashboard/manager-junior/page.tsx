@@ -1,376 +1,189 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useAdminAuth } from '@/app/hooks/useAdminAuth';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
-import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
-import { 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle,
-  Users,
-  ClipboardCheck,
-  MessageSquare,
-  TrendingUp,
-  UserCheck,
-  FileCheck,
-  DollarSign,
-  Flag
+import useSWR from 'swr';
+import {
+  FileText, Users, CheckSquare, AlertTriangle, TrendingUp, ChevronRight, RefreshCw,
 } from 'lucide-react';
+import RoleBasedLayout from '@/components/layout/RoleBasedLayout';
+import { useAdminAuth } from '@/app/hooks/useAdminAuth';
 
-export default function ManagerJuniorDashboard() {
-  const { user, isLoading, logout } = useAdminAuth();
-  const router = useRouter();
+function swrFetcher(url: string, token: string) {
+  return fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then((r) => {
+    if (!r.ok) throw new Error('Erreur');
+    return r.json();
+  });
+}
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.replace('/auth/admin');
+const STATUS_COLORS: Record<string, string> = {
+  DECLARED: 'bg-gray-100 text-gray-700', ANALYZING: 'bg-blue-100 text-blue-700',
+  DOCS_REQUIRED: 'bg-yellow-100 text-yellow-700', UNDER_EXPERTISE: 'bg-purple-100 text-purple-700',
+  IN_DECISION: 'bg-orange-100 text-orange-700', APPROVED: 'bg-green-100 text-green-700',
+  IN_PAYMENT: 'bg-teal-100 text-teal-700', CLOSED: 'bg-gray-200 text-gray-600',
+  REJECTED: 'bg-red-100 text-red-700',
+};
 
-    }
-  }, [user, isLoading, router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+interface KpiCardProps { label: string; value: number | undefined; icon: React.ElementType; color: string; }
+function KpiCard({ label, value, icon: Icon, color }: KpiCardProps) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm flex items-center gap-4">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${color}`}>
+        <Icon className="h-6 w-6" />
       </div>
-    );
-  }
+      <div>
+        <p className="text-sm text-gray-500">{label}</p>
+        <p className="text-2xl font-bold text-gray-900">{value === undefined ? '' : value}</p>
+      </div>
+    </div>
+  );
+}
 
-  if (!user) {
-    return null;
-  }
+export default function ManagerJuniorDashboardPage() {
+  const router = useRouter();
+  const { user, isLoading: authLoading, logout, token } = useAdminAuth();
 
-  const navigation = [
-    {
-      name: 'Dashboard',
-      href: '/dashboard/manager-junior',
-      icon: <FileText className="w-5 h-5" />,
-      current: true,
-    },
-    {
-      name: 'Pending Approvals',
-      href: '/dashboard/manager-junior/approvals',
-      icon: <Clock className="w-5 h-5" />,
-    },
-    {
-      name: 'Team Performance',
-      href: '/dashboard/manager-junior/team',
-      icon: <Users className="w-5 h-5" />,
-    },
-    {
-      name: 'Claim Review',
-      href: '/dashboard/manager-junior/claims',
-      icon: <FileCheck className="w-5 h-5" />,
-    },
-    {
-      name: 'Reports',
-      href: '/dashboard/manager-junior/reports',
-      icon: <TrendingUp className="w-5 h-5" />,
-    },
-    {
-      name: 'Quality Control',
-      href: '/dashboard/manager-junior/quality',
-      icon: <CheckCircle className="w-5 h-5" />,
-    },
-  ];
+  const { data, isLoading, error, mutate } = useSWR(
+    token ? ['/api/manager-junior/stats', token] : null,
+    ([url, t]: [string, string]) => swrFetcher(url, t),
+    { refreshInterval: 30_000 }
+  );
 
-  const recentActivities = [
-    {
-      id: '1',
-      type: 'Claim Approval',
-      description: 'Approved auto insurance claim for MAD 18,500',
-      timestamp: '15 minutes ago',
-      status: 'success' as const,
-    },
-    {
-      id: '2',
-      type: 'Team Review',
-      description: 'Reviewed expert assessment for property damage case',
-      timestamp: '45 minutes ago',
-      status: 'info' as const,
-    },
-    {
-      id: '3',
-      type: 'Quality Check',
-      description: 'Flagged claim for senior manager review',
-      timestamp: '1 hour ago',
-      status: 'warning' as const,
-    },
-    {
-      id: '4',
-      type: 'Policy Review',
-      description: 'Updated claim processing guidelines',
-      timestamp: '2 hours ago',
-      status: 'success' as const,
-    },
-  ];
+  React.useEffect(() => {
+    if (!authLoading && !user) router.push('/auth/admin?reason=session_expired');
+  }, [authLoading, user, router]);
 
-  const pendingApprovals = [
-    {
-      id: 'CLM-2024-015',
-      type: 'Auto Accident',
-      expert: 'Dr. Ahmed Hassan',
-      amount: 22000,
-      priority: 'High',
-      submittedDate: '2024-02-05',
-      client: 'Fatima Al-Zahra',
-    },
-    {
-      id: 'CLM-2024-016',
-      type: 'Property Damage',
-      expert: 'Sarah Johnson',
-      amount: 15500,
-      priority: 'Medium',
-      submittedDate: '2024-02-04',
-      client: 'Omar Benali',
-    },
-    {
-      id: 'CLM-2024-017',
-      type: 'Theft Recovery',
-      expert: 'Michael Chen',
-      amount: 8000,
-      priority: 'Low',
-      submittedDate: '2024-02-03',
-      client: 'Yasmine Rachid',
-    },
-  ];
+  if (authLoading || !user) return null;
 
-  const teamStats = [
-    { name: 'Dr. Ahmed Hassan', completed: 15, pending: 3, rating: 4.9 },
-    { name: 'Sarah Johnson', completed: 12, pending: 5, rating: 4.7 },
-    { name: 'Michael Chen', completed: 18, pending: 2, rating: 4.8 },
-  ];
+  const stats = data?.data;
 
   return (
-    <DashboardLayout 
-      title="Junior Manager Dashboard" 
-      userRole="MANAGER_JUNIOR"
-      navigation={navigation}
-      userProp={user}
-      logoutProp={logout}
-    >
-      {/* Welcome Message */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Welcome back, {user.firstName}!
-        </h2>
-        <p className="text-gray-600 mt-2">
-          Manage claim approvals and oversee team performance.
-        </p>
-      </div>
+    <RoleBasedLayout role="MANAGER_JUNIOR" user={user} onLogout={logout}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Bonjour, {user.firstName} !</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Tableau de bord de votre équipe</p>
+          </div>
+          <button onClick={() => mutate()} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <RefreshCw className="h-4 w-4" /> Actualiser
+          </button>
+        </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          title="Pending Approvals"
-          value="8"
-          icon={Clock}
-          color="yellow"
-          subtitle="Awaiting your review"
-          trend={{ value: 12, isPositive: false }}
-        />
-        <StatCard
-          title="Approved Today"
-          value="6"
-          icon={CheckCircle}
-          color="green"
-          subtitle="Claims processed"
-          trend={{ value: 25, isPositive: true }}
-        />
-        <StatCard
-          title="Team Performance"
-          value="94%"
-          icon={TrendingUp}
-          color="blue"
-          subtitle="Average efficiency"
-          trend={{ value: 5, isPositive: true }}
-        />
-        <StatCard
-          title="Total Value"
-          value="MAD 156K"
-          icon={DollarSign}
-          color="purple"
-          subtitle="Claims processed this month"
-        />
-      </div>
+        {error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Impossible de charger les statistiques.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KpiCard label="Dossiers équipe"   value={isLoading ? undefined : stats?.totalClaims}      icon={FileText}    color="bg-blue-100 text-blue-600" />
+            <KpiCard label="Approbations"       value={isLoading ? undefined : stats?.pendingApprovals} icon={CheckSquare}  color="bg-orange-100 text-orange-600" />
+            <KpiCard label="Experts actifs"     value={isLoading ? undefined : stats?.activeExperts}    icon={Users}        color="bg-green-100 text-green-600" />
+            <KpiCard label="Nouveaux (7j)"      value={isLoading ? undefined : stats?.claimsThisWeek}   icon={TrendingUp}   color="bg-purple-100 text-purple-600" />
+          </div>
+        )}
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <ActionCard
-          title="Review Approvals"
-          description="Process pending claim approvals"
-          icon={ClipboardCheck}
-          color="blue"
-          buttonText="Review Claims"
-          onClick={() => router.push('/dashboard/manager-junior/approvals')}
-        />
-        <ActionCard
-          title="Team Management"
-          description="Monitor expert performance and workload"
-          icon={Users}
-          color="green"
-          buttonText="View Team"
-          onClick={() => router.push('/dashboard/manager-junior/team')}
-        />
-        <ActionCard
-          title="Quality Control"
-          description="Ensure claim processing standards"
-          icon={Flag}
-          color="purple"
-          buttonText="Quality Check"
-          onClick={() => router.push('/dashboard/manager-junior/quality')}
-        />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending Approvals */}
-        <div className="lg:col-span-2 bg-white overflow-hidden shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Pending Approvals
-              </h3>
-              <button
-                onClick={() => router.push('/dashboard/manager-junior/approvals')}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                View All
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Recent claims */}
+          <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h3 className="font-semibold text-gray-900">Dossiers récents</h3>
+              <button onClick={() => router.push('/dashboard/manager-junior/claims')} className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                Voir tout <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-            <div className="space-y-4">
-              {pendingApprovals.map((approval) => (
-                <div key={approval.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="shrink-0">
-                        <div className={`w-3 h-3 rounded-full ${
-                          approval.priority === 'High' ? 'bg-red-500' :
-                          approval.priority === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'
-                        }`} />
+            <div className="divide-y divide-gray-50">
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="px-5 py-3 animate-pulse flex gap-3">
+                      <div className="h-4 w-24 rounded bg-gray-100" />
+                      <div className="h-4 w-20 rounded bg-gray-100" />
+                    </div>
+                  ))
+                : (stats?.recentClaims ?? []).map((c: {
+                    claimId: string; claimNumber: string; claimType: string;
+                    status: string; priority: string;
+                    client?: { firstName: string; lastName: string };
+                    assignedUser?: { firstName: string; lastName: string };
+                  }) => (
+                    <div key={c.claimId} className="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => router.push('/dashboard/manager-junior/claims')}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">#{c.claimNumber}</p>
+                        <p className="text-xs text-gray-400 truncate">{c.client?.firstName} {c.client?.lastName}  Expert: {c.assignedUser?.firstName ?? ''}</p>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">{approval.id}</h4>
-                        <p className="text-sm text-gray-500">{approval.type} â€¢ {approval.client}</p>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[c.status] ?? 'bg-gray-100 text-gray-600'}`}>{c.status}</span>
+                      <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                    </div>
+                  ))}
+            </div>
+          </div>
+
+          {/* Right column */}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-orange-200 bg-orange-50 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                <h3 className="font-semibold text-orange-800">Approbations en attente</h3>
+              </div>
+              <p className="text-3xl font-bold text-orange-700">{isLoading ? '' : stats?.pendingApprovals ?? 0}</p>
+              <p className="text-xs text-orange-600 mt-1">Dossiers en décision</p>
+            </div>
+
+            {/* Team workload */}
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-3">Charge de travail</h3>
+              <div className="space-y-2">
+                {isLoading
+                  ? Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="animate-pulse flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-gray-100" />
+                        <div className="flex-1 h-3 rounded bg-gray-100" />
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
-                        MAD {approval.amount.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Expert: {approval.expert}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs text-gray-500">
-                      Submitted: {approval.submittedDate}
-                    </p>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => router.push(`/dashboard/manager-junior/approvals/${approval.id}`)}
-                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors"
-                      >
-                        Review
-                      </button>
-                      <button className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 transition-colors">
-                        Approve
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                    ))
+                  : (stats?.teamStats ?? []).slice(0, 4).map((expert: {
+                      userId: string; firstName: string; lastName: string;
+                      activeClaims: number; maxWorkload: number; isActive: boolean;
+                    }) => {
+                      const pct = expert.maxWorkload > 0 ? Math.round((expert.activeClaims / expert.maxWorkload) * 100) : 0;
+                      return (
+                        <div key={expert.userId} className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">
+                            {expert.firstName[0]}{expert.lastName[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <p className="text-xs font-medium text-gray-700 truncate">{expert.firstName} {expert.lastName}</p>
+                              <p className="text-xs text-gray-400 shrink-0 ml-1">{pct}%</p>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                              <div className={`h-full rounded-full transition-all ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-orange-400' : 'bg-green-500'}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+              </div>
+              <button onClick={() => router.push('/dashboard/manager-junior/team')} className="mt-3 w-full rounded-lg border border-gray-100 py-1.5 text-xs text-blue-600 hover:bg-gray-50 transition-colors">
+                Voir tous les experts
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-2">
+              <h3 className="font-semibold text-gray-900 mb-3">Accès rapide</h3>
+              {[
+                { label: 'Mon équipe',         href: '/dashboard/manager-junior/team' },
+                { label: 'Approbations',       href: '/dashboard/manager-junior/approvals' },
+                { label: 'Charge de travail',  href: '/dashboard/manager-junior/workload' },
+                { label: 'Performance',        href: '/dashboard/manager-junior/performance' },
+              ].map((a) => (
+                <button key={a.href} onClick={() => router.push(a.href)} className="flex w-full items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-200 transition-colors">
+                  {a.label} <ChevronRight className="h-4 w-4 text-gray-400" />
+                </button>
               ))}
             </div>
           </div>
         </div>
-
-        {/* Sidebar with Activity and Team Performance */}
-        <div className="space-y-6">
-          <RecentActivity activities={recentActivities} />
-          
-          {/* Team Performance Summary */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Team Performance
-              </h3>
-              <div className="space-y-4">
-                {teamStats.map((member, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <UserCheck className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {member.completed} completed, {member.pending} pending
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center">
-                        <span className="text-sm font-medium text-gray-900">{member.rating}</span>
-                        <div className="ml-1 flex items-center">
-                          {[...Array(5)].map((_, i) => (
-                            <div
-                              key={i}
-                              className={`w-2 h-2 rounded-full ${
-                                i < Math.floor(member.rating) ? 'bg-yellow-400' : 'bg-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => router.push('/dashboard/manager-junior/team')}
-                  className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  View Detailed Performance
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                This Week
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Claims Processed</span>
-                  <span className="text-sm font-medium text-gray-900">32</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Average Processing Time</span>
-                  <span className="text-sm font-medium text-gray-900">1.8 days</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Approval Rate</span>
-                  <span className="text-sm font-medium text-gray-900">87%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Quality Score</span>
-                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                    Excellent
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-    </DashboardLayout>
+    </RoleBasedLayout>
   );
 }

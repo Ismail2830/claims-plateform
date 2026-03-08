@@ -1,329 +1,161 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useAdminAuth } from '@/app/hooks/useAdminAuth';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
-import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
-import { 
-  FileText, 
-  Eye, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle,
-  Search,
-  ClipboardCheck,
-  MessageSquare,
-  Calculator,
-  TrendingUp,
-  Calendar
+import useSWR from 'swr';
+import {
+  FileText,
+  Clock,
+  CheckCircle2,
+  FolderOpen,
+  AlertTriangle,
+  ChevronRight,
+  RefreshCw,
 } from 'lucide-react';
+import RoleBasedLayout from '@/components/layout/RoleBasedLayout';
+import { useAdminAuth } from '@/app/hooks/useAdminAuth';
 
-export default function ExpertDashboard() {
-  const { user, isLoading, logout } = useAdminAuth();
-  const router = useRouter();
+function swrFetcher(url: string, token: string) {
+  return fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then((res) => {
+    if (!res.ok) throw new Error('Erreur de chargement');
+    return res.json();
+  });
+}
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.replace('/auth/admin');
+const STATUS_LABELS: Record<string, string> = {
+  DECLARED: 'Déclaré', ANALYZING: 'En analyse', DOCS_REQUIRED: 'Docs requis',
+  UNDER_EXPERTISE: 'En expertise', IN_DECISION: 'En décision', APPROVED: 'Approuvé',
+  IN_PAYMENT: 'En paiement', CLOSED: 'Clôturé', REJECTED: 'Rejeté',
+};
+const STATUS_COLORS: Record<string, string> = {
+  DECLARED: 'bg-gray-100 text-gray-700', ANALYZING: 'bg-blue-100 text-blue-700',
+  DOCS_REQUIRED: 'bg-yellow-100 text-yellow-700', UNDER_EXPERTISE: 'bg-purple-100 text-purple-700',
+  IN_DECISION: 'bg-orange-100 text-orange-700', APPROVED: 'bg-green-100 text-green-700',
+  IN_PAYMENT: 'bg-teal-100 text-teal-700', CLOSED: 'bg-gray-200 text-gray-600',
+  REJECTED: 'bg-red-100 text-red-700',
+};
+const PRIORITY_COLORS: Record<string, string> = {
+  LOW: 'bg-gray-100 text-gray-600', MEDIUM: 'bg-blue-100 text-blue-700',
+  HIGH: 'bg-orange-100 text-orange-700', CRITICAL: 'bg-red-100 text-red-700',
+};
 
-    }
-  }, [user, isLoading, router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+interface KpiCardProps { label: string; value: number | undefined; icon: React.ElementType; color: string; }
+function KpiCard({ label, value, icon: Icon, color }: KpiCardProps) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm flex items-center gap-4">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${color}`}>
+        <Icon className="h-6 w-6" />
       </div>
-    );
-  }
+      <div>
+        <p className="text-sm text-gray-500">{label}</p>
+        <p className="text-2xl font-bold text-gray-900">{value === undefined ? '' : value}</p>
+      </div>
+    </div>
+  );
+}
 
-  if (!user) {
-    return null;
-  }
+export default function ExpertDashboardPage() {
+  const router = useRouter();
+  const { user, isLoading: authLoading, logout, token } = useAdminAuth();
 
-  const navigation = [
-    {
-      name: 'Dashboard',
-      href: '/dashboard/expert',
-      icon: <FileText className="w-5 h-5" />,
-      current: true,
-    },
-    {
-      name: 'Pending Claims',
-      href: '/dashboard/expert/claims/pending',
-      icon: <Clock className="w-5 h-5" />,
-    },
-    {
-      name: 'In Review',
-      href: '/dashboard/expert/claims/review',
-      icon: <Eye className="w-5 h-5" />,
-    },
-    {
-      name: 'Completed',
-      href: '/dashboard/expert/claims/completed',
-      icon: <CheckCircle className="w-5 h-5" />,
-    },
-    {
-      name: 'Search Claims',
-      href: '/dashboard/expert/claims/search',
-      icon: <Search className="w-5 h-5" />,
-    },
-    {
-      name: 'Reports',
-      href: '/dashboard/expert/reports',
-      icon: <TrendingUp className="w-5 h-5" />,
-    },
-  ];
+  const { data, error, isLoading, mutate } = useSWR(
+    token ? ['/api/expert/stats', token] : null,
+    ([url, t]: [string, string]) => swrFetcher(url, t),
+    { refreshInterval: 30_000 }
+  );
 
-  const recentActivities = [
-    {
-      id: '1',
-      type: 'Claim Assessment',
-      description: 'Completed evaluation for auto accident claim #CLM-2024-001',
-      timestamp: '30 minutes ago',
-      status: 'success' as const,
-    },
-    {
-      id: '2',
-      type: 'Document Review',
-      description: 'Requested additional documents for claim #CLM-2024-005',
-      timestamp: '1 hour ago',
-      status: 'warning' as const,
-    },
-    {
-      id: '3',
-      type: 'Field Investigation',
-      description: 'Scheduled on-site inspection for property damage claim',
-      timestamp: '2 hours ago',
-      status: 'info' as const,
-    },
-    {
-      id: '4',
-      type: 'Report Submission',
-      description: 'Submitted assessment report for home insurance claim',
-      timestamp: '3 hours ago',
-      status: 'success' as const,
-    },
-  ];
+  React.useEffect(() => {
+    if (!authLoading && !user) router.push('/auth/admin?reason=session_expired');
+  }, [authLoading, user, router]);
 
-  const pendingClaims = [
-    {
-      id: 'CLM-2024-007',
-      type: 'Auto Accident',
-      priority: 'High',
-      assignedDate: '2024-02-03',
-      estimatedValue: 25000,
-      client: 'Sarah Johnson',
-    },
-    {
-      id: 'CLM-2024-008',
-      type: 'Property Damage',
-      priority: 'Medium',
-      assignedDate: '2024-02-02',
-      estimatedValue: 15000,
-      client: 'Michael Chen',
-    },
-    {
-      id: 'CLM-2024-009',
-      type: 'Theft',
-      priority: 'Low',
-      assignedDate: '2024-02-01',
-      estimatedValue: 5000,
-      client: 'Emma Wilson',
-    },
-  ];
+  if (authLoading || !user) return null;
+
+  const stats = data?.data;
 
   return (
-    <DashboardLayout 
-      title="Expert Dashboard" 
-      userRole="EXPERT"
-      navigation={navigation}
-      userProp={user}
-      logoutProp={logout}
-    >
-      {/* Welcome Message */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Welcome back, {user.firstName}!
-        </h2>
-        <p className="text-gray-600 mt-2">
-          Review and evaluate insurance claims with your expertise.
-        </p>
-      </div>
+    <RoleBasedLayout role="EXPERT" user={user} onLogout={logout}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Bonjour, {user.firstName} !</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Voici un résumé de vos dossiers</p>
+          </div>
+          <button onClick={() => mutate()} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <RefreshCw className="h-4 w-4" /> Actualiser
+          </button>
+        </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          title="Pending Claims"
-          value="12"
-          icon={Clock}
-          color="yellow"
-          subtitle="Awaiting review"
-          trend={{ value: 8, isPositive: false }}
-        />
-        <StatCard
-          title="In Progress"
-          value="5"
-          icon={Eye}
-          color="blue"
-          subtitle="Currently reviewing"
-        />
-        <StatCard
-          title="Completed Today"
-          value="3"
-          icon={CheckCircle}
-          color="green"
-          subtitle="Assessments done"
-          trend={{ value: 15, isPositive: true }}
-        />
-        <StatCard
-          title="Average Processing Time"
-          value="2.3 days"
-          icon={TrendingUp}
-          color="purple"
-          subtitle="This month"
-          trend={{ value: 12, isPositive: true }}
-        />
-      </div>
+        {error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Impossible de charger les statistiques.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KpiCard label="Dossiers assignés"  value={isLoading ? undefined : stats?.totalAssigned}       icon={FileText}    color="bg-blue-100 text-blue-600" />
+            <KpiCard label="En cours"           value={isLoading ? undefined : stats?.inProgress}          icon={Clock}       color="bg-purple-100 text-purple-600" />
+            <KpiCard label="Traités ce mois"    value={isLoading ? undefined : stats?.completedThisMonth}  icon={CheckCircle2} color="bg-green-100 text-green-600" />
+            <KpiCard label="Docs à vérifier"    value={isLoading ? undefined : stats?.pendingDocuments}     icon={FolderOpen}  color="bg-yellow-100 text-yellow-600" />
+          </div>
+        )}
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <ActionCard
-          title="Review Claims"
-          description="Assess pending insurance claims"
-          icon={Eye}
-          color="blue"
-          buttonText="Start Review"
-          onClick={() => router.push('/dashboard/expert/claims/pending')}
-        />
-        <ActionCard
-          title="Schedule Inspection"
-          description="Plan field visits for claims"
-          icon={Calendar}
-          color="green"
-          buttonText="Schedule"
-          onClick={() => router.push('/dashboard/expert/inspections')}
-        />
-        <ActionCard
-          title="Generate Report"
-          description="Create assessment reports"
-          icon={ClipboardCheck}
-          color="purple"
-          buttonText="Create Report"
-          onClick={() => router.push('/dashboard/expert/reports/create')}
-        />
-        <ActionCard
-          title="Claim Calculator"
-          description="Calculate claim values and settlements"
-          icon={Calculator}
-          color="indigo"
-          buttonText="Open Calculator"
-          onClick={() => router.push('/dashboard/expert/calculator')}
-        />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending Claims List */}
-        <div className="lg:col-span-2 bg-white overflow-hidden shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                High Priority Claims
-              </h3>
-              <button
-                onClick={() => router.push('/dashboard/expert/claims/pending')}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                View All
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h3 className="font-semibold text-gray-900">Dossiers récents</h3>
+              <button onClick={() => router.push('/dashboard/expert/claims')} className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                Voir tout <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-            <div className="space-y-4">
-              {pendingClaims.map((claim) => (
-                <div key={claim.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="shrink-0">
-                        <div className={`w-3 h-3 rounded-full ${
-                          claim.priority === 'High' ? 'bg-red-500' :
-                          claim.priority === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'
-                        }`} />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">{claim.id}</h4>
-                        <p className="text-sm text-gray-500">{claim.type} â€¢ {claim.client}</p>
-                      </div>
+            <div className="divide-y divide-gray-50">
+              {isLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="px-5 py-3 animate-pulse flex gap-3">
+                      <div className="h-4 w-24 rounded bg-gray-100" />
+                      <div className="h-4 w-20 rounded bg-gray-100" />
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
-                        MAD {claim.estimatedValue.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Assigned: {claim.assignedDate}
-                      </p>
+                  ))
+                : (stats?.recentClaims ?? []).map((c: {
+                    claimId: string; claimNumber: string; claimType: string;
+                    status: string; priority: string;
+                    client?: { firstName: string; lastName: string };
+                  }) => (
+                    <div key={c.claimId} className="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => router.push(`/dashboard/expert/claims`)}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">#{c.claimNumber}</p>
+                        <p className="text-xs text-gray-400 truncate">{c.client?.firstName} {c.client?.lastName}  {c.claimType}</p>
+                      </div>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[c.status] ?? 'bg-gray-100 text-gray-600'}`}>{STATUS_LABELS[c.status] ?? c.status}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_COLORS[c.priority] ?? 'bg-gray-100 text-gray-600'}`}>{c.priority}</span>
+                      <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
                     </div>
-                  </div>
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      onClick={() => router.push(`/dashboard/expert/claims/${claim.id}`)}
-                      className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors"
-                    >
-                      Review Claim
-                    </button>
-                  </div>
-                </div>
+                  ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-xl border border-orange-200 bg-orange-50 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                <h3 className="font-semibold text-orange-800">Cas urgents</h3>
+              </div>
+              <p className="text-3xl font-bold text-orange-700">{isLoading ? '' : stats?.urgentClaims ?? 0}</p>
+              <p className="text-xs text-orange-600 mt-1">Priorité HIGH / CRITICAL</p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-2">
+              <h3 className="font-semibold text-gray-900 mb-3">Accès rapide</h3>
+              {[
+                { label: 'Mes dossiers', href: '/dashboard/expert/claims' },
+                { label: 'Évaluations', href: '/dashboard/expert/assessments' },
+                { label: 'Documents à vérifier', href: '/dashboard/expert/documents' },
+              ].map((a) => (
+                <button key={a.href} onClick={() => router.push(a.href)} className="flex w-full items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-200 transition-colors">
+                  {a.label} <ChevronRight className="h-4 w-4 text-gray-400" />
+                </button>
               ))}
             </div>
           </div>
         </div>
-
-        {/* Recent Activity & Quick Info */}
-        <div className="space-y-6">
-          <RecentActivity activities={recentActivities} />
-          
-          {/* Performance Metrics */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Performance Metrics
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Claims Processed</span>
-                  <span className="text-sm font-medium text-gray-900">127</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Average Rating</span>
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium text-gray-900">4.8/5</span>
-                    <div className="ml-2 flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-2 h-2 rounded-full ${
-                            i < 5 ? 'bg-yellow-400' : 'bg-gray-300'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Response Time</span>
-                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                    Excellent
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Active Cases</span>
-                  <span className="text-sm font-medium text-gray-900">17</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-    </DashboardLayout>
+    </RoleBasedLayout>
   );
 }

@@ -96,9 +96,33 @@ export async function middleware(request: NextRequest) {
       res.cookies.set('admin_at', '', { maxAge: 0, path: '/' });
       return res;
     }
-    // Super-admin role guard
-    if (pathname.startsWith('/dashboard/super-admin') && payload.role !== 'SUPER_ADMIN') {
-      return NextResponse.redirect(new URL('/dashboard/admin', request.url));
+    // ── Per-role guards: redirect to the correct dashboard if mismatch ──
+    const role = payload.role ?? '';
+
+    const ROLE_DASHBOARD: Record<string, string> = {
+      SUPER_ADMIN:    '/dashboard/super-admin',
+      ADMIN:          '/dashboard/admin',
+      MANAGER_SENIOR: '/dashboard/manager-senior',
+      MANAGER_JUNIOR: '/dashboard/manager-junior',
+      EXPERT:         '/dashboard/expert',
+    };
+
+    const roleDest = ROLE_DASHBOARD[role] ?? '/dashboard/admin';
+
+    if (pathname.startsWith('/dashboard/super-admin') && role !== 'SUPER_ADMIN') {
+      return NextResponse.redirect(new URL(roleDest, request.url));
+    }
+    if (pathname.startsWith('/dashboard/admin') && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+      return NextResponse.redirect(new URL(roleDest, request.url));
+    }
+    if (pathname.startsWith('/dashboard/manager-senior') && role !== 'MANAGER_SENIOR') {
+      return NextResponse.redirect(new URL(roleDest, request.url));
+    }
+    if (pathname.startsWith('/dashboard/manager-junior') && role !== 'MANAGER_JUNIOR') {
+      return NextResponse.redirect(new URL(roleDest, request.url));
+    }
+    if (pathname.startsWith('/dashboard/expert') && role !== 'EXPERT') {
+      return NextResponse.redirect(new URL(roleDest, request.url));
     }
   }
 

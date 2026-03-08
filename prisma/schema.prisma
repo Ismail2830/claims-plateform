@@ -54,6 +54,7 @@ model Client {
   passwordResetTokens PasswordResetToken[]
   sessions    Session[]
   whatsappSessions WhatsappSession[]
+  sentMessages     Message[]        @relation("MessageClientSender")
 }
 
 model User {
@@ -85,9 +86,115 @@ model User {
   generatedReports GeneratedReport[] @relation("ReportGenerator")
   reportSchedules  ReportSchedule[]  @relation("ReportScheduleCreator")
 
+  // Messaging
+  createdConversations   Conversation[]       @relation("ConversationCreator")
+  sentMessages           Message[]            @relation("MessageSender")
+  messageReadReceipts    MessageReadReceipt[]
+  createdTemplates       MessageTemplate[]    @relation("TemplateCreator")
+
   @@index([role], map: "idx_users_role")
   @@index([email], map: "idx_users_email")
   @@map("users")
+}
+
+// ─── Messaging Models ─────────────────────────────────────────────────────────
+
+model Conversation {
+  id            String       @id @default(uuid()) @db.Uuid
+  type          ConvType
+  claimId       String?      @map("claim_id") @db.Uuid
+  participants  String[]
+  subject       String?      @db.VarChar(255)
+  lastMessage   String?      @map("last_message") @db.Text
+  lastMessageAt DateTime?    @map("last_message_at")
+  urgencyLevel  UrgencyLevel @default(NORMAL) @map("urgency_level")
+  isArchived    Boolean      @default(false) @map("is_archived")
+  createdBy     String       @map("created_by") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  messages      Message[]
+  claim         Claim?       @relation(fields: [claimId], references: [claimId])
+  creator       User         @relation("ConversationCreator", fields: [createdBy], references: [userId])
+
+  @@index([createdBy], map: "idx_conversations_creator")
+  @@index([claimId],   map: "idx_conversations_claim")
+  @@index([type],      map: "idx_conversations_type")
+  @@map("conversations")
+}
+
+model Message {
+  id             String            @id @default(uuid()) @db.Uuid
+  conversationId String            @map("conversation_id") @db.Uuid
+  senderId       String?           @map("sender_id") @db.Uuid
+  clientSenderId String?           @map("client_sender_id") @db.Uuid
+  content        String            @db.Text
+  visibility     MessageVisibility @default(ALL)
+  isRead         Boolean           @default(false) @map("is_read")
+  isUrgent       Boolean           @default(false) @map("is_urgent")
+  isTemplate     Boolean           @default(false) @map("is_template")
+  attachments    String[]
+  metadata       Json?
+  editedAt       DateTime?         @map("edited_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User?             @relation("MessageSender", fields: [senderId], references: [userId])
+  clientSender   Client?           @relation("MessageClientSender", fields: [clientSenderId], references: [clientId])
+  readReceipts   MessageReadReceipt[]
+
+  @@index([conversationId], map: "idx_messages_conv")
+  @@index([senderId],       map: "idx_messages_sender")
+  @@index([createdAt],      map: "idx_messages_date")
+  @@map("messages")
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  readAt    DateTime @default(now()) @map("read_at")
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [userId])
+
+  @@unique([messageId, userId])
+  @@index([userId], map: "idx_mrr_user")
+  @@map("message_read_receipts")
+}
+
+model MessageTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  content   String   @db.Text
+  category  String   @db.VarChar(100)
+  isGlobal  Boolean  @default(false) @map("is_global")
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creator   User     @relation("TemplateCreator", fields: [createdBy], references: [userId])
+
+  @@index([createdBy], map: "idx_templates_creator")
+  @@map("message_templates")
+}
+
+enum ConvType {
+  CLIENT
+  INTERNAL
+  CLAIM_LINKED
+  ESCALATION
+}
+
+enum MessageVisibility {
+  ALL
+  CLIENT_ONLY
+  INTERNAL_ONLY
+}
+
+enum UrgencyLevel {
+  NORMAL
+  HIGH
+  URGENT
 }
 
 model Policy {
@@ -177,6 +284,7 @@ model Claim {
   comments      ClaimComment[]
   witnesses     ClaimWitness[]
   auditLogs     AuditLog[]
+  conversations Conversation[]
 
   @@index([clientId], map: "idx_claims_client")
   @@index([policyId], map: "idx_claims_policy")

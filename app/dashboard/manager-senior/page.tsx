@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
@@ -72,16 +72,16 @@ export default function ManagerSeniorDashboardPage() {
         ) : (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard label="Total sinistres"     value={isLoading ? undefined : stats?.totalClaims}       icon={FileText}    color="bg-blue-100 text-blue-600" />
-            <KpiCard label="En décision"          value={isLoading ? undefined : stats?.pendingApprovals}  icon={CheckSquare}  color="bg-orange-100 text-orange-600" />
-            <KpiCard label="Cas escaladés"        value={isLoading ? undefined : stats?.escalatedClaims}   icon={AlertTriangle} color="bg-red-100 text-red-600" />
-            <KpiCard label="Approuvés ce mois"    value={isLoading ? undefined : stats?.approvedThisMonth} icon={TrendingUp}   color="bg-green-100 text-green-600" />
+            <KpiCard label="En dÃ©cision"          value={isLoading ? undefined : stats?.pendingApprovals}  icon={CheckSquare}  color="bg-orange-100 text-orange-600" />
+            <KpiCard label="Cas escaladÃ©s"        value={isLoading ? undefined : stats?.escalatedClaims}   icon={AlertTriangle} color="bg-red-100 text-red-600" />
+            <KpiCard label="ApprouvÃ©s ce mois"    value={isLoading ? undefined : stats?.approvedThisMonth} icon={TrendingUp}   color="bg-green-100 text-green-600" />
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-              <h3 className="font-semibold text-gray-900">Dossiers récents</h3>
+              <h3 className="font-semibold text-gray-900">Dossiers rÃ©cents</h3>
               <button onClick={() => router.push('/dashboard/manager-senior/claims')} className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
                 Voir tout <ChevronRight className="h-4 w-4" />
               </button>
@@ -114,11 +114,11 @@ export default function ManagerSeniorDashboardPage() {
 
           <div className="space-y-4">
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-2">
-              <h3 className="font-semibold text-gray-900 mb-3">Accès rapide</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">AccÃ¨s rapide</h3>
               {[
-                { label: 'Mon équipe',           href: '/dashboard/manager-senior/team' },
+                { label: 'Mon Ã©quipe',           href: '/dashboard/manager-senior/team' },
                 { label: "File d'approbation",   href: '/dashboard/manager-senior/approvals' },
-                { label: 'Cas escaladés',        href: '/dashboard/manager-senior/escalated' },
+                { label: 'Cas escaladÃ©s',        href: '/dashboard/manager-senior/escalated' },
                 { label: 'Performance',          href: '/dashboard/manager-senior/performance' },
                 { label: 'Rapports',             href: '/dashboard/manager-senior/reports' },
               ].map((a) => (

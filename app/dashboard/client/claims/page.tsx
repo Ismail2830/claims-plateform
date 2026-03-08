@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
+import ClientLayout from '@/app/components/dashboard/ClientLayout';
 import ClaimDetailsModal from '@/app/components/dashboard/ClaimDetailsModal';
 import { trpc } from '@/app/lib/trpc-client';
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
@@ -53,7 +53,6 @@ interface Claim {
 
 export function ClientClaimsContent() {
   const t = useTranslations('claims');
-  const tNav = useTranslations('navigation');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -135,30 +134,7 @@ export function ClientClaimsContent() {
     }
   }, [token, isLoading, router]);
 
-  // Navigation items
-  const navigation = [
-    {
-      name: tNav('dashboard'),
-      href: '/dashboard/client',
-      icon: <Shield className="w-5 h-5" />,
-    },
-    {
-      name: tNav('myClaims'),
-      href: '/dashboard/client/claims',
-      icon: <FileText className="w-5 h-5" />,
-      current: true,
-    },
-    {
-      name: tNav('myPolicies'),
-      href: '/dashboard/client/policies',
-      icon: <Shield className="w-5 h-5" />,
-    },
-    {
-      name: tNav('createClaim'),
-      href: '/dashboard/client/create-claim',
-      icon: <FileText className="w-5 h-5" />,
-    },
-  ];
+
 
   // Filter claims based on search term
   const filteredClaims = claims.filter((claim: any) =>
@@ -220,17 +196,17 @@ export function ClientClaimsContent() {
 
   if (isLoading) {
     return (
-      <DashboardLayout title={t('title')} userRole="CLIENT" navigation={navigation}>
+      <ClientLayout>
         <div className="flex items-center justify-center py-12">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
           <span className="ml-2 text-gray-600">{t('loading')}</span>
         </div>
-      </DashboardLayout>
+      </ClientLayout>
     );
   }
 
   return (
-    <DashboardLayout title={t('title')} userRole="CLIENT" navigation={navigation}>
+    <ClientLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -423,7 +399,7 @@ export function ClientClaimsContent() {
           onDelete={handleClaimDelete}
         />
       )}
-    </DashboardLayout>
+    </ClientLayout>
   );
 }
 

@@ -3,7 +3,7 @@
 import React, { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
-import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
+import ClientLayout from '@/app/components/dashboard/ClientLayout';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useLocale } from '@/app/hooks/useLocale';
@@ -156,14 +156,7 @@ function ProfilePageContent() {
     }
   }, [token, isLoading, router]);
 
-  const navMsgs = messages.navigation;
-  const navigation = [
-    { name: navMsgs.dashboard,    href: '/dashboard/client',          icon: <Shield className="w-5 h-5" />,    current: false },
-    { name: navMsgs.myClaims,     href: '/dashboard/client/claims',   icon: <FileText className="w-5 h-5" />,  current: false },
-    { name: navMsgs.myPolicies,   href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />,    current: false },
-    { name: navMsgs.createClaim,  href: '/claims/create',             icon: <PlusCircle className="w-5 h-5" />, current: false },
-    { name: navMsgs.profile,      href: '/dashboard/client/profile',  icon: <User className="w-5 h-5" />,      current: true },
-  ];
+
 
   if (isLoading) {
     return (
@@ -237,7 +230,7 @@ function ProfilePageContent() {
   const documents: ProfileDocument[] = [];
 
   return (
-    <DashboardLayout title={navMsgs.profile} userRole="CLIENT" navigation={navigation}>
+    <ClientLayout>
       <Toaster richColors position="top-right" />
       <NextIntlClientProvider locale={locale} messages={messages}>
         <div>
@@ -261,7 +254,7 @@ function ProfilePageContent() {
           )}
         </div>
       </NextIntlClientProvider>
-    </DashboardLayout>
+    </ClientLayout>
   );
 }
 

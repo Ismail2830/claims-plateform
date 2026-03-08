@@ -49,6 +49,7 @@ function getPageTitle(pathname: string, role: UserRole): string {
     MANAGER_SENIOR:  '/dashboard/manager-senior',
     ADMIN:           '/dashboard/admin',
     SUPER_ADMIN:     '/dashboard/super-admin',
+    CLIENT:          '/dashboard/client',
   };
   const rootHref = rootHrefs[role] ?? '/dashboard';
 

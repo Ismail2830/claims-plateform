@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
+import ClientLayout from '@/app/components/dashboard/ClientLayout';
 import { trpc } from '@/app/lib/trpc-client';
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { useLocale } from '@/app/hooks/useLocale';
@@ -83,7 +83,6 @@ function isExpiringSoon(endDate: string): boolean {
 
 export function ClientPoliciesContent() {
   const t = useTranslations('policies');
-  const tNav = useTranslations('navigation');
   const [filterStatus, setFilterStatus] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -111,13 +110,7 @@ export function ClientPoliciesContent() {
     return matchesStatus && matchesSearch;
   });
 
-  const navigation = [
-    { name: tNav('dashboard'), href: '/dashboard/client', icon: <Shield className="w-5 h-5" /> },
-    { name: tNav('myClaims'), href: '/dashboard/client/claims', icon: <FileText className="w-5 h-5" /> },
-    { name: tNav('myPolicies'), href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />, current: true },
-    { name: tNav('createClaim'), href: '/claims/create', icon: <PlusCircle className="w-5 h-5" /> },
-    { name: tNav('profile'), href: '/dashboard/client/profile', icon: <CheckCircle className="w-5 h-5" /> },
-  ];
+
 
   // Stats
   const totalActive = allPolicies.filter((p) => p.status === 'ACTIVE').length;
@@ -125,16 +118,16 @@ export function ClientPoliciesContent() {
 
   if (isLoading) {
     return (
-      <DashboardLayout title={t('title')} userRole="CLIENT" navigation={navigation}>
+      <ClientLayout>
         <div className="flex items-center justify-center py-24">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
         </div>
-      </DashboardLayout>
+      </ClientLayout>
     );
   }
 
   return (
-    <DashboardLayout title={t('title')} userRole="CLIENT" navigation={navigation}>
+    <ClientLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -315,7 +308,7 @@ export function ClientPoliciesContent() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </ClientLayout>
   );
 }
 

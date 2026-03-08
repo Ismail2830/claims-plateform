@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
+import ClientLayout from '@/app/components/dashboard/ClientLayout';
 import { StatCard, ActionCard, RecentActivity } from '@/app/components/dashboard/DashboardWidgets';
 import { useClaimUpdates } from '@/app/hooks/useRealTimeUpdates';
 import { trpc } from '@/app/lib/trpc-client';
@@ -22,12 +22,12 @@ import {
   Shield,
   DollarSign,
   Calendar,
-  XCircle
+  XCircle,
+  MessageSquare
 } from 'lucide-react';
 
 function ClientDashboardContent() {
   const t = useTranslations('dashboard');
-  const tNav = useTranslations('navigation');
   const [showSuccess, setShowSuccess] = useState(false);
   const [showRealTimeNotification, setShowRealTimeNotification] = useState(false);
   const [lastActivity, setLastActivity] = useState<string>('');
@@ -117,35 +117,7 @@ function ClientDashboardContent() {
     }
   }, [token, isLoading, router, searchParams]);
 
-  // Navigation items for sidebar
-  const navigation = [
-    {
-      name: tNav('dashboard'),
-      href: '/dashboard/client',
-      icon: <Shield className="w-5 h-5" />,
-      current: true,
-    },
-    {
-      name: tNav('myClaims'),
-      href: '/dashboard/client/claims',
-      icon: <FileText className="w-5 h-5" />,
-    },
-    {
-      name: tNav('myPolicies'),
-      href: '/dashboard/client/policies',
-      icon: <Shield className="w-5 h-5" />,
-    },
-    {
-      name: tNav('createClaim'),
-      href: '/claims/create',
-      icon: <PlusCircle className="w-5 h-5" />,
-    },
-    {
-      name: tNav('profile'),
-      href: '/dashboard/client/profile',
-      icon: <CheckCircle className="w-5 h-5" />,
-    },
-  ];
+
 
   // Format the recent activities with relative timestamps
   const formatRelativeTime = (date: Date) => {
@@ -227,30 +199,22 @@ function ClientDashboardContent() {
   // Show loading state if queries are still loading
   if (statsLoading || activitiesLoading) {
     return (
-      <DashboardLayout 
-        title={t('title')}
-        userRole="CLIENT"
-        navigation={navigation}
-      >
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <ClientLayout>
+        <div className="flex items-center justify-center py-24">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">{t('loadingData')}</p>
           </div>
         </div>
-      </DashboardLayout>
+      </ClientLayout>
     );
   }
 
   // Show error state only if both queries failed AND we don't have any cached data
   if (statsError && activitiesError && !dashboardStats && !recentActivitiesData) {
     return (
-      <DashboardLayout 
-        title={t('title')}
-        userRole="CLIENT"
-        navigation={navigation}
-      >
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <ClientLayout>
+        <div className="flex items-center justify-center py-24">
           <div className="text-center">
             <div className="text-red-600 mb-4">
               <AlertCircle className="h-12 w-12 mx-auto" />
@@ -265,7 +229,7 @@ function ClientDashboardContent() {
             </button>
           </div>
         </div>
-      </DashboardLayout>
+      </ClientLayout>
     );
   }
 
@@ -286,11 +250,7 @@ function ClientDashboardContent() {
   };
 
   return (
-    <DashboardLayout 
-      title={t('title')}
-      userRole="CLIENT"
-      navigation={navigation}
-    >
+    <ClientLayout>
       {/* Success Alert */}
       {showSuccess && (
         <motion.div 
@@ -520,7 +480,7 @@ function ClientDashboardContent() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </ClientLayout>
   );
 }
 

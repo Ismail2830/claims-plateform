@@ -8,7 +8,7 @@ import arMessages from '@/messages/ar.json';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
-import { DashboardLayout } from '@/app/components/dashboard/DashboardLayout';
+import ClientLayout from '@/app/components/dashboard/ClientLayout';
 import { trpc } from '@/app/lib/trpc-client';
 import {
   Shield,
@@ -198,28 +198,22 @@ export default function PolicyDetailPage() {
 
   const policy = res?.data;
 
-  const navigation = [
-    { name: navMsgs.dashboard,   href: '/dashboard/client',          icon: <Shield className="w-5 h-5" /> },
-    { name: navMsgs.myClaims,    href: '/dashboard/client/claims',   icon: <FileText className="w-5 h-5" /> },
-    { name: navMsgs.myPolicies,  href: '/dashboard/client/policies', icon: <Shield className="w-5 h-5" />, current: true },
-    { name: navMsgs.createClaim, href: '/claims/create',             icon: <PlusCircle className="w-5 h-5" /> },
-    { name: navMsgs.profile,     href: '/dashboard/client/profile',  icon: <CheckCircle className="w-5 h-5" /> },
-  ];
+
 
   if (isLoading || loading) {
     return (
-      <DashboardLayout title="Policy Details" userRole="CLIENT" navigation={navigation}>
+      <ClientLayout>
         <div className="flex items-center justify-center py-24">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
           <span className="ml-2 text-gray-500">Loading policy details...</span>
         </div>
-      </DashboardLayout>
+      </ClientLayout>
     );
   }
 
   if (!policy) {
     return (
-      <DashboardLayout title="Policy Details" userRole="CLIENT" navigation={navigation}>
+      <ClientLayout>
         <div className="text-center py-24">
           <Shield className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-700">Policy not found</h3>
@@ -230,7 +224,7 @@ export default function PolicyDetailPage() {
             ← Back to My Policies
           </button>
         </div>
-      </DashboardLayout>
+      </ClientLayout>
     );
   }
 
@@ -249,7 +243,7 @@ export default function PolicyDetailPage() {
   const upcomingPayments = schedule.filter((s) => s.dueDate >= new Date()).slice(0, 3);
 
   return (
-    <DashboardLayout title="Policy Details" userRole="CLIENT" navigation={navigation}>
+    <ClientLayout>
       <div className="space-y-6 max-w-5xl">
 
         {/* Back + Header */}
@@ -499,6 +493,6 @@ export default function PolicyDetailPage() {
           )}
         </SectionCard>
       </div>
-    </DashboardLayout>
+    </ClientLayout>
   );
 }

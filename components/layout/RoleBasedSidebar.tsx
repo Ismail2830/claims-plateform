@@ -14,6 +14,7 @@ import {
 import { NAV_CONFIG } from '@/constants/nav-config';
 import { ROLE_LABELS } from '@/lib/permissions';
 import type { UserRole } from '@/lib/permissions';
+import { useUnreadCount } from '@/app/hooks/useUnreadCount';
 
 interface RoleBasedSidebarProps {
   role: UserRole;
@@ -36,6 +37,7 @@ function getRootHref(role: UserRole): string {
     MANAGER_SENIOR:  '/dashboard/manager-senior',
     ADMIN:           '/dashboard/admin',
     SUPER_ADMIN:     '/dashboard/super-admin',
+    CLIENT:          '/dashboard/client',
   };
   return roots[role] ?? '/dashboard';
 }
@@ -43,6 +45,7 @@ function getRootHref(role: UserRole): string {
 export default function RoleBasedSidebar({ role, user, onLogout }: RoleBasedSidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState<boolean>(false);
+  const { totalUnread } = useUnreadCount();
 
   useEffect(() => {
     const stored = localStorage.getItem('sidebar_collapsed');
@@ -113,6 +116,9 @@ export default function RoleBasedSidebar({ role, user, onLogout }: RoleBasedSide
               {group.items.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
+                // Inject live unread count into the Messages nav item badge
+                const isMessages = item.href.endsWith('/messages');
+                const badge = isMessages ? totalUnread : item.badge;
                 const navItem = (
                   <Link
                     href={item.href}
@@ -125,14 +131,14 @@ export default function RoleBasedSidebar({ role, user, onLogout }: RoleBasedSide
                   >
                     <Icon className="w-5 h-5 shrink-0" />
                     {!collapsed && <span className="truncate flex-1">{item.label}</span>}
-                    {!collapsed && item.badge !== undefined && item.badge > 0 && (
+                    {!collapsed && badge !== undefined && badge > 0 && (
                       <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
-                        {item.badge > 99 ? '99+' : item.badge}
+                        {badge > 99 ? '99+' : badge}
                       </span>
                     )}
-                    {collapsed && item.badge !== undefined && item.badge > 0 && (
+                    {collapsed && badge !== undefined && badge > 0 && (
                       <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
-                        {item.badge > 9 ? '9+' : item.badge}
+                        {badge > 9 ? '9+' : badge}
                       </span>
                     )}
                   </Link>

@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
@@ -23,9 +23,9 @@ function swrFetcher(url: string, token: string) {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  DECLARED: 'Déclaré', ANALYZING: 'En analyse', DOCS_REQUIRED: 'Docs requis',
-  UNDER_EXPERTISE: 'En expertise', IN_DECISION: 'En décision', APPROVED: 'Approuvé',
-  IN_PAYMENT: 'En paiement', CLOSED: 'Clôturé', REJECTED: 'Rejeté',
+  DECLARED: 'DÃ©clarÃ©', ANALYZING: 'En analyse', DOCS_REQUIRED: 'Docs requis',
+  UNDER_EXPERTISE: 'En expertise', IN_DECISION: 'En dÃ©cision', APPROVED: 'ApprouvÃ©',
+  IN_PAYMENT: 'En paiement', CLOSED: 'ClÃ´turÃ©', REJECTED: 'RejetÃ©',
 };
 const STATUS_COLORS: Record<string, string> = {
   DECLARED: 'bg-gray-100 text-gray-700', ANALYZING: 'bg-blue-100 text-blue-700',
@@ -78,7 +78,7 @@ export default function ExpertDashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Bonjour, {user.firstName} !</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Voici un résumé de vos dossiers</p>
+            <p className="text-sm text-gray-500 mt-0.5">Voici un rÃ©sumÃ© de vos dossiers</p>
           </div>
           <button onClick={() => mutate()} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
             <RefreshCw className="h-4 w-4" /> Actualiser
@@ -91,17 +91,17 @@ export default function ExpertDashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Dossiers assignés"  value={isLoading ? undefined : stats?.totalAssigned}       icon={FileText}    color="bg-blue-100 text-blue-600" />
+            <KpiCard label="Dossiers assignÃ©s"  value={isLoading ? undefined : stats?.totalAssigned}       icon={FileText}    color="bg-blue-100 text-blue-600" />
             <KpiCard label="En cours"           value={isLoading ? undefined : stats?.inProgress}          icon={Clock}       color="bg-purple-100 text-purple-600" />
-            <KpiCard label="Traités ce mois"    value={isLoading ? undefined : stats?.completedThisMonth}  icon={CheckCircle2} color="bg-green-100 text-green-600" />
-            <KpiCard label="Docs à vérifier"    value={isLoading ? undefined : stats?.pendingDocuments}     icon={FolderOpen}  color="bg-yellow-100 text-yellow-600" />
+            <KpiCard label="TraitÃ©s ce mois"    value={isLoading ? undefined : stats?.completedThisMonth}  icon={CheckCircle2} color="bg-green-100 text-green-600" />
+            <KpiCard label="Docs Ã  vÃ©rifier"    value={isLoading ? undefined : stats?.pendingDocuments}     icon={FolderOpen}  color="bg-yellow-100 text-yellow-600" />
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-              <h3 className="font-semibold text-gray-900">Dossiers récents</h3>
+              <h3 className="font-semibold text-gray-900">Dossiers rÃ©cents</h3>
               <button onClick={() => router.push('/dashboard/expert/claims')} className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
                 Voir tout <ChevronRight className="h-4 w-4" />
               </button>
@@ -139,14 +139,14 @@ export default function ExpertDashboardPage() {
                 <h3 className="font-semibold text-orange-800">Cas urgents</h3>
               </div>
               <p className="text-3xl font-bold text-orange-700">{isLoading ? '' : stats?.urgentClaims ?? 0}</p>
-              <p className="text-xs text-orange-600 mt-1">Priorité HIGH / CRITICAL</p>
+              <p className="text-xs text-orange-600 mt-1">PrioritÃ© HIGH / CRITICAL</p>
             </div>
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-2">
-              <h3 className="font-semibold text-gray-900 mb-3">Accès rapide</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">AccÃ¨s rapide</h3>
               {[
                 { label: 'Mes dossiers', href: '/dashboard/expert/claims' },
-                { label: 'Évaluations', href: '/dashboard/expert/assessments' },
-                { label: 'Documents à vérifier', href: '/dashboard/expert/documents' },
+                { label: 'Ã‰valuations', href: '/dashboard/expert/assessments' },
+                { label: 'Documents Ã  vÃ©rifier', href: '/dashboard/expert/documents' },
               ].map((a) => (
                 <button key={a.href} onClick={() => router.push(a.href)} className="flex w-full items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-200 transition-colors">
                   {a.label} <ChevronRight className="h-4 w-4 text-gray-400" />

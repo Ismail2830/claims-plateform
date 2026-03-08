@@ -20,6 +20,8 @@ import {
   CheckSquare,
   TrendingUp,
   AlertTriangle,
+  PlusCircle,
+  User,
   type LucideIcon,
 } from 'lucide-react';
 import type { UserRole } from '@/lib/permissions';
@@ -184,6 +186,42 @@ const ADMIN_NAV: NavGroup[] = [
   },
 ];
 
+// ─── Client ───────────────────────────────────────────────────────────────────
+
+const CLIENT_NAV: NavGroup[] = [
+  {
+    items: [
+      { label: 'Tableau de bord',  href: '/dashboard/client',          icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: 'MES DOSSIERS',
+    items: [
+      { label: 'Mes sinistres',    href: '/dashboard/client/claims',   icon: FileText },
+      { label: 'Mes polices',      href: '/dashboard/client/policies', icon: Shield },
+    ],
+  },
+  {
+    title: 'ACTIONS',
+    items: [
+      { label: 'Nouveau sinistre', href: '/claims/create',             icon: PlusCircle },
+    ],
+  },
+  {
+    title: 'COMMUNICATION',
+    items: [
+      { label: 'Messages',         href: '/dashboard/client/messages', icon: MessageCircle },
+      { label: 'Notifications',    href: '/dashboard/client/notifications', icon: Bell },
+    ],
+  },
+  {
+    title: 'COMPTE',
+    items: [
+      { label: 'Mon profil',       href: '/dashboard/client/profile',  icon: User },
+    ],
+  },
+];
+
 // ─── Unified config ───────────────────────────────────────────────────────────
 
 export const NAV_CONFIG: Partial<Record<UserRole, NavGroup[]>> = {
@@ -191,6 +229,7 @@ export const NAV_CONFIG: Partial<Record<UserRole, NavGroup[]>> = {
   MANAGER_JUNIOR:  MANAGER_JUNIOR_NAV,
   MANAGER_SENIOR:  MANAGER_SENIOR_NAV,
   ADMIN:           ADMIN_NAV,
+  CLIENT:          CLIENT_NAV,
 };
 
 // ─── Segment → label dictionary (shared across all role layouts) ──────────────
@@ -198,6 +237,7 @@ export const NAV_CONFIG: Partial<Record<UserRole, NavGroup[]>> = {
 export const SEGMENT_LABELS: Record<string, string> = {
   'super-admin':    'Super Admin',
   admin:            'Admin',
+  client:           'Client',
   expert:           'Expert',
   'manager-junior': 'Manager Junior',
   'manager-senior': 'Manager Senior',
@@ -226,4 +266,6 @@ export const SEGMENT_LABELS: Record<string, string> = {
   approvals:        'Approbations',
   escalated:        'Cas escaladés',
   performance:      'Performance équipe',
+  profile:          'Mon profil',
+  'create':         'Nouveau sinistre',
 };

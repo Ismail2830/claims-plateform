@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
@@ -63,7 +63,7 @@ export default function ManagerJuniorDashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Bonjour, {user.firstName} !</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Tableau de bord de votre équipe</p>
+            <p className="text-sm text-gray-500 mt-0.5">Tableau de bord de votre Ã©quipe</p>
           </div>
           <button onClick={() => mutate()} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
             <RefreshCw className="h-4 w-4" /> Actualiser
@@ -76,7 +76,7 @@ export default function ManagerJuniorDashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Dossiers équipe"   value={isLoading ? undefined : stats?.totalClaims}      icon={FileText}    color="bg-blue-100 text-blue-600" />
+            <KpiCard label="Dossiers Ã©quipe"   value={isLoading ? undefined : stats?.totalClaims}      icon={FileText}    color="bg-blue-100 text-blue-600" />
             <KpiCard label="Approbations"       value={isLoading ? undefined : stats?.pendingApprovals} icon={CheckSquare}  color="bg-orange-100 text-orange-600" />
             <KpiCard label="Experts actifs"     value={isLoading ? undefined : stats?.activeExperts}    icon={Users}        color="bg-green-100 text-green-600" />
             <KpiCard label="Nouveaux (7j)"      value={isLoading ? undefined : stats?.claimsThisWeek}   icon={TrendingUp}   color="bg-purple-100 text-purple-600" />
@@ -87,7 +87,7 @@ export default function ManagerJuniorDashboardPage() {
           {/* Recent claims */}
           <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-              <h3 className="font-semibold text-gray-900">Dossiers récents</h3>
+              <h3 className="font-semibold text-gray-900">Dossiers rÃ©cents</h3>
               <button onClick={() => router.push('/dashboard/manager-junior/claims')} className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
                 Voir tout <ChevronRight className="h-4 w-4" />
               </button>
@@ -126,7 +126,7 @@ export default function ManagerJuniorDashboardPage() {
                 <h3 className="font-semibold text-orange-800">Approbations en attente</h3>
               </div>
               <p className="text-3xl font-bold text-orange-700">{isLoading ? '' : stats?.pendingApprovals ?? 0}</p>
-              <p className="text-xs text-orange-600 mt-1">Dossiers en décision</p>
+              <p className="text-xs text-orange-600 mt-1">Dossiers en dÃ©cision</p>
             </div>
 
             {/* Team workload */}
@@ -169,9 +169,9 @@ export default function ManagerJuniorDashboardPage() {
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-2">
-              <h3 className="font-semibold text-gray-900 mb-3">Accès rapide</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">AccÃ¨s rapide</h3>
               {[
-                { label: 'Mon équipe',         href: '/dashboard/manager-junior/team' },
+                { label: 'Mon Ã©quipe',         href: '/dashboard/manager-junior/team' },
                 { label: 'Approbations',       href: '/dashboard/manager-junior/approvals' },
                 { label: 'Charge de travail',  href: '/dashboard/manager-junior/workload' },
                 { label: 'Performance',        href: '/dashboard/manager-junior/performance' },

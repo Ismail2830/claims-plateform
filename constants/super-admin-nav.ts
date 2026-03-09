@@ -110,26 +110,6 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
     ],
   },
   {
-    title: 'COMMUNICATION',
-    items: [
-      {
-        label: 'Notifications',
-        href: '/dashboard/super-admin/notifications',
-        icon: Bell,
-      },
-      {
-        label: 'WhatsApp Bot',
-        href: '/dashboard/super-admin/whatsapp',
-        icon: MessageCircle,
-      },
-      {
-        label: 'Modèles emails',
-        href: '/dashboard/super-admin/email-templates',
-        icon: Mail,
-      },
-    ],
-  },
-  {
     title: 'SYSTÈME',
     items: [
       {

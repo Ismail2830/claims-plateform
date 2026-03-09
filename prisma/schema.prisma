@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,91 +7,76 @@ datasource db {
 }
 
 model Client {
-  clientId    String   @id @default(uuid()) @map("client_id") @db.Uuid
-  cin         String   @unique
-  firstName   String
-  lastName    String
-  email       String   @unique
-  password    String   // Password hash for client authentication
-  phone       String   @unique  
-  dateOfBirth DateTime
-  address     String
-  city        String
-  province    String
-  postalCode  String?
-
-  // Verification & Status
-  status          ClientStatus @default(ACTIVE)
-  emailVerified   Boolean @default(false)
-  phoneVerified   Boolean @default(false)
-  documentVerified Boolean @default(false)
-
-  // Two-Factor Authentication
-  twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
-  twoFactorMethod  String?  @map("two_factor_method") // "email" | "phone"
-
-  // Historique sinistres — used by ML risk scoring
-  nbSinistresPasses  Int     @default(0) @map("nb_sinistres_passes")
-  montantTotalPasse  Decimal @default(0) @map("montant_total_passe") @db.Decimal(12, 2)
-  ancienneteAnnees   Int     @default(0) @map("anciennete_annees")
-
-  createdAt   DateTime @default(now())
-  lastLoginAt DateTime?
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  policies    Policy[]
-  claims      Claim[]
-  documents   ClaimDocument[] @relation("DocumentUploadedByClient")
-  comments    ClaimComment[] @relation("CommentAuthorClient")
-  auditLogs   AuditLog[] @relation("AuditLogClient")
+  clientId            String               @id @default(uuid()) @map("client_id") @db.Uuid
+  cin                 String               @unique
+  firstName           String
+  lastName            String
+  email               String               @unique
+  password            String
+  phone               String               @unique
+  dateOfBirth         DateTime
+  address             String
+  city                String
+  province            String
+  postalCode          String?
+  status              ClientStatus         @default(ACTIVE)
+  emailVerified       Boolean              @default(false)
+  phoneVerified       Boolean              @default(false)
+  documentVerified    Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  lastLoginAt         DateTime?
+  updatedAt           DateTime             @updatedAt
+  twoFactorEnabled    Boolean              @default(false) @map("two_factor_enabled")
+  twoFactorMethod     String?              @map("two_factor_method")
+  ancienneteAnnees    Int                  @default(0) @map("anciennete_annees")
+  montantTotalPasse   Decimal              @default(0) @map("montant_total_passe") @db.Decimal(12, 2)
+  nbSinistresPasses   Int                  @default(0) @map("nb_sinistres_passes")
+  auditLogs           AuditLog[]           @relation("AuditLogClient")
+  comments            ClaimComment[]       @relation("CommentAuthorClient")
+  documents           ClaimDocument[]      @relation("DocumentUploadedByClient")
+  claims              Claim[]
+  sentMessages        Message[]            @relation("MessageClientSender")
   passwordResetTokens PasswordResetToken[]
-  sessions    Session[]
-  whatsappSessions WhatsappSession[]
-  sentMessages     Message[]        @relation("MessageClientSender")
+  policies            Policy[]
+  sessions            Session[]
+  whatsappSessions    WhatsappSession[]
 }
 
 model User {
-  userId        String   @id @default(uuid()) @map("user_id") @db.Uuid
-  email         String   @unique @db.VarChar(255)
-  passwordHash  String   @map("password_hash") @db.VarChar(255)
-  firstName     String   @map("first_name") @db.VarChar(100)
-  lastName      String   @map("last_name") @db.VarChar(100)
-  role          UserRole
-  currentWorkload Int    @default(0) @map("current_workload")
-  maxWorkload   Int      @default(20) @map("max_workload")
-  isActive      Boolean  @default(true) @map("is_active")
-  lastLogin     DateTime? @map("last_login")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  assignedClaims Claim[]
-  documentsUploaded ClaimDocument[] @relation("DocumentUploadedBy")
-  documentsVerified ClaimDocument[] @relation("DocumentVerifiedBy")
-  statusChanges ClaimStatusHistory[] @relation("StatusChangedBy")
-  commentsAuthored ClaimComment[] @relation("CommentAuthorUser")
-  commentsRead ClaimComment[] @relation("CommentReadBy")
-  auditLogs AuditLog[] @relation("AuditLogUser")
-  passwordResetTokens PasswordResetToken[]
-  sessions    Session[]
-  teamMembers TeamMember[]
-  documentAccessLogs DocumentAccessLog[]
-  generatedReports GeneratedReport[] @relation("ReportGenerator")
-  reportSchedules  ReportSchedule[]  @relation("ReportScheduleCreator")
-
-  // Messaging
-  createdConversations   Conversation[]       @relation("ConversationCreator")
-  sentMessages           Message[]            @relation("MessageSender")
-  messageReadReceipts    MessageReadReceipt[]
-  createdTemplates       MessageTemplate[]    @relation("TemplateCreator")
+  userId               String               @id @default(uuid()) @map("user_id") @db.Uuid
+  email                String               @unique @db.VarChar(255)
+  passwordHash         String               @map("password_hash") @db.VarChar(255)
+  firstName            String               @map("first_name") @db.VarChar(100)
+  lastName             String               @map("last_name") @db.VarChar(100)
+  role                 UserRole
+  currentWorkload      Int                  @default(0) @map("current_workload")
+  maxWorkload          Int                  @default(20) @map("max_workload")
+  isActive             Boolean              @default(true) @map("is_active")
+  lastLogin            DateTime?            @map("last_login")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+  auditLogs            AuditLog[]           @relation("AuditLogUser")
+  commentsAuthored     ClaimComment[]       @relation("CommentAuthorUser")
+  commentsRead         ClaimComment[]       @relation("CommentReadBy")
+  documentsUploaded    ClaimDocument[]      @relation("DocumentUploadedBy")
+  documentsVerified    ClaimDocument[]      @relation("DocumentVerifiedBy")
+  statusChanges        ClaimStatusHistory[] @relation("StatusChangedBy")
+  assignedClaims       Claim[]
+  createdConversations Conversation[]       @relation("ConversationCreator")
+  documentAccessLogs   DocumentAccessLog[]
+  generatedReports     GeneratedReport[]    @relation("ReportGenerator")
+  messageReadReceipts  MessageReadReceipt[]
+  createdTemplates     MessageTemplate[]    @relation("TemplateCreator")
+  sentMessages         Message[]            @relation("MessageSender")
+  passwordResetTokens  PasswordResetToken[]
+  reportSchedules      ReportSchedule[]     @relation("ReportScheduleCreator")
+  sessions             Session[]
+  teamMembers          TeamMember[]
 
   @@index([role], map: "idx_users_role")
   @@index([email], map: "idx_users_email")
   @@map("users")
 }
-
-// ─── Messaging Models ─────────────────────────────────────────────────────────
 
 model Conversation {
   id            String       @id @default(uuid()) @db.Uuid
@@ -105,47 +84,45 @@ model Conversation {
   claimId       String?      @map("claim_id") @db.Uuid
   participants  String[]
   subject       String?      @db.VarChar(255)
-  lastMessage   String?      @map("last_message") @db.Text
+  lastMessage   String?      @map("last_message")
   lastMessageAt DateTime?    @map("last_message_at")
   urgencyLevel  UrgencyLevel @default(NORMAL) @map("urgency_level")
   isArchived    Boolean      @default(false) @map("is_archived")
   createdBy     String       @map("created_by") @db.Uuid
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
-
-  messages      Message[]
   claim         Claim?       @relation(fields: [claimId], references: [claimId])
   creator       User         @relation("ConversationCreator", fields: [createdBy], references: [userId])
+  messages      Message[]
 
   @@index([createdBy], map: "idx_conversations_creator")
-  @@index([claimId],   map: "idx_conversations_claim")
-  @@index([type],      map: "idx_conversations_type")
+  @@index([claimId], map: "idx_conversations_claim")
+  @@index([type], map: "idx_conversations_type")
   @@map("conversations")
 }
 
 model Message {
-  id             String            @id @default(uuid()) @db.Uuid
-  conversationId String            @map("conversation_id") @db.Uuid
-  senderId       String?           @map("sender_id") @db.Uuid
-  clientSenderId String?           @map("client_sender_id") @db.Uuid
-  content        String            @db.Text
-  visibility     MessageVisibility @default(ALL)
-  isRead         Boolean           @default(false) @map("is_read")
-  isUrgent       Boolean           @default(false) @map("is_urgent")
-  isTemplate     Boolean           @default(false) @map("is_template")
+  id             String               @id @default(uuid()) @db.Uuid
+  conversationId String               @map("conversation_id") @db.Uuid
+  senderId       String?              @map("sender_id") @db.Uuid
+  content        String
+  visibility     MessageVisibility    @default(ALL)
+  isRead         Boolean              @default(false) @map("is_read")
+  isUrgent       Boolean              @default(false) @map("is_urgent")
+  isTemplate     Boolean              @default(false) @map("is_template")
   attachments    String[]
   metadata       Json?
-  editedAt       DateTime?         @map("edited_at")
-  createdAt      DateTime          @default(now()) @map("created_at")
-
-  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User?             @relation("MessageSender", fields: [senderId], references: [userId])
-  clientSender   Client?           @relation("MessageClientSender", fields: [clientSenderId], references: [clientId])
+  editedAt       DateTime?            @map("edited_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  clientSenderId String?              @map("client_sender_id") @db.Uuid
   readReceipts   MessageReadReceipt[]
+  clientSender   Client?              @relation("MessageClientSender", fields: [clientSenderId], references: [clientId])
+  conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User?                @relation("MessageSender", fields: [senderId], references: [userId])
 
   @@index([conversationId], map: "idx_messages_conv")
-  @@index([senderId],       map: "idx_messages_sender")
-  @@index([createdAt],      map: "idx_messages_date")
+  @@index([senderId], map: "idx_messages_sender")
+  @@index([createdAt], map: "idx_messages_date")
   @@map("messages")
 }
 
@@ -154,7 +131,6 @@ model MessageReadReceipt {
   messageId String   @map("message_id") @db.Uuid
   userId    String   @map("user_id") @db.Uuid
   readAt    DateTime @default(now()) @map("read_at")
-
   message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [userId])
 
@@ -166,16 +142,504 @@ model MessageReadReceipt {
 model MessageTemplate {
   id        String   @id @default(uuid()) @db.Uuid
   name      String   @db.VarChar(255)
-  content   String   @db.Text
+  content   String
   category  String   @db.VarChar(100)
   isGlobal  Boolean  @default(false) @map("is_global")
   createdBy String   @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
-
   creator   User     @relation("TemplateCreator", fields: [createdBy], references: [userId])
 
   @@index([createdBy], map: "idx_templates_creator")
   @@map("message_templates")
+}
+
+model Policy {
+  policyId         String           @id @default(uuid()) @map("policy_id") @db.Uuid
+  clientId         String           @map("client_id") @db.Uuid
+  policyNumber     String           @unique @map("policy_number") @db.VarChar(50)
+  policyType       PolicyType       @map("policy_type")
+  coverageType     CoverageType?    @map("coverage_type")
+  startDate        DateTime         @map("start_date") @db.Date
+  endDate          DateTime         @map("end_date") @db.Date
+  premiumAmount    Decimal          @map("premium_amount") @db.Decimal(12, 2)
+  insuredAmount    Decimal          @map("insured_amount") @db.Decimal(12, 2)
+  deductible       Decimal          @default(0) @db.Decimal(12, 2)
+  status           PolicyStatus     @default(ACTIVE)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  renewalDate      DateTime?        @map("renewal_date") @db.Date
+  premiumFrequency PremiumFrequency @default(ANNUAL) @map("premium_frequency")
+  isObligatory     Boolean          @default(false) @map("is_obligatory")
+  isTakaful        Boolean          @default(false) @map("is_takaful")
+  notes            String?
+  claims           Claim[]
+  client           Client           @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([clientId], map: "idx_policies_client")
+  @@index([status], map: "idx_policies_status")
+  @@index([policyType], map: "idx_policies_type")
+  @@map("policies")
+}
+
+model Claim {
+  claimId                  String               @id @default(uuid()) @map("claim_id") @db.Uuid
+  claimNumber              String               @unique @map("claim_number") @db.VarChar(50)
+  policyId                 String?              @map("policy_id") @db.Uuid
+  clientId                 String               @map("client_id") @db.Uuid
+  claimType                ClaimType            @map("claim_type")
+  incidentDate             DateTime             @map("incident_date")
+  declarationDate          DateTime             @default(now()) @map("declaration_date")
+  incidentLocation         String?              @map("incident_location")
+  description              String
+  claimedAmount            Decimal?             @map("claimed_amount") @db.Decimal(12, 2)
+  estimatedAmount          Decimal?             @map("estimated_amount") @db.Decimal(12, 2)
+  approvedAmount           Decimal?             @map("approved_amount") @db.Decimal(12, 2)
+  status                   ClaimStatus          @default(DECLARED)
+  priority                 Priority             @default(NORMAL)
+  assignedTo               String?              @map("assigned_to") @db.Uuid
+  riskScore                Decimal?             @map("risk_score") @db.Decimal(5, 2)
+  fraudScore               Decimal?             @map("fraud_score") @db.Decimal(5, 2)
+  declarationChannel       DeclarationChannel?  @map("declaration_channel")
+  createdAt                DateTime             @default(now()) @map("created_at")
+  updatedAt                DateTime             @updatedAt @map("updated_at")
+  additionalNotes          String?              @map("additional_notes")
+  damageDescription        String?              @map("damage_description")
+  emergencyServices        Boolean              @default(false) @map("emergency_services")
+  emergencyServicesDetails String?              @map("emergency_services_details")
+  policeReport             Boolean              @default(false) @map("police_report")
+  policeReportNumber       String?              @map("police_report_number") @db.VarChar(100)
+  source                   ClaimSource          @default(WEB)
+  decisionIa               DecisionIA?          @map("decision_ia")
+  labelRisque              RiskLabel?           @map("label_risque")
+  scoreConfidence          Float?               @map("score_confidence")
+  scoreRisque              Int?                 @map("score_risque")
+  scoredAt                 DateTime?            @map("scored_at")
+  auditLogs                AuditLog[]
+  comments                 ClaimComment[]
+  documents                ClaimDocument[]
+  statusHistory            ClaimStatusHistory[]
+  witnesses                ClaimWitness[]
+  assignedUser             User?                @relation(fields: [assignedTo], references: [userId])
+  client                   Client               @relation(fields: [clientId], references: [clientId])
+  policy                   Policy?              @relation(fields: [policyId], references: [policyId])
+  conversations            Conversation[]
+
+  @@index([clientId], map: "idx_claims_client")
+  @@index([policyId], map: "idx_claims_policy")
+  @@index([status], map: "idx_claims_status")
+  @@index([assignedTo], map: "idx_claims_assigned")
+  @@map("claims")
+}
+
+model ClaimDocument {
+  documentId          String              @id @default(uuid()) @map("document_id") @db.Uuid
+  claimId             String              @map("claim_id") @db.Uuid
+  fileName            String              @map("file_name") @db.VarChar(255)
+  originalName        String              @map("original_name") @db.VarChar(255)
+  fileType            DocumentType        @map("file_type")
+  mimeType            String              @map("mime_type") @db.VarChar(100)
+  fileSize            Int                 @map("file_size")
+  filePath            String              @map("file_path") @db.VarChar(500)
+  uploadedBy          String?             @map("uploaded_by") @db.Uuid
+  uploadedByClient    String?             @map("uploaded_by_client") @db.Uuid
+  status              DocumentStatus      @default(UPLOADED)
+  description         String?
+  isRequired          Boolean             @default(false) @map("is_required")
+  verifiedAt          DateTime?           @map("verified_at")
+  verifiedBy          String?             @map("verified_by") @db.Uuid
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  expiresAt           DateTime?           @map("expires_at")
+  isArchived          Boolean             @default(false) @map("is_archived")
+  rejectionNote       String?             @map("rejection_note")
+  uploadedVia         UploadSource        @default(WEB) @map("uploaded_via")
+  claim               Claim               @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+  uploadedByClientRef Client?             @relation("DocumentUploadedByClient", fields: [uploadedByClient], references: [clientId])
+  uploadedByUser      User?               @relation("DocumentUploadedBy", fields: [uploadedBy], references: [userId])
+  verifiedByUser      User?               @relation("DocumentVerifiedBy", fields: [verifiedBy], references: [userId])
+  accessLogs          DocumentAccessLog[]
+
+  @@index([claimId], map: "idx_claim_documents_claim")
+  @@index([fileType], map: "idx_claim_documents_type")
+  @@index([status], map: "idx_claim_documents_status")
+  @@map("claim_documents")
+}
+
+model DocumentAccessLog {
+  id         String        @id @default(uuid()) @db.Uuid
+  documentId String        @map("document_id") @db.Uuid
+  userId     String        @map("user_id") @db.Uuid
+  action     AccessAction
+  createdAt  DateTime      @default(now()) @map("created_at")
+  document   ClaimDocument @relation(fields: [documentId], references: [documentId])
+  user       User          @relation(fields: [userId], references: [userId])
+
+  @@index([documentId])
+  @@map("document_access_logs")
+}
+
+model ClaimStatusHistory {
+  historyId         String       @id @default(uuid()) @map("history_id") @db.Uuid
+  claimId           String       @map("claim_id") @db.Uuid
+  fromStatus        ClaimStatus? @map("from_status")
+  toStatus          ClaimStatus  @map("to_status")
+  changedBy         String?      @map("changed_by") @db.Uuid
+  reason            String?
+  notes             String?
+  isSystemGenerated Boolean      @default(false) @map("is_system_generated")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  changedByUser     User?        @relation("StatusChangedBy", fields: [changedBy], references: [userId])
+  claim             Claim        @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+
+  @@index([claimId], map: "idx_claim_status_history_claim")
+  @@index([toStatus], map: "idx_claim_status_history_status")
+  @@index([changedBy], map: "idx_claim_status_history_user")
+  @@index([createdAt], map: "idx_claim_status_history_date")
+  @@map("claim_status_history")
+}
+
+model ClaimComment {
+  commentId       String         @id @default(uuid()) @map("comment_id") @db.Uuid
+  claimId         String         @map("claim_id") @db.Uuid
+  message         String
+  commentType     CommentType    @default(GENERAL) @map("comment_type")
+  isInternal      Boolean        @default(false) @map("is_internal")
+  authorId        String?        @map("author_id") @db.Uuid
+  authorClientId  String?        @map("author_client_id") @db.Uuid
+  parentCommentId String?        @map("parent_comment_id") @db.Uuid
+  isRead          Boolean        @default(false) @map("is_read")
+  readAt          DateTime?      @map("read_at")
+  readBy          String?        @map("read_by") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  authorClient    Client?        @relation("CommentAuthorClient", fields: [authorClientId], references: [clientId])
+  authorUser      User?          @relation("CommentAuthorUser", fields: [authorId], references: [userId])
+  claim           Claim          @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+  parentComment   ClaimComment?  @relation("CommentReplies", fields: [parentCommentId], references: [commentId])
+  replies         ClaimComment[] @relation("CommentReplies")
+  readByUser      User?          @relation("CommentReadBy", fields: [readBy], references: [userId])
+
+  @@index([claimId], map: "idx_claim_comments_claim")
+  @@index([authorId], map: "idx_claim_comments_author_user")
+  @@index([authorClientId], map: "idx_claim_comments_author_client")
+  @@index([parentCommentId], map: "idx_claim_comments_parent")
+  @@index([createdAt], map: "idx_claim_comments_date")
+  @@map("claim_comments")
+}
+
+model ClaimWitness {
+  witnessId       String    @id @default(uuid()) @map("witness_id") @db.Uuid
+  claimId         String    @map("claim_id") @db.Uuid
+  name            String    @db.VarChar(255)
+  phone           String?   @db.VarChar(20)
+  email           String?   @db.VarChar(255)
+  address         String?
+  relationship    String?   @db.VarChar(100)
+  statementGiven  Boolean   @default(false) @map("statement_given")
+  statementText   String?   @map("statement_text")
+  statementDate   DateTime? @map("statement_date")
+  isReachable     Boolean   @default(true) @map("is_reachable")
+  lastContactDate DateTime? @map("last_contact_date")
+  contactNotes    String?   @map("contact_notes")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  claim           Claim     @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+
+  @@index([claimId], map: "idx_claim_witnesses_claim")
+  @@index([name], map: "idx_claim_witnesses_name")
+  @@index([createdAt], map: "idx_claim_witnesses_date")
+  @@map("claim_witnesses")
+}
+
+model AuditLog {
+  logId        String      @id @default(uuid()) @map("log_id") @db.Uuid
+  entityType   EntityType  @map("entity_type")
+  entityId     String      @map("entity_id") @db.Uuid
+  claimId      String?     @map("claim_id") @db.Uuid
+  action       AuditAction @map("action")
+  description  String
+  userId       String?     @map("user_id") @db.Uuid
+  clientId     String?     @map("client_id") @db.Uuid
+  ipAddress    String?     @map("ip_address") @db.VarChar(45)
+  userAgent    String?     @map("user_agent")
+  sessionId    String?     @map("session_id") @db.VarChar(255)
+  oldValues    Json?       @map("old_values")
+  newValues    Json?       @map("new_values")
+  metadata     Json?       @map("metadata")
+  riskLevel    RiskLevel   @default(LOW) @map("risk_level")
+  isSuspicious Boolean     @default(false) @map("is_suspicious")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  claim        Claim?      @relation(fields: [claimId], references: [claimId])
+  clientRef    Client?     @relation("AuditLogClient", fields: [clientId], references: [clientId])
+  userRef      User?       @relation("AuditLogUser", fields: [userId], references: [userId])
+
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@index([claimId], map: "idx_audit_logs_claim")
+  @@index([userId], map: "idx_audit_logs_user")
+  @@index([clientId], map: "idx_audit_logs_client")
+  @@index([action], map: "idx_audit_logs_action")
+  @@index([createdAt], map: "idx_audit_logs_date")
+  @@index([riskLevel], map: "idx_audit_logs_risk")
+  @@map("audit_logs")
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  hashedToken  String   @unique @map("hashed_token") @db.VarChar(255)
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent")
+  lastActivity DateTime @default(now()) @map("last_activity")
+  expiresAt    DateTime @map("expires_at")
+  isRevoked    Boolean  @default(false) @map("is_revoked")
+  createdAt    DateTime @default(now()) @map("created_at")
+  clientId     String?  @map("client_id") @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  deviceName   String?  @map("device_name") @db.VarChar(100)
+  rememberMe   Boolean  @default(false) @map("remember_me")
+  client       Client?  @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user         User?    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([hashedToken], map: "idx_sessions_token")
+  @@index([clientId], map: "idx_sessions_client")
+  @@index([userId], map: "idx_sessions_user")
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  clientId  String?  @map("client_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  client    Client?  @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([token], map: "idx_prt_token")
+  @@index([expiresAt], map: "idx_prt_expires")
+  @@map("password_reset_tokens")
+}
+
+model WhatsappSession {
+  id          String   @id @default(uuid()) @db.Uuid
+  phone       String   @unique @db.VarChar(20)
+  clientId    String?  @map("client_id") @db.Uuid
+  currentStep String   @default("MENU") @map("current_step") @db.VarChar(50)
+  context     Json     @default("{}")
+  lastMessage DateTime @default(now()) @map("last_message")
+  createdAt   DateTime @default(now()) @map("created_at")
+  client      Client?  @relation(fields: [clientId], references: [clientId])
+
+  @@index([phone], map: "idx_wa_sessions_phone")
+  @@index([clientId], map: "idx_wa_sessions_client")
+  @@map("whatsapp_sessions")
+}
+
+model WhatsappMessage {
+  id        String            @id @default(uuid()) @db.Uuid
+  phone     String            @db.VarChar(20)
+  direction WhatsappDirection
+  content   String
+  intent    String?           @db.VarChar(30)
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  @@index([phone], map: "idx_wa_messages_phone")
+  @@index([direction], map: "idx_wa_messages_direction")
+  @@index([createdAt], map: "idx_wa_messages_date")
+  @@map("whatsapp_messages")
+}
+
+model PremiumRate {
+  id          String   @id @default(uuid()) @db.Uuid
+  policyType  String   @unique @map("policy_type") @db.VarChar(50)
+  basePremium Decimal  @map("base_premium") @db.Decimal(10, 2)
+  ratePerYear Decimal  @map("rate_per_year") @db.Decimal(8, 2)
+  description String?  @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([policyType], map: "idx_premium_rates_type")
+  @@map("premium_rates")
+}
+
+model PredictionResult {
+  id         String           @id @default(uuid()) @db.Uuid
+  module     PredictionModule
+  targetId   String?          @map("target_id")
+  targetType String?          @map("target_type")
+  score      Float?
+  data       Json
+  confidence Float            @default(0.7)
+  validUntil DateTime         @map("valid_until")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  @@index([module, targetId])
+  @@index([module, createdAt])
+  @@map("prediction_results")
+}
+
+model PredictionAlert {
+  id          String           @id @default(uuid()) @db.Uuid
+  module      PredictionModule
+  severity    AlertSeverity
+  title       String           @db.VarChar(255)
+  description String
+  targetId    String?          @map("target_id")
+  targetType  String?          @map("target_type")
+  isRead      Boolean          @default(false) @map("is_read")
+  isDismissed Boolean          @default(false) @map("is_dismissed")
+  metadata    Json?
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  @@index([module, isDismissed])
+  @@index([severity, isDismissed])
+  @@map("prediction_alerts")
+}
+
+model Team {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String        @db.VarChar(100)
+  description  String?       @db.VarChar(255)
+  claimTypes   String[]      @map("claim_types")
+  maxWorkload  Int           @default(20) @map("max_workload")
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  routingRules RoutingRule[]
+  members      TeamMember[]
+
+  @@index([isActive], map: "idx_teams_active")
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @map("team_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      TeamRole @default(MEMBER)
+  maxClaims Int      @default(20) @map("max_claims")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId], map: "idx_team_members_team")
+  @@index([userId], map: "idx_team_members_user")
+  @@map("team_members")
+}
+
+model RoutingRule {
+  id           String   @id @default(uuid()) @db.Uuid
+  claimType    String?  @map("claim_type") @db.VarChar(50)
+  minRiskScore Int?     @map("min_risk_score")
+  maxRiskScore Int?     @map("max_risk_score")
+  minAmount    Decimal? @map("min_amount") @db.Decimal(12, 2)
+  targetTeamId String   @map("target_team_id") @db.Uuid
+  targetRole   String?  @map("target_role") @db.VarChar(50)
+  priority     Int      @default(1)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  targetTeam   Team     @relation(fields: [targetTeamId], references: [id])
+
+  @@index([isActive, priority], map: "idx_routing_rules_active_priority")
+  @@index([targetTeamId], map: "idx_routing_rules_team")
+  @@map("routing_rules")
+}
+
+model GeneratedReport {
+  id           String          @id @default(uuid()) @db.Uuid
+  name         String          @db.VarChar(255)
+  type         ReportType
+  format       ReportFormat
+  period       String          @db.VarChar(100)
+  dateFrom     DateTime        @map("date_from")
+  dateTo       DateTime        @map("date_to")
+  filePath     String?         @map("file_path")
+  fileSize     Int?            @map("file_size")
+  generatedBy  String?         @map("generated_by") @db.Uuid
+  sentTo       String[]        @map("sent_to")
+  status       ReportStatus    @default(PENDING)
+  errorMessage String?         @map("error_message")
+  sections     String[]
+  scheduleId   String?         @map("schedule_id") @db.Uuid
+  createdAt    DateTime        @default(now()) @map("created_at")
+  generator    User?           @relation("ReportGenerator", fields: [generatedBy], references: [userId])
+  schedule     ReportSchedule? @relation(fields: [scheduleId], references: [id])
+
+  @@index([type], map: "idx_generated_reports_type")
+  @@index([status], map: "idx_generated_reports_status")
+  @@index([createdAt], map: "idx_generated_reports_date")
+  @@map("generated_reports")
+}
+
+model ReportSchedule {
+  id             String            @id @default(uuid()) @db.Uuid
+  name           String            @db.VarChar(255)
+  type           ReportType
+  format         ReportFormat
+  frequency      ScheduleFrequency
+  cronExpression String            @map("cron_expression") @db.VarChar(100)
+  recipients     String[]
+  sections       String[]
+  isActive       Boolean           @default(true) @map("is_active")
+  lastRunAt      DateTime?         @map("last_run_at")
+  nextRunAt      DateTime?         @map("next_run_at")
+  createdBy      String            @map("created_by") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  reports        GeneratedReport[]
+  creator        User              @relation("ReportScheduleCreator", fields: [createdBy], references: [userId])
+
+  @@index([isActive, nextRunAt], map: "idx_report_schedules_active_next")
+  @@map("report_schedules")
+}
+
+model PlatformSettings {
+  id        String   @id @default("singleton")
+  data      Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  @@map("platform_settings")
+}
+
+model PlatformAuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  userFullName String?  @map("user_full_name") @db.VarChar(255)
+  userRole     String?  @map("user_role") @db.VarChar(50)
+  action       String
+  resourceType String?  @map("resource_type") @db.VarChar(50)
+  resourceId   String?  @map("resource_id") @db.VarChar(255)
+  resourceRef  String?  @map("resource_ref") @db.VarChar(100)
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent")
+  status       String   @default("SUCCESS") @db.VarChar(20)
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId], map: "idx_pal_user")
+  @@index([action], map: "idx_pal_action")
+  @@index([resourceType, resourceId], map: "idx_pal_resource")
+  @@index([createdAt], map: "idx_pal_date")
+  @@map("platform_audit_logs")
+}
+
+model ActiveSession {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  sessionToken String   @unique @map("session_token") @db.VarChar(500)
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent")
+  browser      String?  @db.VarChar(150)
+  lastActivity DateTime @default(now()) @map("last_activity")
+  createdAt    DateTime @default(now()) @map("created_at")
+  expiresAt    DateTime @map("expires_at")
+
+  @@index([userId], map: "idx_active_sessions_user")
+  @@map("active_sessions")
 }
 
 enum ConvType {
@@ -195,329 +659,6 @@ enum UrgencyLevel {
   NORMAL
   HIGH
   URGENT
-}
-
-model Policy {
-  policyId         String            @id @default(uuid()) @map("policy_id") @db.Uuid
-  clientId         String            @map("client_id") @db.Uuid
-  client           Client            @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  policyNumber     String            @unique @map("policy_number") @db.VarChar(50)
-  policyType       PolicyType        @map("policy_type")
-  coverageType     CoverageType?     @map("coverage_type")
-  startDate        DateTime          @map("start_date") @db.Date
-  endDate          DateTime          @map("end_date") @db.Date
-  renewalDate      DateTime?         @map("renewal_date") @db.Date
-  premiumAmount    Decimal           @map("premium_amount") @db.Decimal(12, 2)
-  insuredAmount    Decimal           @map("insured_amount") @db.Decimal(12, 2)
-  deductible       Decimal           @default(0) @db.Decimal(12, 2)
-  premiumFrequency PremiumFrequency  @default(ANNUAL) @map("premium_frequency")
-  isObligatory     Boolean           @default(false) @map("is_obligatory")
-  isTakaful        Boolean           @default(false) @map("is_takaful")
-  notes            String?           @db.Text
-  status           PolicyStatus      @default(ACTIVE)
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-
-  // Relations
-  claims        Claim[]
-
-  @@index([clientId], map: "idx_policies_client")
-  @@index([status], map: "idx_policies_status")
-  @@index([policyType], map: "idx_policies_type")
-  @@map("policies")
-}
-
-model Claim {
-  claimId           String      @id @default(uuid()) @map("claim_id") @db.Uuid
-  claimNumber       String      @unique @map("claim_number") @db.VarChar(50)
-  policyId          String?     @map("policy_id") @db.Uuid
-  policy            Policy?     @relation(fields: [policyId], references: [policyId])
-  clientId          String      @map("client_id") @db.Uuid
-  client            Client      @relation(fields: [clientId], references: [clientId])
-  
-  // Claim information
-  claimType         ClaimType   @map("claim_type")
-  incidentDate      DateTime    @map("incident_date")
-  declarationDate   DateTime    @default(now()) @map("declaration_date")
-  incidentLocation  String?     @map("incident_location") @db.Text
-  description       String      @db.Text
-  
-  // Additional incident details
-  damageDescription String?     @map("damage_description") @db.Text
-  policeReport      Boolean     @default(false) @map("police_report")
-  policeReportNumber String?    @map("police_report_number") @db.VarChar(100)
-  emergencyServices Boolean     @default(false) @map("emergency_services")
-  emergencyServicesDetails String? @map("emergency_services_details") @db.Text
-  additionalNotes   String?     @map("additional_notes") @db.Text
-  
-  // Financial
-  claimedAmount     Decimal?    @map("claimed_amount") @db.Decimal(12, 2)
-  estimatedAmount   Decimal?    @map("estimated_amount") @db.Decimal(12, 2)
-  approvedAmount    Decimal?    @map("approved_amount") @db.Decimal(12, 2)
-  
-  // Workflow
-  status            ClaimStatus @default(DECLARED)
-  priority          Priority    @default(NORMAL)
-  assignedTo        String?     @map("assigned_to") @db.Uuid
-  assignedUser      User?       @relation(fields: [assignedTo], references: [userId])
-  
-  // AI Scoring (legacy)
-  riskScore         Decimal?    @map("risk_score") @db.Decimal(5, 2)
-  fraudScore        Decimal?    @map("fraud_score") @db.Decimal(5, 2)
-
-  // AI Risk Scoring — ML microservice
-  scoreRisque       Int?        @map("score_risque")
-  labelRisque       RiskLabel?  @map("label_risque")
-  decisionIa        DecisionIA? @map("decision_ia")
-  scoreConfidence   Float?      @map("score_confidence")
-  scoredAt          DateTime?   @map("scored_at")
-  
-  // Metadata
-  declarationChannel DeclarationChannel? @map("declaration_channel")
-  source            ClaimSource @default(WEB)
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
-
-  // Relations
-  documents     ClaimDocument[]
-  statusHistory ClaimStatusHistory[]
-  comments      ClaimComment[]
-  witnesses     ClaimWitness[]
-  auditLogs     AuditLog[]
-  conversations Conversation[]
-
-  @@index([clientId], map: "idx_claims_client")
-  @@index([policyId], map: "idx_claims_policy")
-  @@index([status], map: "idx_claims_status")
-  @@index([assignedTo], map: "idx_claims_assigned")
-  @@map("claims")
-}
-
-// Supporting Tables
-
-model ClaimDocument {
-  documentId    String      @id @default(uuid()) @map("document_id") @db.Uuid
-  claimId       String      @map("claim_id") @db.Uuid
-  claim         Claim       @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
-  
-  fileName      String      @map("file_name") @db.VarChar(255)
-  originalName  String      @map("original_name") @db.VarChar(255)
-  fileType      DocumentType @map("file_type")
-  mimeType      String      @map("mime_type") @db.VarChar(100)
-  fileSize      Int         @map("file_size")
-  filePath      String      @map("file_path") @db.VarChar(500)
-  
-  uploadedBy    String?     @map("uploaded_by") @db.Uuid
-  uploadedByUser User?      @relation("DocumentUploadedBy", fields: [uploadedBy], references: [userId])
-  uploadedByClient String?  @map("uploaded_by_client") @db.Uuid
-  uploadedByClientRef Client? @relation("DocumentUploadedByClient", fields: [uploadedByClient], references: [clientId])
-  
-  status        DocumentStatus @default(UPLOADED)
-  uploadedVia   UploadSource   @default(WEB) @map("uploaded_via")
-  description   String?     @db.Text
-  rejectionNote String?     @db.Text @map("rejection_note")
-  expiresAt     DateTime?   @map("expires_at")
-  isRequired    Boolean     @default(false) @map("is_required")
-  isArchived    Boolean     @default(false) @map("is_archived")
-  verifiedAt    DateTime?   @map("verified_at")
-  verifiedBy    String?     @map("verified_by") @db.Uuid
-  verifiedByUser User?      @relation("DocumentVerifiedBy", fields: [verifiedBy], references: [userId])
-  
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-
-  accessLogs    DocumentAccessLog[]
-
-  @@index([claimId], map: "idx_claim_documents_claim")
-  @@index([fileType], map: "idx_claim_documents_type")
-  @@index([status], map: "idx_claim_documents_status")
-  @@map("claim_documents")
-}
-
-model DocumentAccessLog {
-  id         String       @id @default(uuid()) @db.Uuid
-  documentId String       @map("document_id") @db.Uuid
-  userId     String       @map("user_id") @db.Uuid
-  action     AccessAction
-  createdAt  DateTime     @default(now()) @map("created_at")
-
-  document   ClaimDocument @relation(fields: [documentId], references: [documentId])
-  user       User          @relation(fields: [userId], references: [userId])
-
-  @@index([documentId])
-  @@map("document_access_logs")
-}
-
-model ClaimStatusHistory {
-  historyId     String      @id @default(uuid()) @map("history_id") @db.Uuid
-  claimId       String      @map("claim_id") @db.Uuid
-  claim         Claim       @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
-  
-  fromStatus    ClaimStatus? @map("from_status")
-  toStatus      ClaimStatus  @map("to_status")
-  changedBy     String?     @map("changed_by") @db.Uuid
-  changedByUser User?       @relation("StatusChangedBy", fields: [changedBy], references: [userId])
-  
-  reason        String?     @db.Text
-  notes         String?     @db.Text
-  isSystemGenerated Boolean @default(false) @map("is_system_generated")
-  
-  createdAt     DateTime    @default(now()) @map("created_at")
-
-  @@index([claimId], map: "idx_claim_status_history_claim")
-  @@index([toStatus], map: "idx_claim_status_history_status")
-  @@index([changedBy], map: "idx_claim_status_history_user")
-  @@index([createdAt], map: "idx_claim_status_history_date")
-  @@map("claim_status_history")
-}
-
-model ClaimComment {
-  commentId     String      @id @default(uuid()) @map("comment_id") @db.Uuid
-  claimId       String      @map("claim_id") @db.Uuid
-  claim         Claim       @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
-  
-  message       String      @db.Text
-  commentType   CommentType @default(GENERAL) @map("comment_type")
-  isInternal    Boolean     @default(false) @map("is_internal")
-  
-  authorId      String?     @map("author_id") @db.Uuid
-  authorUser    User?       @relation("CommentAuthorUser", fields: [authorId], references: [userId])
-  authorClientId String?    @map("author_client_id") @db.Uuid
-  authorClient  Client?     @relation("CommentAuthorClient", fields: [authorClientId], references: [clientId])
-  
-  parentCommentId String?   @map("parent_comment_id") @db.Uuid
-  parentComment ClaimComment? @relation("CommentReplies", fields: [parentCommentId], references: [commentId])
-  replies       ClaimComment[] @relation("CommentReplies")
-  
-  isRead        Boolean     @default(false) @map("is_read")
-  readAt        DateTime?   @map("read_at")
-  readBy        String?     @map("read_by") @db.Uuid
-  readByUser    User?       @relation("CommentReadBy", fields: [readBy], references: [userId])
-  
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-
-  @@index([claimId], map: "idx_claim_comments_claim")
-  @@index([authorId], map: "idx_claim_comments_author_user")
-  @@index([authorClientId], map: "idx_claim_comments_author_client")
-  @@index([parentCommentId], map: "idx_claim_comments_parent")
-  @@index([createdAt], map: "idx_claim_comments_date")
-  @@map("claim_comments")
-}
-
-model ClaimWitness {
-  witnessId     String      @id @default(uuid()) @map("witness_id") @db.Uuid
-  claimId       String      @map("claim_id") @db.Uuid
-  claim         Claim       @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
-  
-  name          String      @db.VarChar(255)
-  phone         String?     @db.VarChar(20)
-  email         String?     @db.VarChar(255)
-  address       String?     @db.Text
-  relationship  String?     @db.VarChar(100) // e.g., "Passenger", "Bystander", "Other driver"
-  
-  statementGiven Boolean    @default(false) @map("statement_given")
-  statementText  String?    @db.Text @map("statement_text")
-  statementDate  DateTime?  @map("statement_date")
-  
-  isReachable    Boolean    @default(true) @map("is_reachable")
-  lastContactDate DateTime? @map("last_contact_date")
-  contactNotes   String?    @db.Text @map("contact_notes")
-  
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-
-  @@index([claimId], map: "idx_claim_witnesses_claim")
-  @@index([name], map: "idx_claim_witnesses_name")
-  @@index([createdAt], map: "idx_claim_witnesses_date")
-  @@map("claim_witnesses")
-}
-
-model AuditLog {
-  logId         String      @id @default(uuid()) @map("log_id") @db.Uuid
-  
-  // Entity Information
-  entityType    EntityType  @map("entity_type")
-  entityId      String      @map("entity_id") @db.Uuid
-  claimId       String?     @map("claim_id") @db.Uuid
-  claim         Claim?      @relation(fields: [claimId], references: [claimId])
-  
-  // Action Information
-  action        AuditAction @map("action")
-  description   String      @db.Text
-  
-  // User Information
-  userId        String?     @map("user_id") @db.Uuid
-  userRef       User?       @relation("AuditLogUser", fields: [userId], references: [userId])
-  clientId      String?     @map("client_id") @db.Uuid
-  clientRef     Client?     @relation("AuditLogClient", fields: [clientId], references: [clientId])
-  
-  // System Information
-  ipAddress     String?     @map("ip_address") @db.VarChar(45)
-  userAgent     String?     @map("user_agent") @db.Text
-  sessionId     String?     @map("session_id") @db.VarChar(255)
-  
-  // Data Changes
-  oldValues     Json?       @map("old_values")
-  newValues     Json?       @map("new_values")
-  metadata      Json?       @map("metadata")
-  
-  // Risk & Security
-  riskLevel     RiskLevel   @default(LOW) @map("risk_level")
-  isSuspicious  Boolean     @default(false) @map("is_suspicious")
-  
-  createdAt     DateTime    @default(now()) @map("created_at")
-
-  @@index([entityType, entityId], map: "idx_audit_logs_entity")
-  @@index([claimId], map: "idx_audit_logs_claim")
-  @@index([userId], map: "idx_audit_logs_user")
-  @@index([clientId], map: "idx_audit_logs_client")
-  @@index([action], map: "idx_audit_logs_action")
-  @@index([createdAt], map: "idx_audit_logs_date")
-  @@index([riskLevel], map: "idx_audit_logs_risk")
-  @@map("audit_logs")
-}
-
-model Session {
-  id           String   @id @default(uuid()) @db.Uuid
-  hashedToken  String   @unique @map("hashed_token") @db.VarChar(255)
-  ipAddress    String?  @map("ip_address") @db.VarChar(45)
-  userAgent    String?  @map("user_agent") @db.Text
-  deviceName   String?  @map("device_name") @db.VarChar(100)
-  rememberMe   Boolean  @default(false) @map("remember_me")
-  lastActivity DateTime @default(now()) @map("last_activity")
-  expiresAt    DateTime @map("expires_at")
-  isRevoked    Boolean  @default(false) @map("is_revoked")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  // Either a client or a staff user owns this session
-  clientId String? @map("client_id") @db.Uuid
-  client   Client? @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  userId   String? @map("user_id") @db.Uuid
-  user     User?   @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@index([hashedToken], map: "idx_sessions_token")
-  @@index([clientId],    map: "idx_sessions_client")
-  @@index([userId],      map: "idx_sessions_user")
-  @@map("sessions")
-}
-
-model PasswordResetToken {
-  id        String   @id @default(uuid()) @db.Uuid
-  token     String   @unique @db.VarChar(255)  // SHA-256 hashed token
-  expiresAt DateTime @map("expires_at")
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  // Either a client or a user resets their password
-  clientId  String?  @map("client_id") @db.Uuid
-  client    Client?  @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  userId    String?  @map("user_id") @db.Uuid
-  user      User?    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@index([token], map: "idx_prt_token")
-  @@index([expiresAt], map: "idx_prt_expires")
-  @@map("password_reset_tokens")
 }
 
 enum ClaimType {
@@ -553,55 +694,9 @@ enum DeclarationChannel {
   API
 }
 
-// ─── WhatsApp Chatbot Models ───────────────────────────────────────────────────
-
-model WhatsappSession {
-  id          String   @id @default(uuid()) @db.Uuid
-  phone       String   @unique @db.VarChar(20)
-  clientId    String?  @map("client_id") @db.Uuid
-  client      Client?  @relation(fields: [clientId], references: [clientId], onDelete: SetNull)
-  currentStep String   @default("MENU") @map("current_step") @db.VarChar(50)
-  context     Json     @default("{}")
-  lastMessage DateTime @default(now()) @map("last_message")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@index([phone],    map: "idx_wa_sessions_phone")
-  @@index([clientId], map: "idx_wa_sessions_client")
-  @@map("whatsapp_sessions")
-}
-
-model WhatsappMessage {
-  id        String             @id @default(uuid()) @db.Uuid
-  phone     String             @db.VarChar(20)
-  direction WhatsappDirection
-  content   String             @db.Text
-  intent    String?            @db.VarChar(30)
-  createdAt DateTime           @default(now()) @map("created_at")
-
-  @@index([phone],     map: "idx_wa_messages_phone")
-  @@index([direction], map: "idx_wa_messages_direction")
-  @@index([createdAt], map: "idx_wa_messages_date")
-  @@map("whatsapp_messages")
-}
-
 enum WhatsappDirection {
   INBOUND
   OUTBOUND
-}
-
-// Admin-managed premium rate table — fetched by chatbot for estimations
-model PremiumRate {
-  id          String   @id @default(uuid()) @db.Uuid
-  policyType  String   @unique @map("policy_type") @db.VarChar(50)
-  basePremium Decimal  @map("base_premium") @db.Decimal(10, 2)
-  ratePerYear Decimal  @map("rate_per_year") @db.Decimal(8, 2)
-  description String?  @db.VarChar(255)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@index([policyType], map: "idx_premium_rates_type")
-  @@map("premium_rates")
 }
 
 enum ClaimSource {
@@ -625,60 +720,42 @@ enum DecisionIA {
 }
 
 enum PolicyType {
-  // ─── Non-Vie (Dommages) ───────────────────────
-  AUTO              // RC Auto / Tiers Plus / Tous Risques
-  HOME              // Multirisques Habitation / Incendie
-  PROFESSIONAL      // Multirisques Professionnelle
-  AGRICULTURE       // Grêle, Mortalité bétail
-  TRANSPORT         // Maritime, aérien, terrestre marchandises
-  CONSTRUCTION      // TRC + RCD (obligatoire depuis déc. 2024)
-  LIABILITY         // RC Générale / RC Décennale
-
-  // ─── Personnes (Vie) ─────────────────────────
-  HEALTH            // AMO / Complémentaire Santé
-  LIFE              // Décès / Épargne Vie / Retraite
-  ACCIDENT          // Accidents Corporels
-  ASSISTANCE        // Rapatriement, aide voyage
-
-  // ─── Crédit & Caution ─────────────────────────
-  CREDIT            // Assurance Crédit
-  SURETY            // Assurance Caution
-
-  // ─── Takaful ──────────────────────────────────
-  TAKAFUL_NON_VIE   // Takaful dommages
-  TAKAFUL_VIE       // Takaful vie / épargne
+  AUTO
+  HOME
+  HEALTH
+  LIFE
+  PROFESSIONAL
+  AGRICULTURE
+  TRANSPORT
+  CONSTRUCTION
+  LIABILITY
+  ACCIDENT
+  ASSISTANCE
+  CREDIT
+  SURETY
+  TAKAFUL_NON_VIE
+  TAKAFUL_VIE
 }
 
 enum CoverageType {
-  // AUTO
-  RC_ONLY              // Responsabilité civile uniquement
-  THIRD_PARTY_PLUS     // Tiers plus (RC + vol + incendie)
-  COMPREHENSIVE        // Tous risques
-
-  // HOME
+  RC_ONLY
+  THIRD_PARTY_PLUS
+  COMPREHENSIVE
   FIRE_ONLY
   MULTIRISQUES
-  LANDLORD             // Propriétaire non-occupant
-
-  // HEALTH
+  LANDLORD
   AMO_BASIC
   COMPLEMENTAIRE
   FULL_COVER
-
-  // LIFE
-  TERM_LIFE            // Temporaire décès
-  WHOLE_LIFE           // Vie entière
-  SAVINGS              // Épargne / Capitalisation
-  RETIREMENT           // Retraite
-
-  // CONSTRUCTION
+  TERM_LIFE
+  WHOLE_LIFE
+  SAVINGS
+  RETIREMENT
   TRC_ONLY
   RCD_ONLY
-  TRC_AND_RCD          // Combiné obligatoire
-
+  TRC_AND_RCD
   OTHER
 }
-
 
 enum PremiumFrequency {
   MONTHLY
@@ -709,8 +786,6 @@ enum ClientStatus {
   BLOCKED
 }
 
-// Supporting Tables Enums
-
 enum DocumentType {
   PHOTO
   PDF
@@ -720,6 +795,7 @@ enum DocumentType {
   MEDICAL_REPORT
   IDENTITY_DOCUMENT
   INSURANCE_CERTIFICATE
+  OTHER
   CONSTAT
   EXPERTISE_REPORT
   DEATH_CERTIFICATE
@@ -729,7 +805,6 @@ enum DocumentType {
   DRIVERS_LICENSE
   BANK_DETAILS
   LEGAL_DOCUMENT
-  OTHER
 }
 
 enum DocumentStatus {
@@ -798,66 +873,25 @@ enum RiskLevel {
   CRITICAL
 }
 
-// ─── Teams & Routing ──────────────────────────────────────────────────────────
+enum PredictionModule {
+  VOLUME_FORECAST
+  CHURN_RISK
+  PROVISIONING
+  PROACTIVE_RISK
+  TARIFF_RECOMMENDATION
+  FRAUD_CLUSTER
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
 
 enum TeamRole {
   LEAD
   MEMBER
 }
-
-model Team {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @db.VarChar(100)
-  description String?  @db.VarChar(255)
-  claimTypes  String[] @map("claim_types")
-  maxWorkload Int      @default(20) @map("max_workload")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  members      TeamMember[]
-  routingRules RoutingRule[]
-
-  @@index([isActive], map: "idx_teams_active")
-  @@map("teams")
-}
-
-model TeamMember {
-  id        String   @id @default(uuid()) @db.Uuid
-  teamId    String   @map("team_id") @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  role      TeamRole @default(MEMBER)
-  maxClaims Int      @default(20) @map("max_claims")
-  joinedAt  DateTime @default(now()) @map("joined_at")
-
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@unique([teamId, userId])
-  @@index([teamId], map: "idx_team_members_team")
-  @@index([userId], map: "idx_team_members_user")
-  @@map("team_members")
-}
-
-model RoutingRule {
-  id           String   @id @default(uuid()) @db.Uuid
-  claimType    String?  @map("claim_type") @db.VarChar(50)
-  minRiskScore Int?     @map("min_risk_score")
-  maxRiskScore Int?     @map("max_risk_score")
-  minAmount    Decimal? @map("min_amount") @db.Decimal(12, 2)
-  targetTeamId String   @map("target_team_id") @db.Uuid
-  targetRole   String?  @map("target_role") @db.VarChar(50)
-  priority     Int      @default(1)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  targetTeam Team @relation(fields: [targetTeamId], references: [id])
-
-  @@index([isActive, priority], map: "idx_routing_rules_active_priority")
-  @@index([targetTeamId], map: "idx_routing_rules_team")
-  @@map("routing_rules")
-}
-// ─── Reports ──────────────────────────────────────────────────────────────────
 
 enum ReportType {
   MONTHLY_ACTIVITY
@@ -888,54 +922,4 @@ enum ScheduleFrequency {
   MONTHLY
   QUARTERLY
   ANNUAL
-}
-
-model GeneratedReport {
-  id           String         @id @default(uuid()) @db.Uuid
-  name         String         @db.VarChar(255)
-  type         ReportType
-  format       ReportFormat
-  period       String         @db.VarChar(100)
-  dateFrom     DateTime       @map("date_from")
-  dateTo       DateTime       @map("date_to")
-  filePath     String?        @map("file_path")
-  fileSize     Int?           @map("file_size")
-  generatedBy  String?        @map("generated_by") @db.Uuid
-  sentTo       String[]       @map("sent_to")
-  status       ReportStatus   @default(PENDING)
-  errorMessage String?        @map("error_message") @db.Text
-  sections     String[]
-  scheduleId   String?        @map("schedule_id") @db.Uuid
-  createdAt    DateTime       @default(now()) @map("created_at")
-
-  generator    User?          @relation("ReportGenerator", fields: [generatedBy], references: [userId])
-  schedule     ReportSchedule? @relation(fields: [scheduleId], references: [id])
-
-  @@index([type],      map: "idx_generated_reports_type")
-  @@index([status],    map: "idx_generated_reports_status")
-  @@index([createdAt], map: "idx_generated_reports_date")
-  @@map("generated_reports")
-}
-
-model ReportSchedule {
-  id             String            @id @default(uuid()) @db.Uuid
-  name           String            @db.VarChar(255)
-  type           ReportType
-  format         ReportFormat
-  frequency      ScheduleFrequency
-  cronExpression String            @map("cron_expression") @db.VarChar(100)
-  recipients     String[]
-  sections       String[]
-  isActive       Boolean           @default(true) @map("is_active")
-  lastRunAt      DateTime?         @map("last_run_at")
-  nextRunAt      DateTime?         @map("next_run_at")
-  createdBy      String            @map("created_by") @db.Uuid
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
-
-  creator        User              @relation("ReportScheduleCreator", fields: [createdBy], references: [userId])
-  reports        GeneratedReport[]
-
-  @@index([isActive, nextRunAt], map: "idx_report_schedules_active_next")
-  @@map("report_schedules")
 }

@@ -9,13 +9,13 @@ export async function GET(request: NextRequest) {
   const experts = await prisma.user.findMany({
     where: { role: 'EXPERT', isActive: true },
     select: {
-      id: true,
+      userId: true,
       firstName: true,
       lastName: true,
       email: true,
       createdAt: true,
       assignedClaims: {
-        select: { id: true, status: true },
+        select: { claimId: true, status: true },
       },
     },
     orderBy: { firstName: 'asc' },
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const completed = e.assignedClaims.filter((c: { status: string }) => c.status === 'APPROVED').length;
 
     return {
-      id: e.id,
+      id: e.userId,
       firstName: e.firstName,
       lastName: e.lastName,
       email: e.email,

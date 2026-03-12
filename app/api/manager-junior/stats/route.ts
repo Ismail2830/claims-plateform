@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     select: {
       team: {
         select: {
-          teamId: true,
+          id: true,
           name: true,
           members: { select: { userId: true, role: true } },
         },

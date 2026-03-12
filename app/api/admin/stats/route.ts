@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       take: 5,
       orderBy: { createdAt: 'desc' },
       select: {
-        id: true,
+        claimId: true,
         claimNumber: true,
         status: true,
         priority: true,
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     prisma.user.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
-      select: { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true, createdAt: true },
+      select: { userId: true, firstName: true, lastName: true, email: true, role: true, isActive: true, createdAt: true },
     }),
   ]);
 

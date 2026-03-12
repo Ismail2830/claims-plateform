@@ -136,7 +136,7 @@ export const autoFlow: Record<string, FlowStep> = {
       "📎 Parfait! Passons aux documents.\nJ'ai besoin d'une **photo des dégâts** sur votre véhicule.",
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'PHOTO_DEGATS',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'AUTO_DOCS_CONSTAT',
   },
 
@@ -159,7 +159,7 @@ export const autoFlow: Record<string, FlowStep> = {
     botMessage: '🪪 Votre **permis de conduire** (recto-verso).',
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'PERMIS_CONDUIRE',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'AUTO_SUMMARY',
   },
 

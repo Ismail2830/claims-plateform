@@ -81,7 +81,7 @@ export const vieFlow: Record<string, FlowStep> = {
     botMessage: '📄 Veuillez joindre une copie de votre **pièce d\'identité** (CIN ou passeport)',
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'PIECE_IDENTITE',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'VIE_SUMMARY',
   },
 

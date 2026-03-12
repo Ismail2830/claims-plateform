@@ -77,7 +77,7 @@ export const healthFlow: Record<string, FlowStep> = {
     botMessage: '📎 Passons aux documents.\nJ\'ai besoin de la **facture** ou note d\'honoraires.',
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'FACTURE',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'HEALTH_DOCS_ORDONNANCE',
   },
 
@@ -88,7 +88,7 @@ export const healthFlow: Record<string, FlowStep> = {
     botMessage: '💊 Envoyez l\'**ordonnance médicale** correspondante.',
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'ORDONNANCE',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'HEALTH_DOCS_RAPPORT',
   },
 
@@ -98,7 +98,7 @@ export const healthFlow: Record<string, FlowStep> = {
     botMessage: '🏥 Envoyez le **rapport médical** ou compte rendu d\'hospitalisation.',
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'RAPPORT_MEDICAL',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'HEALTH_DOCS_RIB',
   },
 
@@ -109,7 +109,7 @@ export const healthFlow: Record<string, FlowStep> = {
       '🏦 Pour le remboursement, envoyez votre **RIB bancaire** (Relevé d\'Identité Bancaire).',
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'RIB',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'HEALTH_SUMMARY',
   },
 

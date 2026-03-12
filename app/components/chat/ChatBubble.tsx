@@ -2,6 +2,22 @@
 
 import { Bot } from 'lucide-react'
 
+const SKIP_LABELS: Record<string, string> = {
+  SKIP_OPTIONAL: '⏭️ Passer ce document',
+  SKIP_CONSTAT:  '⏭️ Passer le constat',
+  SKIP_DEVIS:    '⏭️ Passer le devis',
+  SKIP_PERMIS:   '⏭️ Passer le permis',
+  SKIP_MAINC:    '⏭️ Passer la main courante',
+}
+
+function getDisplayContent(content: string, role: 'USER' | 'BOT' | 'SYSTEM'): string {
+  if (role === 'USER') {
+    if (content in SKIP_LABELS) return SKIP_LABELS[content]
+    if (content.startsWith('SKIP_')) return '⏭️ Passer ce document'
+  }
+  return content
+}
+
 interface Props {
   role: 'USER' | 'BOT' | 'SYSTEM'
   content: string
@@ -31,7 +47,7 @@ export default function ChatBubble({ role, content, timestamp }: Props) {
         {/* Render **bold** markdown-lite */}
         <span
           dangerouslySetInnerHTML={{
-            __html: content
+            __html: getDisplayContent(content, role)
               .replace(/&/g, '&amp;')
               .replace(/</g, '&lt;')
               .replace(/>/g, '&gt;')

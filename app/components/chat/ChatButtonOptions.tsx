@@ -10,17 +10,17 @@ interface ButtonOption {
 
 interface Props {
   options: ButtonOption[]
-  onSelect: (value: string) => void
+  onSelect: (value: string, label: string) => void
   disabled?: boolean
 }
 
 export default function ChatButtonOptions({ options, onSelect, disabled = false }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
 
-  function handleClick(value: string) {
+  function handleClick(value: string, label: string) {
     if (disabled || selected) return
     setSelected(value)
-    onSelect(value)
+    onSelect(value, label)
   }
 
   return (
@@ -28,7 +28,7 @@ export default function ChatButtonOptions({ options, onSelect, disabled = false 
       {options.map((opt) => (
         <button
           key={opt.value}
-          onClick={() => handleClick(opt.value)}
+          onClick={() => handleClick(opt.value, opt.label)}
           disabled={disabled || selected !== null}
           className={`
             flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all

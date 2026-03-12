@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { writeFile, mkdir } from 'fs/promises'
+import path from 'path'
 import { verifyAccessToken } from '@/app/lib/tokens'
 import { prisma } from '@/app/lib/prisma'
 import { processFileUpload } from '@/app/lib/chatbot/flow-engine'
-import { put } from '@vercel/blob'
 
 function getClientId(request: NextRequest): string | null {
   const auth = request.headers.get('authorization')
@@ -75,12 +76,21 @@ export async function POST(
   const ext = file.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') ?? 'bin'
   const safeFilename = `${docType}_${Date.now()}.${ext}`
 
-  // Upload to Vercel Blob (works in serverless / Vercel production)
-  const blob = await put(`chat/${sessionId}/${safeFilename}`, file, {
-    access: 'public',
-    contentType: file.type,
-  })
-  const publicPath = blob.url
+  // Save to local public/uploads/chat/{sessionId}/
+  const uploadsRoot = path.join(process.cwd(), 'public', 'uploads')
+  const uploadDir   = path.join(uploadsRoot, 'chat', sessionId)
+  const fullPath    = path.join(uploadDir, safeFilename)
+
+  // Guard against path traversal
+  if (!fullPath.startsWith(uploadsRoot)) {
+    return NextResponse.json({ error: 'Chemin invalide' }, { status: 400 })
+  }
+
+  await mkdir(uploadDir, { recursive: true })
+  const buffer = Buffer.from(await file.arrayBuffer())
+  await writeFile(fullPath, buffer)
+
+  const publicPath = `/uploads/chat/${sessionId}/${safeFilename}`
 
   try {
     const response = await processFileUpload(sessionId, publicPath, docType, {

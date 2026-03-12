@@ -124,7 +124,7 @@ export const homeFlow: Record<string, FlowStep> = {
     botMessage: '📎 Passons aux documents.\nJ\'ai besoin de **photos des dégâts** causés au logement.',
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'PHOTO_DEGATS',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'HOME_DOCS_DEVIS',
   },
 
@@ -143,7 +143,7 @@ export const homeFlow: Record<string, FlowStep> = {
     botMessage: '📋 Envoyez la **main courante ou copie de plainte** déposée.',
     inputType: 'FILE_UPLOAD',
     uploadDocType: 'MAIN_COURANTE',
-    uploadRequired: true,
+    uploadRequired: false,
     nextStep: 'HOME_SUMMARY',
   },
 

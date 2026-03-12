@@ -112,7 +112,7 @@ export default function AssistantPage() {
     setIsComplete(resp.isComplete ?? false)
 
     if (resp.inputType === 'FILE_UPLOAD') {
-      setUploadInfo({ docType: resp.uploadDocType ?? 'OTHER', required: resp.uploadRequired ?? true })
+      setUploadInfo({ docType: resp.uploadDocType ?? 'OTHER', required: resp.uploadRequired ?? false })
     } else {
       setUploadInfo(null)
     }
@@ -235,7 +235,7 @@ export default function AssistantPage() {
   }, [token, authLoading])
 
   // ── Send text/button message ────────────────────────────────────────────────
-  async function sendMessage(content: string) {
+  async function sendMessage(content: string, displayLabel?: string) {
     if (!sessionId || isLoading || isComplete) return
     setError(null)
 
@@ -256,11 +256,11 @@ export default function AssistantPage() {
       setCurrentStep(STEP_MAP[content]?.[0] ?? 'DONE')
     }
 
-    // Add user message optimistically
+    // Add user message optimistically — show French label if provided
     const userMsg: LocalMessage = {
       id: uid(),
       role: 'USER',
-      content,
+      content: displayLabel ?? content,
       timestamp: new Date(),
     }
     setMessages((prev) => [
@@ -282,14 +282,36 @@ export default function AssistantPage() {
       if (!res.ok) throw new Error('Erreur réseau')
       const data: { response: BotResponse } = await res.json()
 
-      setTimeout(() => {
-        applyBotResponse(data.response)
-        setIsLoading(false)
-        // Update current step tracking
-        if (data.response.isComplete) {
-          setCurrentStep('DONE')
-        }
-      }, randomDelay())
+      const delay = randomDelay()
+      if (data.response.acknowledgmentMessage) {
+        // Show acknowledgment bubble first, keep typing indicator alive, then show next step
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: uid(),
+              role: 'BOT',
+              content: data.response.acknowledgmentMessage!,
+              timestamp: new Date(),
+            },
+          ])
+          // isLoading stays true — typing indicator visible between the two bot bubbles
+        }, delay)
+        setTimeout(() => {
+          applyBotResponse(data.response)
+          setIsLoading(false)
+          if (data.response.isComplete) setCurrentStep('DONE')
+        }, delay + 700)
+      } else {
+        setTimeout(() => {
+          applyBotResponse(data.response)
+          setIsLoading(false)
+          // Update current step tracking
+          if (data.response.isComplete) {
+            setCurrentStep('DONE')
+          }
+        }, delay)
+      }
     } catch {
       setIsLoading(false)
       setError('Une erreur est survenue. Veuillez réessayer.')
@@ -336,7 +358,7 @@ export default function AssistantPage() {
   // Skip optional file upload
   async function handleSkipUpload() {
     if (!sessionId || !uploadInfo) return
-    await sendMessage('SKIP_OPTIONAL')
+    await sendMessage('SKIP_OPTIONAL', '⏭️ Passer ce document')
   }
 
   // Textarea auto-resize
@@ -454,8 +476,8 @@ export default function AssistantPage() {
                 {msg.summary && !msg.claimCreated && (
                   <ChatSummaryCard
                     summary={msg.summary}
-                    onConfirm={() => sendMessage('confirm')}
-                    onEdit={() => sendMessage('edit')}
+                    onConfirm={() => sendMessage('confirm', '✅ Confirmer et soumettre')}
+                    onEdit={() => sendMessage('edit', '✏️ Modifier')}
                     disabled={msg.buttonsDisabled || !isLast}
                   />
                 )}
@@ -464,7 +486,7 @@ export default function AssistantPage() {
                 {msg.options && msg.options.length > 0 && !msg.summary && (
                   <ChatButtonOptions
                     options={msg.options}
-                    onSelect={(val) => sendMessage(val)}
+                    onSelect={(val, label) => sendMessage(val, label)}
                     disabled={msg.buttonsDisabled || !isLast || isLoading || isComplete}
                   />
                 )}
@@ -473,9 +495,9 @@ export default function AssistantPage() {
                 {msg.inputType === 'FILE_UPLOAD' && isLast && !isComplete && (
                   <ChatFileUpload
                     docType={msg.uploadDocType ?? 'OTHER'}
-                    required={msg.uploadRequired ?? true}
+                    required={msg.uploadRequired ?? false}
                     onUpload={handleFileUpload}
-                    onSkip={msg.uploadRequired ? undefined : handleSkipUpload}
+                    onSkip={handleSkipUpload}
                     disabled={isLoading}
                   />
                 )}
@@ -543,7 +565,16 @@ export default function AssistantPage() {
             </p>
             <div className="flex gap-2">
               <button
-                onClick={() => { setShowExitModal(false); router.back() }}
+                onClick={async () => {
+                  setShowExitModal(false)
+                  if (sessionId) {
+                    await fetch(`/api/chat/${sessionId}`, {
+                      method: 'DELETE',
+                      headers: authHeaders(),
+                    }).catch(() => {})
+                  }
+                  router.back()
+                }}
                 className="flex-1 bg-red-50 text-red-600 font-medium py-2.5 rounded-xl text-sm hover:bg-red-100 transition-colors"
               >
                 Quitter

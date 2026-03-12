@@ -47,6 +47,7 @@ export interface BotResponse {
   claimCreated?: { claimId: string; claimNumber: string; estimatedDays: number }
   isComplete?: boolean
   error?: string
+  acknowledgmentMessage?: string
 }
 
 export interface ClaimSummary {

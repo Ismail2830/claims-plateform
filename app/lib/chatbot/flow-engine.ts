@@ -207,9 +207,19 @@ export async function processMessage(
   const ctx = (session.context ?? {}) as ClaimContext
   if (!ctx.uploadedDocs) ctx.uploadedDocs = []
 
-  // Save user message
+  // Save user message (with skip metadata when applicable)
   await prisma.chatMessage.create({
-    data: { sessionId, role: 'USER', content: userInput },
+    data: {
+      sessionId,
+      role: 'USER',
+      content: userInput,
+      ...(userInput.startsWith('SKIP_') ? {
+        metadata: {
+          type: 'SKIP',
+          displayLabel: '⏭️ Passer ce document',
+        } as object,
+      } : {}),
+    },
   })
 
   // ── STEP: START — user selected claim type ────────────────────────────────
@@ -279,6 +289,15 @@ export async function processMessage(
     return { message: "Cette étape est introuvable. Veuillez recommencer.", inputType: 'TEXT', error: 'STEP_NOT_FOUND' }
   }
 
+  // ── Skip optional upload ───────────────────────────────────────────────────
+  let skipAck: string | undefined
+  if (userInput.startsWith('SKIP_') && currentStepDef.inputType === 'FILE_UPLOAD') {
+    skipAck = "Pas de problème! 👌 Vous pourrez ajouter ce document directement depuis votre dossier à tout moment après la déclaration."
+    await prisma.chatMessage.create({
+      data: { sessionId, role: 'BOT', content: skipAck },
+    })
+  }
+
   // Validate input if validator exists
   if (currentStepDef.validate) {
     const result = currentStepDef.validate(userInput)
@@ -334,6 +353,7 @@ export async function processMessage(
         { label: '👁️ Suivre mon dossier', value: `view:${created.claimId}`, emoji: '👁️' },
         { label: '🏠 Tableau de bord', value: 'dashboard', emoji: '🏠' },
       ],
+      acknowledgmentMessage: skipAck,
     }
   }
 
@@ -379,7 +399,7 @@ export async function processMessage(
     },
   })
 
-  return response
+  return { ...response, acknowledgmentMessage: skipAck }
 }
 
 export async function processFileUpload(

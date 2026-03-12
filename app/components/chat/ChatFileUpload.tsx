@@ -146,9 +146,9 @@ export default function ChatFileUpload({ docType, required, onUpload, onSkip, di
           <button
             onClick={onSkip}
             disabled={uploading || disabled}
-            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+            className="min-h-[44px] text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2 mt-1 transition-colors cursor-pointer disabled:opacity-40"
           >
-            Passer (optionnel)
+            ⏭️ Passer pour l&apos;instant
           </button>
         )}
       </div>

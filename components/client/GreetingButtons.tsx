@@ -13,10 +13,20 @@ interface GreetingButtonsProps {
   primary: ButtonDef
   secondary: ButtonDef
   onNavigate: () => void
+  onPrimaryAction?: () => void
 }
 
-export function GreetingButtons({ primary, secondary, onNavigate }: GreetingButtonsProps) {
+export function GreetingButtons({ primary, secondary, onNavigate, onPrimaryAction }: GreetingButtonsProps) {
   const router = useRouter()
+
+  function handlePrimary() {
+    if (onPrimaryAction) {
+      onPrimaryAction()
+    } else {
+      onNavigate()
+      router.push(primary.href)
+    }
+  }
 
   function navigate(href: string) {
     onNavigate()
@@ -27,14 +37,14 @@ export function GreetingButtons({ primary, secondary, onNavigate }: GreetingButt
     <div className="flex flex-col gap-2 mt-4">
       {/* Primary */}
       <button
-        onClick={() => navigate(primary.href)}
+        onClick={handlePrimary}
         className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl py-3 px-4 font-medium flex items-center justify-between transition-colors"
       >
         <span className="flex items-center gap-2">
           <span>{primary.emoji}</span>
           <span className="text-sm">{primary.label}</span>
         </span>
-        <ChevronRight className="w-4 h-4 flex-shrink-0" />
+        <ChevronRight className="w-4 h-4 shrink-0" />
       </button>
 
       {/* Secondary */}
@@ -46,7 +56,7 @@ export function GreetingButtons({ primary, secondary, onNavigate }: GreetingButt
           <span>{secondary.emoji}</span>
           <span className="text-sm">{secondary.label}</span>
         </span>
-        <ChevronRight className="w-4 h-4 flex-shrink-0" />
+        <ChevronRight className="w-4 h-4 shrink-0" />
       </button>
     </div>
   )

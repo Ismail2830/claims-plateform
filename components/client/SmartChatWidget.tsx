@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Bot, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { Bot, X, AlertCircle, CheckCircle, Search, ChevronRight, ArrowLeft, Loader2 } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
 import useSWR from 'swr'
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth'
@@ -29,6 +29,30 @@ interface DashboardSummary {
   claims: ClientClaimSummary
 }
 
+interface ClaimSearchResult {
+  claimId: string
+  claimNumber: string
+  status: string
+  statusLabel: string
+  claimType: string
+  estimatedDaysRemaining: number
+}
+
+const STATUS_DOT: Record<string, string> = {
+  DECLARED:        'bg-gray-400',
+  ANALYZING:       'bg-blue-500',
+  DOCS_REQUIRED:   'bg-orange-500',
+  UNDER_EXPERTISE: 'bg-purple-500',
+  IN_DECISION:     'bg-blue-600',
+  APPROVED:        'bg-green-500',
+  IN_PAYMENT:      'bg-teal-500',
+  CLOSED:          'bg-gray-500',
+  REJECTED:        'bg-red-500',
+}
+
+/** Scenarios where primary button should open claim search instead of navigating */
+const SEARCH_SCENARIOS = new Set(['CLAIM_IN_PROGRESS', 'CLAIM_APPROVED', 'CLAIM_REJECTED'])
+
 const NEEDS_ATTENTION_SCENARIOS = ['DOCS_PENDING', 'CLAIM_APPROVED', 'CLAIM_REJECTED']
 
 // ─── SWR fetcher ─────────────────────────────────────────────────────────────
@@ -53,6 +77,11 @@ export function SmartChatWidget() {
   const [greeting, setGreeting] = useState<GreetingResult | null>(null)
   const [subVisible, setSubVisible] = useState(false)
   const [autoOpened, setAutoOpened] = useState(false)
+  // ── Claim search state ────────────────────────────────────────────────────
+  const [searchMode, setSearchMode] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [allClaims, setAllClaims] = useState<ClaimSearchResult[]>([])
+  const [claimsLoading, setClaimsLoading] = useState(false)
   const hoverRef = useRef(false)
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const greetingComputedRef = useRef(false)
@@ -146,7 +175,28 @@ export function SmartChatWidget() {
     setOpen(false)
     setAutoOpened(false)
     setSubVisible(false)
+    setSearchMode(false)
+    setSearchQuery('')
   }, [])
+
+  // ── Fetch all claims for search ───────────────────────────────────────────
+  const openSearch = useCallback(async () => {
+    setSearchMode(true)
+    setSearchQuery('')
+    if (!token || allClaims.length > 0) return
+    setClaimsLoading(true)
+    try {
+      const res = await fetch('/api/client/claims', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const d = await res.json()
+        setAllClaims(d.claims ?? [])
+      }
+    } catch { /* silent */ } finally {
+      setClaimsLoading(false)
+    }
+  }, [token, allClaims.length])
 
   const needsAttention =
     greeting !== null &&
@@ -247,23 +297,108 @@ export function SmartChatWidget() {
 
                 <hr className="my-4 border-gray-100" />
 
-                {/* Action buttons */}
-                <GreetingButtons
-                  primary={greeting.primaryButton}
-                  secondary={greeting.secondaryButton}
-                  onNavigate={collapse}
-                />
+                {/* ── Search mode ──────────────────────────────────────────── */}
+                {searchMode ? (
+                  <div>
+                    {/* Back header */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <button
+                        onClick={() => { setSearchMode(false); setSearchQuery('') }}
+                        className="p-1 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                      </button>
+                      <p className="text-sm font-semibold text-gray-800">Rechercher un dossier</p>
+                    </div>
 
-                {/* Footer */}
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                  <p className="text-xs text-gray-400">💬 Besoin d'aide?</p>
-                  <button
-                    onClick={() => { collapse(); router.push('/dashboard/client/messages') }}
-                    className="text-xs text-blue-500 underline hover:no-underline cursor-pointer"
-                  >
-                    Contacter un conseiller
-                  </button>
-                </div>
+                    {/* Search input */}
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        autoFocus
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="N° dossier, ex: CLM-2026-701007"
+                        className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                      />
+                    </div>
+
+                    {/* Results */}
+                    <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                      {claimsLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                        </div>
+                      ) : (() => {
+                        const q = searchQuery.trim().toLowerCase()
+                        const filtered = allClaims.filter(c =>
+                          !q ||
+                          c.claimNumber.toLowerCase().includes(q) ||
+                          c.claimType.toLowerCase().includes(q) ||
+                          c.statusLabel.toLowerCase().includes(q),
+                        )
+                        if (filtered.length === 0) {
+                          return (
+                            <p className="text-center text-xs text-gray-400 py-4">
+                              {q ? 'Aucun dossier trouvé' : 'Aucun dossier enregistré'}
+                            </p>
+                          )
+                        }
+                        return filtered.map(c => (
+                          <button
+                            key={c.claimId}
+                            onClick={() => {
+                              collapse()
+                              router.push(`/dashboard/client/claims/${c.claimId}`)
+                            }}
+                            className="w-full flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all text-left group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[c.status] ?? 'bg-gray-400'}`} />
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 truncate">{c.claimNumber}</p>
+                                <p className="text-[11px] text-gray-400">{c.statusLabel}</p>
+                              </div>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 shrink-0" />
+                          </button>
+                        ))
+                      })()}
+                    </div>
+
+                    {/* Footer link */}
+                    <button
+                      onClick={() => { collapse(); router.push('/dashboard/client/claims') }}
+                      className="w-full mt-3 text-xs text-blue-500 hover:underline text-center"
+                    >
+                      Voir tous mes dossiers →
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Action buttons */}
+                    <GreetingButtons
+                      primary={greeting.primaryButton}
+                      secondary={greeting.secondaryButton}
+                      onNavigate={collapse}
+                      onPrimaryAction={
+                        SEARCH_SCENARIOS.has(greeting.scenario) ? openSearch : undefined
+                      }
+                    />
+
+                    {/* Footer */}
+                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                      <p className="text-xs text-gray-400">💬 Besoin d'aide?</p>
+                      <button
+                        onClick={() => { collapse(); router.push('/dashboard/client/messages') }}
+                        className="text-xs text-blue-500 underline hover:no-underline cursor-pointer"
+                      >
+                        Contacter un conseiller
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
             ) : null}
           </div>

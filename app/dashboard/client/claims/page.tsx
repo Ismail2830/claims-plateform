@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSimpleAuth } from '@/app/hooks/useSimpleAuth';
 import { useRouter } from 'next/navigation';
 import ClientLayout from '@/app/components/dashboard/ClientLayout';
-import ClaimDetailsModal from '@/app/components/dashboard/ClaimDetailsModal';
 import { trpc } from '@/app/lib/trpc-client';
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { useLocale } from '@/app/hooks/useLocale';
@@ -244,11 +243,11 @@ function DocumentRow({ doc, token }: { doc: ClaimDocument; token: string | null 
 function ClaimCard({
   claim,
   token,
-  onViewDetails,
+  onOpenDetail,
 }: {
   claim: Claim;
   token: string | null;
-  onViewDetails: (claim: Claim) => void;
+  onOpenDetail: (claimId: string) => void;
 }) {
   const [docsOpen, setDocsOpen] = useState(false);
   const meta = getStatusMeta(claim.status);
@@ -261,7 +260,7 @@ function ClaimCard({
     >
       {/* Card header strip */}
       <div className={`${meta.bgClass} px-5 py-3 flex flex-wrap items-center justify-between gap-2`}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {meta.icon}
           <span className="font-bold text-gray-900 text-base tracking-wide">{claim.claimNumber}</span>
           <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${meta.colorClass} bg-white/70 border ${meta.borderClass}`}>
@@ -270,13 +269,18 @@ function ClaimCard({
           <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getPriorityBadge(claim.priority)}`}>
             {claim.priority}
           </span>
+          {claim.status === 'DOCS_REQUIRED' && (
+            <span className="animate-pulse px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-300">
+              ⚠️ Action requise
+            </span>
+          )}
         </div>
         <button
-          onClick={() => onViewDetails(claim)}
+          onClick={() => onOpenDetail(claim.claimId)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-white rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors"
         >
           <Eye className="w-3.5 h-3.5" />
-          Voir les détails
+          Voir le dossier
         </button>
       </div>
 
@@ -416,10 +420,6 @@ export function ClientClaimsContent() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Claim Details Modal
-  const [showClaimModal, setShowClaimModal] = useState(false);
-  const [selectedClaim, setSelectedClaim] = useState<any>(null);
-
   const auth = useSimpleAuth();
   const router = useRouter();
   const { token, isLoading } = auth;
@@ -450,26 +450,8 @@ export function ClientClaimsContent() {
   const loading = claimsLoading;
   const error = claimsError ? 'Failed to fetch claims' : null;
 
-  const handleViewClaimDetails = (claim: Claim) => {
-    const formatted = {
-      ...claim,
-      incidentDate: claim.incidentDate instanceof Date ? (claim.incidentDate as Date).toISOString() : claim.incidentDate,
-      declarationDate: claim.declarationDate instanceof Date ? (claim.declarationDate as Date).toISOString() : claim.declarationDate,
-      createdAt: claim.createdAt instanceof Date ? (claim.createdAt as Date).toISOString() : claim.createdAt,
-    };
-    setSelectedClaim(formatted);
-    setShowClaimModal(true);
-  };
-
-  const handleClaimUpdate = async (claimId: string, data: any) => {
-    console.log('Client claim update requested:', claimId, data);
-    alert('Votre demande de modification a été notée. Un conseiller vous contactera bientôt.');
-    refetchClaims();
-  };
-
-  const handleClaimDelete = async (claimId: string) => {
-    console.log('Client claim deletion requested:', claimId);
-    alert('Votre demande a été notée. Un conseiller vous contactera bientôt.');
+  const handleOpenDetail = (claimId: string) => {
+    router.push(`/dashboard/client/claims/${claimId}`);
   };
 
   useEffect(() => {
@@ -619,22 +601,13 @@ export function ClientClaimsContent() {
                 key={claim.claimId}
                 claim={claim}
                 token={token}
-                onViewDetails={handleViewClaimDetails}
+                onOpenDetail={handleOpenDetail}
               />
             ))}
           </div>
         )}
       </div>
 
-      {showClaimModal && selectedClaim && (
-        <ClaimDetailsModal
-          claim={selectedClaim}
-          isOpen={showClaimModal}
-          onClose={() => { setShowClaimModal(false); setSelectedClaim(null); }}
-          onUpdate={handleClaimUpdate}
-          onDelete={handleClaimDelete}
-        />
-      )}
     </ClientLayout>
   );
 }

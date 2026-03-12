@@ -428,7 +428,7 @@ export default function PolicyDetailPage() {
               <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
               <p className="text-sm text-gray-400">No claims filed under this policy yet.</p>
               <button
-                onClick={() => router.push('/claims/create')}
+                onClick={() => router.push('/dashboard/client/claims/new')}
                 className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 <PlusCircle className="w-4 h-4" /> File a Claim

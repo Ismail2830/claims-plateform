@@ -25,6 +25,7 @@ import {
   XCircle,
   MessageSquare
 } from 'lucide-react';
+import { SmartChatWidget } from '@/components/client/SmartChatWidget';
 
 function ClientDashboardContent() {
   const t = useTranslations('dashboard');
@@ -389,7 +390,7 @@ function ClientDashboardContent() {
           icon={PlusCircle}
           color="blue"
           buttonText={t('actions.startNew')}
-          onClick={() => router.push('/claims/create')}
+          onClick={() => router.push('/dashboard/client/claims/new')}
         />
         <ActionCard
           title={t('actions.trackClaims')}
@@ -480,6 +481,9 @@ function ClientDashboardContent() {
           </div>
         </div>
       </div>
+
+      {/* Smart greeting + tracking widget */}
+      <SmartChatWidget />
     </ClientLayout>
   );
 }

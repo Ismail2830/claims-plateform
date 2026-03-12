@@ -40,6 +40,7 @@ model Client {
   policies            Policy[]
   sessions            Session[]
   whatsappSessions    WhatsappSession[]
+  chatSessions        ChatSession[]
 }
 
 model User {
@@ -209,6 +210,8 @@ model Claim {
   policeReport             Boolean              @default(false) @map("police_report")
   policeReportNumber       String?              @map("police_report_number") @db.VarChar(100)
   source                   ClaimSource          @default(WEB)
+  declarationMethod        String?              @default("FORM") @map("declaration_method")
+  chatSessionId            String?              @map("chat_session_id") @db.Uuid
   decisionIa               DecisionIA?          @map("decision_ia")
   labelRisque              RiskLabel?           @map("label_risque")
   scoreConfidence          Float?               @map("score_confidence")
@@ -922,4 +925,58 @@ enum ScheduleFrequency {
   MONTHLY
   QUARTERLY
   ANNUAL
+}
+
+// ─── ChatSession / ChatMessage ───────────────────────────────────────────────
+
+model ChatSession {
+  id                String     @id @default(uuid()) @db.Uuid
+  clientId          String     @map("client_id") @db.Uuid
+  status            ChatStatus @default(ACTIVE)
+  claimType         String?    @map("claim_type")
+  currentStep       String     @default("START") @map("current_step")
+  context           Json       @default("{}")
+  createdClaimId    String?    @map("created_claim_id") @db.Uuid
+  declarationMethod String     @default("CHATBOT") @map("declaration_method")
+  language          String     @default("fr")
+  completedAt       DateTime?  @map("completed_at")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  messages ChatMessage[]
+  client   Client        @relation(fields: [clientId], references: [clientId])
+
+  @@index([clientId], map: "idx_chat_sessions_client")
+  @@index([status], map: "idx_chat_sessions_status")
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid()) @db.Uuid
+  sessionId String      @map("session_id") @db.Uuid
+  role      MessageRole
+  content   String      @db.Text
+  metadata  Json?
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId], map: "idx_chat_messages_session")
+  @@index([createdAt], map: "idx_chat_messages_date")
+  @@map("chat_messages")
+}
+
+// ─── Chatbot enums ────────────────────────────────────────────────────────────
+
+enum ChatStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+  TRANSFERRED_TO_AGENT
+}
+
+enum MessageRole {
+  USER
+  BOT
+  SYSTEM
 }

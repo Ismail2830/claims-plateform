@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAccessToken } from '@/app/lib/tokens'
 import { prisma } from '@/app/lib/prisma'
 import { processFileUpload } from '@/app/lib/chatbot/flow-engine'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { put } from '@vercel/blob'
 
 function getClientId(request: NextRequest): string | null {
   const auth = request.headers.get('authorization')
@@ -75,14 +74,13 @@ export async function POST(
   // Sanitize filename — no path traversal
   const ext = file.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') ?? 'bin'
   const safeFilename = `${docType}_${Date.now()}.${ext}`
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'chat', sessionId)
-  const filePath = path.join(uploadDir, safeFilename)
 
-  await mkdir(uploadDir, { recursive: true })
-  const buffer = Buffer.from(await file.arrayBuffer())
-  await writeFile(filePath, buffer)
-
-  const publicPath = `/uploads/chat/${sessionId}/${safeFilename}`
+  // Upload to Vercel Blob (works in serverless / Vercel production)
+  const blob = await put(`chat/${sessionId}/${safeFilename}`, file, {
+    access: 'public',
+    contentType: file.type,
+  })
+  const publicPath = blob.url
 
   try {
     const response = await processFileUpload(sessionId, publicPath, docType, {

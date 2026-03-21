@@ -38,8 +38,8 @@ async function verifyToken(token: string) {
   }
 }
 
-// ── Middleware ────────────────────────────────────────────────────────────
-export async function middleware(request: NextRequest) {
+// ── Proxy ───────────────────────────────────────────────────────────────
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ── CORS for API routes ────────────────────────────────────────────────
@@ -156,3 +156,5 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|public).*)'],
 };
+
+export default proxy;

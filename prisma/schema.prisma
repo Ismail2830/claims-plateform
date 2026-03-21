@@ -232,6 +232,8 @@ model Claim {
   @@index([status], map: "idx_claims_status")
   @@index([assignedTo], map: "idx_claims_assigned")
   @@map("claims")
+
+  aiDecision       AIDecision?
 }
 
 model ClaimDocument {
@@ -467,6 +469,29 @@ model PremiumRate {
   @@map("premium_rates")
 }
 
+model AIDecision {
+  id             String           @id @default(uuid()) @db.Uuid
+  claimId        String           @unique @map("claim_id") @db.Uuid
+  recommendation AIRecommendation
+  confidence     Float
+  approveScore   Float            @map("approve_score")
+  rejectScore    Float            @map("reject_score")
+  escalateScore  Float            @map("escalate_score")
+  factors        Json
+  reasoning      String           @db.Text
+  autoTriggered  Boolean          @default(true) @map("auto_triggered")
+  followedByUser Boolean?         @map("followed_by_user")
+  ignoredReason  String?          @map("ignored_reason") @db.VarChar(255)
+  calculatedAt   DateTime         @default(now()) @map("calculated_at")
+
+  claim          Claim            @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+
+  @@index([claimId], map: "idx_ai_decisions_claim")
+  @@index([recommendation], map: "idx_ai_decisions_recommendation")
+  @@index([calculatedAt], map: "idx_ai_decisions_calculated_at")
+  @@map("ai_decisions")
+}
+
 model PredictionResult {
   id         String           @id @default(uuid()) @db.Uuid
   module     PredictionModule
@@ -688,6 +713,12 @@ enum Priority {
   NORMAL
   HIGH
   URGENT
+}
+
+enum AIRecommendation {
+  APPROVE
+  REJECT
+  ESCALATE
 }
 
 enum DeclarationChannel {

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyAccessToken } from '@/app/lib/tokens';
 import { sendWhatsAppTemplate } from '@/app/lib/whatsapp';
+import { triggerDecisionIfReady } from '@/lib/ai-decision/triggers';
 
 function auth(req: NextRequest) {
   const h = req.headers.get('authorization');
@@ -82,6 +83,9 @@ export async function PATCH(
       });
     }
   }
+
+  // Fire-and-forget: auto-trigger AI decision — force=true since document status changed
+  void triggerDecisionIfReady(doc.claimId, true);
 
   return NextResponse.json(updated);
 }

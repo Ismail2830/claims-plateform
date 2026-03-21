@@ -4,7 +4,8 @@ import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import {
   Sparkles, RefreshCw, TrendingUp, UserMinus, Wallet,
-  ShieldAlert, Tag, AlertOctagon, Mail, ChevronDown, ChevronRight,
+  ShieldAlert, Tag, AlertOctagon, Mail, ChevronDown, ChevronRight, Bot,
+  CheckCircle, XCircle, ArrowUp, BarChart2,
 } from 'lucide-react';
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
@@ -99,6 +100,20 @@ interface FraudData {
   criticalCount: number;
 }
 
+// ─── AI Decision Analytics types ────────────────────────────────────────────
+
+interface AIAnalytics {
+  totalDecisions: number;
+  followRate: number;
+  escalatesAvoided: number;
+  thisMonth: number;
+  accuracyByType: Record<string, { total: number; followed: number; accuracy: number }>;
+  recommendationDistribution: { APPROVE: number; REJECT: number; ESCALATE: number };
+  overrideReasons: { reason: string; count: number; percentage: number }[];
+  confidenceAccuracy: { range: string; followed: number; total: number; rate: number | null }[];
+  topOverridingManagers: { managerId: string; name: string; overrideCount: number; totalDecisions: number }[];
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeAgo(dateStr: string | null): string {
@@ -121,6 +136,14 @@ const PROVISION_LABELS: Record<string, string> = {
   THEFT: 'Vol',
   FIRE: 'Incendie',
   WATER_DAMAGE: 'Dégât des eaux',
+};
+
+const IGNORE_REASON_LABELS: Record<string, string> = {
+  ADDITIONAL_INFO_AVAILABLE: "J'ai des informations supplémentaires",
+  DISAGREE_WITH_ANALYSIS:    "Pas d'accord avec l'analyse",
+  POLICY_EXCEPTION:          'Exception de politique interne',
+  CLIENT_RELATIONSHIP:       'Relation client particulière',
+  OTHER:                     'Autre raison',
 };
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -159,6 +182,10 @@ export default function PredictionsPage() {
   );
   const { data: fraud, mutate: mutateFraud } = useSWR<FraudData>(
     activeTab === 'fraud' ? `/api/predictions/fraud?includeDismissed=${showDismissed}` : null,
+    fetcher, SWR_OPTS
+  );
+  const { data: aiAnalytics } = useSWR<AIAnalytics>(
+    activeTab === 'ai-decisions' ? '/api/ai-decision/analytics' : null,
     fetcher, SWR_OPTS
   );
   const { data: alertsData } = useSWR<{ alerts: { id: string; title: string; severity: string }[] }>(
@@ -356,6 +383,9 @@ export default function PredictionsPage() {
           </TabsTrigger>
           <TabsTrigger value="fraud" className="gap-1 text-xs py-2">
             <AlertOctagon className="w-3.5 h-3.5" /> Fraude
+          </TabsTrigger>
+          <TabsTrigger value="ai-decisions" className="gap-1 text-xs py-2">
+            <Bot className="w-3.5 h-3.5" /> Décisions IA
           </TabsTrigger>
         </TabsList>
 
@@ -832,6 +862,207 @@ export default function PredictionsPage() {
             {showDismissed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
             {showDismissed ? 'Masquer les alertes ignorées' : 'Voir les alertes ignorées'}
           </button>
+        </TabsContent>
+
+        {/* ── TAB 7: AI DECISIONS ───────────────────────────────────────────── */}
+        <TabsContent value="ai-decisions" className="mt-4 space-y-5">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h2 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
+              <Bot className="w-5 h-5 text-blue-600" />
+              Performance des Décisions IA
+            </h2>
+
+            {/* ── KPI Cards ──────────────────────────────────────────────── */}
+            {!aiAnalytics ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                  <p className="text-xs text-blue-600 font-medium mb-1">Taux de suivi</p>
+                  <p className="text-3xl font-bold text-blue-700">{aiAnalytics.followRate}%</p>
+                  <p className="text-xs text-blue-500 mt-1">managers suivant la recommandation IA</p>
+                </div>
+                <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                  <p className="text-xs text-green-600 font-medium mb-1">Recommandations ce mois</p>
+                  <p className="text-3xl font-bold text-green-700">{aiAnalytics.thisMonth}</p>
+                  <p className="text-xs text-green-500 mt-1">{aiAnalytics.totalDecisions} au total</p>
+                </div>
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
+                  <p className="text-xs text-orange-600 font-medium mb-1">Escalades évitées</p>
+                  <p className="text-3xl font-bold text-orange-700">{aiAnalytics.escalatesAvoided}</p>
+                  <p className="text-xs text-orange-500 mt-1">décisions directes suivies</p>
+                </div>
+              </div>
+            )}
+
+            {/* ── Charts row ─────────────────────────────────────────────── */}
+            {aiAnalytics && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                {/* Pie: distribution */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1">
+                    <BarChart2 className="w-4 h-4 text-gray-400" />
+                    Distribution des recommandations
+                  </h3>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Approuver', value: aiAnalytics.recommendationDistribution.APPROVE,  fill: '#16a34a' },
+                          { name: 'Refuser',   value: aiAnalytics.recommendationDistribution.REJECT,   fill: '#dc2626' },
+                          { name: 'Escalader', value: aiAnalytics.recommendationDistribution.ESCALATE, fill: '#f97316' },
+                        ]}
+                        cx="50%" cy="50%" outerRadius={80}
+                        dataKey="value"
+                        label={({ name, percent }: { name: string; percent: number }) =>
+                          `${name} ${(percent * 100).toFixed(0)}%`
+                        }
+                        labelLine={false}
+                      >
+                        {[
+                          <Cell key="approve"  fill="#16a34a" />,
+                          <Cell key="reject"   fill="#dc2626" />,
+                          <Cell key="escalate" fill="#f97316" />,
+                        ]}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => [v, 'décisions']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Bar: follow rate by claim type */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1">
+                    <TrendingUp className="w-4 h-4 text-gray-400" />
+                    Taux de suivi par type de sinistre
+                  </h3>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart
+                      data={Object.entries(aiAnalytics.accuracyByType).map(([type, v]) => ({
+                        type,
+                        accuracy: v.accuracy,
+                        total: v.total,
+                      }))}
+                      margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="type" tick={{ fontSize: 10 }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
+                      <Tooltip formatter={(v: number) => [`${v}%`, 'Taux suivi']} />
+                      <Bar dataKey="accuracy" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* ── Override reasons table ────────────────────────────────── */}
+            {aiAnalytics && aiAnalytics.overrideReasons.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Raisons de dérogation</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-xs text-gray-500">
+                        <th className="text-left py-2 font-medium">RAISON</th>
+                        <th className="text-right py-2 font-medium">NOMBRE</th>
+                        <th className="text-right py-2 font-medium">% DU TOTAL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiAnalytics.overrideReasons.map(r => (
+                        <tr key={r.reason} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2.5 text-gray-700">{IGNORE_REASON_LABELS[r.reason] ?? r.reason}</td>
+                          <td className="py-2.5 text-right font-medium text-gray-900">{r.count}</td>
+                          <td className="py-2.5 text-right text-gray-500">{r.percentage}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Confidence accuracy table ─────────────────────────────── */}
+            {aiAnalytics && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Précision par intervalle de confiance</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-xs text-gray-500">
+                        <th className="text-left py-2 font-medium">INTERVALLE CONFIANCE</th>
+                        <th className="text-right py-2 font-medium">DÉCISIONS</th>
+                        <th className="text-right py-2 font-medium">TAUX SUIVI</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiAnalytics.confidenceAccuracy.map(b => (
+                        <tr key={b.range} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2.5 text-gray-700">{b.range}</td>
+                          <td className="py-2.5 text-right text-gray-600">{b.total}</td>
+                          <td className="py-2.5 text-right">
+                            {b.rate !== null ? (
+                              <span className={`font-medium ${
+                                b.rate >= 80 ? 'text-green-600' : b.rate >= 60 ? 'text-orange-500' : 'text-red-500'
+                              }`}>
+                                {b.rate}%
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Top overriding managers ───────────────────────────────── */}
+            {aiAnalytics && aiAnalytics.topOverridingManagers.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Managers dérogeant le plus souvent</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-xs text-gray-500">
+                        <th className="text-left py-2 font-medium">MANAGER</th>
+                        <th className="text-right py-2 font-medium">DÉROGATIONS</th>
+                        <th className="text-right py-2 font-medium">TOTAL</th>
+                        <th className="text-right py-2 font-medium">TAUX DÉROGATION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiAnalytics.topOverridingManagers.map(m => (
+                        <tr key={m.managerId} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2.5 text-gray-800 font-medium">{m.name}</td>
+                          <td className="py-2.5 text-right text-red-600 font-medium">{m.overrideCount}</td>
+                          <td className="py-2.5 text-right text-gray-500">{m.totalDecisions}</td>
+                          <td className="py-2.5 text-right">
+                            <span className={`font-medium ${
+                              m.totalDecisions > 0 && (m.overrideCount / m.totalDecisions) > 0.5 ? 'text-red-500' : 'text-gray-700'
+                            }`}>
+                              {m.totalDecisions > 0 ? Math.round((m.overrideCount / m.totalDecisions) * 100) : 0}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {!aiAnalytics && (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 

@@ -8,6 +8,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { prisma } from '@/app/lib/prisma';
 import { verifyAccessToken } from '@/app/lib/tokens';
+import { triggerDecisionIfReady } from '@/lib/ai-decision/triggers';
 
 function getClientId(req: NextRequest): string | null {
   const h = req.headers.get('authorization');
@@ -106,6 +107,9 @@ export async function POST(req: NextRequest) {
         createdAt:    true,
       },
     });
+
+    // Fire-and-forget: recalculate AI decision with force=true since new data arrived
+    void triggerDecisionIfReady(claimId, true);
 
     return NextResponse.json({ document: doc }, { status: 201 });
   } catch (err) {

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import RoleBasedLayout from '@/components/layout/RoleBasedLayout'
 import { useAdminAuth } from '@/app/hooks/useAdminAuth'
+import AIDecisionPanel from '@/app/components/dashboard/AIDecisionPanel'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -208,14 +209,16 @@ function StatusChangeModal({
   onClose,
   onConfirm,
   loading,
+  defaultStatus,
 }: {
   currentStatus: string
   onClose: () => void
   onConfirm: (status: string, reason: string, notes: string, approvedAmount?: number) => void
   loading: boolean
+  defaultStatus?: string
 }) {
   const transitions = STATUS_TRANSITIONS[currentStatus] ?? []
-  const [newStatus, setNewStatus]           = useState(transitions[0] ?? '')
+  const [newStatus, setNewStatus]           = useState(defaultStatus ?? transitions[0] ?? '')
   const [reason, setReason]                 = useState('')
   const [notes, setNotes]                   = useState('')
   const [approvedAmount, setApprovedAmount] = useState('')
@@ -321,6 +324,29 @@ export default function ManagerClaimDetailPage() {
   const [commentType, setCommentType]   = useState('INTERNAL_NOTE')
   const [commentLoading, setCommentLoading] = useState(false)
   const [toast, setToast]               = useState<string | null>(null)
+  const [aiDefaultStatus, setAiDefaultStatus] = useState<string | undefined>(undefined)
+  const [scoring, setScoring] = useState(false)
+
+  async function handleScore() {
+    if (!token || scoring) return
+    setScoring(true)
+    try {
+      const res = await fetch(`/api/claims/${claimId}/score`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        showToast('Score IA calculé avec succès')
+        await fetchClaim()
+      } else {
+        showToast('Erreur lors du calcul du score')
+      }
+    } catch {
+      showToast('Erreur de connexion')
+    } finally {
+      setScoring(false)
+    }
+  }
 
   function showToast(msg: string) {
     setToast(msg)
@@ -357,6 +383,18 @@ export default function ManagerClaimDetailPage() {
   }, [authLoading, token, fetchClaim])
 
   if (authLoading || !user) return null
+
+  // ── AI Decision handler ────────────────────────────────────────────────────
+
+  function handleAIDecisionMade(aiRec: 'APPROVE' | 'REJECT' | 'ESCALATE') {
+    const statusMap: Record<string, string> = {
+      APPROVE:  'APPROVED',
+      REJECT:   'REJECTED',
+      ESCALATE: 'UNDER_EXPERTISE',
+    }
+    setAiDefaultStatus(statusMap[aiRec])
+    setStatusModal(true)
+  }
 
   // ── Status change (Sprint 6) ───────────────────────────────────────────────
 
@@ -447,9 +485,10 @@ export default function ManagerClaimDetailPage() {
       {statusModal && (
         <StatusChangeModal
           currentStatus={claim.status}
-          onClose={() => setStatusModal(false)}
+          onClose={() => { setStatusModal(false); setAiDefaultStatus(undefined) }}
           onConfirm={handleStatusChange}
           loading={statusLoading}
+          defaultStatus={aiDefaultStatus}
         />
       )}
 
@@ -582,9 +621,17 @@ export default function ManagerClaimDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-                <Brain className="w-8 h-8 mb-2 text-gray-300" />
-                <p className="text-sm">Non scoré</p>
+              <div className="flex flex-col items-center justify-center py-6 text-gray-400 gap-3">
+                <Brain className="w-8 h-8 mb-1 text-gray-300" />
+                <p className="text-sm">Aucun score disponible</p>
+                <button
+                  onClick={handleScore}
+                  disabled={scoring}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Brain className={`w-4 h-4 ${scoring ? 'animate-pulse' : ''}`} />
+                  {scoring ? 'Calcul en cours...' : 'Scorer maintenant'}
+                </button>
               </div>
             )}
           </div>
@@ -703,6 +750,16 @@ export default function ManagerClaimDetailPage() {
             )}
           </div>
         </div>
+
+        {/* ── AI Decision Panel (visible for IN_DECISION status) ────────── */}
+        {(claim.status === 'IN_DECISION' || claim.status === 'ANALYZING' || claim.status === 'UNDER_EXPERTISE') && (
+          <div>
+            <AIDecisionPanel
+              claimId={claimId}
+              onDecisionMade={handleAIDecisionMade}
+            />
+          </div>
+        )}
 
         {/* ── Status history ──────────────────────────────────────────────── */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">

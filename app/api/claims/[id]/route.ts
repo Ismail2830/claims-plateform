@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyAccessToken } from '@/app/lib/tokens';
+import { triggerDecisionIfReady } from '@/lib/ai-decision/triggers';
 
 async function authenticate(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -149,6 +150,8 @@ export async function PATCH(
 
   try {
     const updated = await prisma.claim.update({ where: { claimId: id }, data });
+    // Fire-and-forget: recalculate AI decision since claim data changed
+    void triggerDecisionIfReady(id, true);
     return NextResponse.json({ success: true, data: updated });
   } catch {
     return NextResponse.json({ error: 'Mise à jour échouée.' }, { status: 500 });

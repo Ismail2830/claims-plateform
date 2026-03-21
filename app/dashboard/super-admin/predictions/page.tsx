@@ -916,8 +916,8 @@ export default function PredictionsPage() {
                         ]}
                         cx="50%" cy="50%" outerRadius={80}
                         dataKey="value"
-                        label={({ name, percent }: { name: string; percent: number }) =>
-                          `${name} ${(percent * 100).toFixed(0)}%`
+                        label={({ name, percent }: { name?: string | number; percent?: number }) =>
+                          `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`
                         }
                         labelLine={false}
                       >

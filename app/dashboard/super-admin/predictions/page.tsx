@@ -950,7 +950,7 @@ export default function PredictionsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="type" tick={{ fontSize: 10 }} />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
-                      <Tooltip formatter={(v: number) => [`${v}%`, 'Taux suivi']} />
+                      <Tooltip formatter={(v) => [`${v}%`, 'Taux suivi']} />
                       <Bar dataKey="accuracy" fill="#2563eb" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>

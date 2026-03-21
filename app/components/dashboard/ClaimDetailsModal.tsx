@@ -649,7 +649,9 @@ export default function ClaimDetailsModal({
                               <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
                             )}
                             {entry.status === 'error' && (
-                              <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" title={entry.error} />
+                              <span title={entry.error}>
+                                <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                              </span>
                             )}
                             {entry.status === 'pending' && (
                               <button

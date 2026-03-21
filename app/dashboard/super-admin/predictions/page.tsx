@@ -927,7 +927,7 @@ export default function PredictionsPage() {
                           <Cell key="escalate" fill="#f97316" />,
                         ]}
                       </Pie>
-                      <Tooltip formatter={(v: number) => [v, 'décisions']} />
+                      <Tooltip formatter={(v) => [v, 'décisions']} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>

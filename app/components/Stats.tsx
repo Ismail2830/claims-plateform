@@ -18,7 +18,7 @@ export function Stats() {
             <p className="text-xs sm:text-sm text-neutral-500 leading-tight">Satisfaction client</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl sm:text-3xl font-bold text-neutral-900">1M€+</p>
+            <p className="text-2xl sm:text-3xl font-bold text-neutral-900">10M MAD+</p>
             <p className="text-xs sm:text-sm text-neutral-500 leading-tight">Indemnisations versées</p>
           </div>
         </div>

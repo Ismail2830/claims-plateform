@@ -6,6 +6,7 @@ import { Stats } from '@/app/components/Stats';
 import { Features } from '@/app/components/Features';
 import { HowItWorks } from '@/app/components/HowItWorks';
 import { Testimonials } from '@/app/components/Testimonials';
+import { FAQ } from '@/app/components/FAQ';
 import { CTA } from '@/app/components/CTA';
 import { Footer } from '@/app/components/Footer';
 
@@ -29,7 +30,10 @@ export default function LandingPage() {
       
       {/* Testimonials Section */}
       <Testimonials />
-      
+
+      {/* FAQ Section */}
+      <FAQ />
+
       {/* CTA Section */}
       <CTA />
       

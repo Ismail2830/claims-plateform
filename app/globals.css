@@ -129,6 +129,43 @@ body {
   scrollbar-width: none;
 }
 
+/* Marquee animations */
+@keyframes marquee-left {
+  from { transform: translateX(0) translateZ(0); }
+  to   { transform: translateX(-2040px) translateZ(0); }
+}
+
+@keyframes marquee-right {
+  from { transform: translateX(-1360px) translateZ(0); }
+  to   { transform: translateX(0) translateZ(0); }
+}
+
+.animate-marquee-left {
+  animation: marquee-left 35s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.animate-marquee-right {
+  animation: marquee-right 40s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.marquee-container:hover .animate-marquee-left,
+.marquee-container:hover .animate-marquee-right {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-left,
+  .animate-marquee-right {
+    animation: none;
+  }
+}
+
 /* Line clamp utility for text truncation */
 .line-clamp-2 {
   display: -webkit-box;

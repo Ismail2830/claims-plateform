@@ -95,7 +95,7 @@ export function Features() {
   const smallFeatures = features.filter(f => !f.featured);
 
   return (
-    <section className="py-20 sm:py-28 bg-white overflow-hidden">
+    <section id="fonctionnalites" className="py-20 sm:py-28 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}

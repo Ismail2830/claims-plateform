@@ -167,7 +167,7 @@ export default function UnifiedLoginForm() {
         {step === 'credentials' ? (
           <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 mb-8 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Home</span>
+            <span>Retour à l'accueil</span>
           </Link>
         ) : (
           <button
@@ -175,7 +175,7 @@ export default function UnifiedLoginForm() {
             className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 mb-8 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Login</span>
+            <span>Retour à la connexion</span>
           </button>
         )}
 
@@ -184,17 +184,17 @@ export default function UnifiedLoginForm() {
           <h1 className="text-6xl font-bold text-gray-900 mb-6">ISM Assurance</h1>
           {step === 'credentials' ? (
             <>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-              <p className="text-gray-600">Sign in to manage your claims and policies</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Bienvenue</h2>
+              <p className="text-gray-600">Connectez-vous pour gérer vos sinistres et polices</p>
             </>
           ) : (
             <>
               <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Smartphone className="w-7 h-7 text-blue-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Two-Factor Verification</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Vérification en deux étapes</h2>
               <p className="text-gray-600 text-sm">
-                A 6-digit code was sent to your{' '}
+                Un code à 6 chiffres a été envoyé à votre{' '}
                 <span className="font-medium text-gray-800">{twoFAMethod}</span>
               </p>
             </>
@@ -211,7 +211,7 @@ export default function UnifiedLoginForm() {
                     <div className="flex items-center gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600" />
                       <p className="text-sm text-green-800">
-                        <strong>Registration successful!</strong> You can now sign in with your credentials.
+                        <strong>Inscription réussie !</strong> Vous pouvez maintenant vous connecter avec vos identifiants.
                       </p>
                     </div>
                   </motion.div>
@@ -231,7 +231,7 @@ export default function UnifiedLoginForm() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Email */}
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Adresse e-mail</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Mail className="h-5 w-5 text-gray-400" />
@@ -240,14 +240,14 @@ export default function UnifiedLoginForm() {
                         id="email" name="email" type="email" autoComplete="email" required
                         value={formData.email} onChange={handleChange}
                         className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                        placeholder="Enter your email"
+                        placeholder="Entrez votre e-mail"
                       />
                     </div>
                   </div>
 
                   {/* Password */}
                   <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Mot de passe</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 text-gray-400" />
@@ -256,7 +256,7 @@ export default function UnifiedLoginForm() {
                         id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required
                         value={formData.password} onChange={handleChange}
                         className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                        placeholder="Enter your password"
+                        placeholder="Entrez votre mot de passe"
                       />
                       <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowPassword(!showPassword)}>
                         {showPassword ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
@@ -276,7 +276,7 @@ export default function UnifiedLoginForm() {
                         checked={rememberMe}
                         onChange={(e) => setRememberMe(e.target.checked)}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                      <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">Remember me</label>
+                      <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">Se souvenir de moi</label>
                     </div>
                     <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">Mot de passe oublié ?</Link>
                   </div>
@@ -286,15 +286,15 @@ export default function UnifiedLoginForm() {
                     className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isLoading
-                      ? <div className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Signing in...</span></div>
-                      : 'Sign In'}
+                      ? <div className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Connexion en cours...</span></div>
+                      : 'Se connecter'}
                   </motion.button>
                 </form>
 
                 <div className="mt-6 text-center">
                   <p className="text-sm text-gray-600">
-                    Don't have an account?{' '}
-                    <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-500">Register here</Link>
+                    Vous n'avez pas de compte ?{' '}
+                    <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-500">S'inscrire ici</Link>
                   </p>
                 </div>
               </motion.div>
@@ -307,7 +307,7 @@ export default function UnifiedLoginForm() {
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex items-center gap-3">
                   <MethodIcon className="w-5 h-5 text-blue-600 shrink-0" />
                   <p className="text-sm text-blue-800">
-                    Code sent to <span className="font-semibold">{maskedContact}</span>. Check your {twoFAMethod}.
+                    Code envoyé à <span className="font-semibold">{maskedContact}</span>. Vérifiez votre {twoFAMethod}.
                   </p>
                 </div>
 
@@ -325,20 +325,20 @@ export default function UnifiedLoginForm() {
                     className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isLoading
-                      ? <div className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Verifying...</span></div>
-                      : 'Verify Code'}
+                      ? <div className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Vérification...</span></div>
+                      : 'Vérifier le code'}
                   </motion.button>
                 </form>
 
                 <div className="mt-5 text-center">
                   <p className="text-sm text-gray-500">
-                    Didn't receive the code?{' '}
+                    Vous n'avez pas reçu le code ?{' '}
                     <button
                       disabled={resendCountdown > 0}
                       onClick={handleResend}
                       className="font-medium text-blue-600 hover:text-blue-500 disabled:text-gray-400 disabled:cursor-not-allowed"
                     >
-                      {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend code'}
+                      {resendCountdown > 0 ? `Renvoyer dans ${resendCountdown}s` : 'Renvoyer le code'}
                     </button>
                   </p>
                 </div>

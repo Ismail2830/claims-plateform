@@ -211,7 +211,6 @@ const CLIENT_NAV: NavGroup[] = [
     title: 'COMMUNICATION',
     items: [
       { label: 'Messages',         href: '/dashboard/client/messages', icon: MessageCircle },
-      { label: 'Notifications',    href: '/dashboard/client/notifications', icon: Bell },
     ],
   },
   {

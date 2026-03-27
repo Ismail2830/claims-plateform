@@ -334,7 +334,7 @@ export function HowItWorks() {
   }, [isPaused, activeStep, steps.length]);
 
   return (
-    <section id="how-it-works" className="bg-gray-950 py-20 sm:py-28 overflow-hidden">
+    <section id="comment-ca-marche" className="bg-gray-950 py-20 sm:py-28 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}

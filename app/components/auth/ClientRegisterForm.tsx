@@ -42,12 +42,12 @@ export default function ClientRegisterForm() {
     setErrorMessage('');
     
     if (formData.password !== formData.confirmPassword) {
-      setErrors({ confirmPassword: 'Passwords do not match' });
+      setErrors({ confirmPassword: 'Les mots de passe ne correspondent pas' });
       return;
     }
     
     if (!formData.agreeToTerms) {
-      setErrors({ agreeToTerms: 'Please agree to the terms and conditions' });
+      setErrors({ agreeToTerms: 'Veuillez accepter les conditions générales' });
       return;
     }
 
@@ -61,7 +61,7 @@ export default function ClientRegisterForm() {
       // Redirect to login with success message
       router.push('/auth/login?registered=true');
     } catch (error: any) {
-      setErrorMessage(error.message || 'Registration failed');
+      setErrorMessage(error.message || "Échec de l'inscription");
     } finally {
       setIsLoading(false);
     }
@@ -76,6 +76,29 @@ export default function ClientRegisterForm() {
   };
 
   const nextStep = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (currentStep === 1) {
+      if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est obligatoire';
+      if (!formData.lastName.trim()) newErrors.lastName = 'Le nom de famille est obligatoire';
+      if (!formData.cin.trim()) newErrors.cin = 'Le CIN est obligatoire';
+      if (!formData.email.trim()) newErrors.email = "L'adresse e-mail est obligatoire";
+      if (!formData.phone.trim()) newErrors.phone = 'Le numéro de téléphone est obligatoire';
+      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'La date de naissance est obligatoire';
+    }
+
+    if (currentStep === 2) {
+      if (!formData.address.trim()) newErrors.address = "L'adresse est obligatoire";
+      if (!formData.city.trim()) newErrors.city = 'La ville est obligatoire';
+      if (!formData.province) newErrors.province = 'La province est obligatoire';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     if (currentStep < 3) setCurrentStep(currentStep + 1);
   };
 
@@ -106,7 +129,7 @@ export default function ClientRegisterForm() {
           className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Login</span>
+          <span>Retour à la connexion</span>
         </Link>
 
         {/* Progress Bar */}
@@ -141,14 +164,14 @@ export default function ClientRegisterForm() {
             </div>
             <div className="text-left">
               <h1 className="text-xl font-bold text-gray-900">ClaimsEase</h1>
-              <p className="text-sm text-gray-600">Client Registration</p>
+              <p className="text-sm text-gray-600">Inscription client</p>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Your Account</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Créer votre compte</h2>
           <p className="text-gray-600">
-            {currentStep === 1 && 'Enter your personal information'}
-            {currentStep === 2 && 'Provide your address details'}
-            {currentStep === 3 && 'Set up your account security'}
+            {currentStep === 1 && 'Entrez vos informations personnelles'}
+            {currentStep === 2 && 'Renseignez vos coordonnées'}
+            {currentStep === 3 && 'Sécurisez votre compte'}
           </p>
         </div>
 
@@ -165,39 +188,39 @@ export default function ClientRegisterForm() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                      First Name
+                      Prénom
                     </label>
                     <input
                       id="firstName"
                       name="firstName"
                       type="text"
-                      required
                       value={formData.firstName}
                       onChange={handleChange}
-                      className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="First name"
+                      className={`block w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.firstName ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="Prénom"
                     />
+                    {errors.firstName && <p className="mt-1 text-xs text-red-600">{errors.firstName}</p>}
                   </div>
                   <div>
                     <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                      Last Name
+                      Nom de famille
                     </label>
                     <input
                       id="lastName"
                       name="lastName"
                       type="text"
-                      required
                       value={formData.lastName}
                       onChange={handleChange}
-                      className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Last name"
+                      className={`block w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.lastName ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="Nom de famille"
                     />
+                    {errors.lastName && <p className="mt-1 text-xs text-red-600">{errors.lastName}</p>}
                   </div>
                 </div>
 
                 <div>
                   <label htmlFor="cin" className="block text-sm font-medium text-gray-700 mb-2">
-                    CIN (National ID)
+                    CIN (Carte d'identité nationale)
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -207,18 +230,18 @@ export default function ClientRegisterForm() {
                       id="cin"
                       name="cin"
                       type="text"
-                      required
                       value={formData.cin}
                       onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter your CIN"
+                      className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.cin ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="Entrez votre CIN"
                     />
                   </div>
+                  {errors.cin && <p className="mt-1 text-xs text-red-600">{errors.cin}</p>}
                 </div>
 
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
+                      Adresse e-mail
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -228,19 +251,19 @@ export default function ClientRegisterForm() {
                       id="email"
                       name="email"
                       type="email"
-                      required
                       value={formData.email}
                       onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter your email"
+                      className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="Entrez votre e-mail"
                     />
                   </div>
+                  {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number
+                      Numéro de téléphone
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -250,17 +273,17 @@ export default function ClientRegisterForm() {
                         id="phone"
                         name="phone"
                         type="tel"
-                        required
                         value={formData.phone}
                         onChange={handleChange}
-                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
                         placeholder="+212 6XX XXX XXX"
                       />
                     </div>
+                    {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
                   </div>
                   <div>
                     <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-2">
-                      Date of Birth
+                      Date de naissance
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -270,12 +293,12 @@ export default function ClientRegisterForm() {
                         id="dateOfBirth"
                         name="dateOfBirth"
                         type="date"
-                        required
                         value={formData.dateOfBirth}
                         onChange={handleChange}
-                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.dateOfBirth ? 'border-red-500' : 'border-gray-300'}`}
                       />
                     </div>
+                    {errors.dateOfBirth && <p className="mt-1 text-xs text-red-600">{errors.dateOfBirth}</p>}
                   </div>
                 </div>
               </motion.div>
@@ -290,7 +313,7 @@ export default function ClientRegisterForm() {
               >
                 <div>
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                    Street Address
+                      Adresse
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -300,34 +323,34 @@ export default function ClientRegisterForm() {
                       id="address"
                       name="address"
                       type="text"
-                      required
                       value={formData.address}
                       onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter your street address"
+                      className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="Entrez votre adresse"
                     />
                   </div>
+                  {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                      City
+                      Ville
                     </label>
                     <input
                       id="city"
                       name="city"
                       type="text"
-                      required
                       value={formData.city}
                       onChange={handleChange}
-                      className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="City"
+                      className={`block w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.city ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="Ville"
                     />
+                    {errors.city && <p className="mt-1 text-xs text-red-600">{errors.city}</p>}
                   </div>
                   <div>
                     <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-2">
-                      Postal Code
+                      Code postal
                     </label>
                     <input
                       id="postalCode"
@@ -336,30 +359,30 @@ export default function ClientRegisterForm() {
                       value={formData.postalCode}
                       onChange={handleChange}
                       className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Postal code"
+                      placeholder="Code postal"
                     />
                   </div>
                 </div>
 
                 <div>
                   <label htmlFor="province" className="block text-sm font-medium text-gray-700 mb-2">
-                    Province/Region
+                      Province / Région
                   </label>
                   <select
                     id="province"
                     name="province"
-                    required
                     value={formData.province}
                     onChange={handleChange}
-                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className={`block w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.province ? 'border-red-500' : 'border-gray-300'}`}
                   >
-                    <option value="">Select your province</option>
+                    <option value="">Sélectionnez votre province</option>
                     {moroccanProvinces.map((province) => (
                       <option key={province} value={province}>
                         {province}
                       </option>
                     ))}
                   </select>
+                  {errors.province && <p className="mt-1 text-xs text-red-600">{errors.province}</p>}
                 </div>
               </motion.div>
             )}
@@ -373,7 +396,7 @@ export default function ClientRegisterForm() {
               >
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
+                    Mot de passe
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -387,7 +410,7 @@ export default function ClientRegisterForm() {
                       value={formData.password}
                       onChange={handleChange}
                       className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Create a strong password"
+                      placeholder="Créez un mot de passe fort"
                     />
                     <button
                       type="button"
@@ -405,7 +428,7 @@ export default function ClientRegisterForm() {
 
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm Password
+                    Confirmer le mot de passe
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -419,7 +442,7 @@ export default function ClientRegisterForm() {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Confirm your password"
+                      placeholder="Confirmez votre mot de passe"
                     />
                     <button
                       type="button"
@@ -446,13 +469,13 @@ export default function ClientRegisterForm() {
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <label htmlFor="agreeToTerms" className="ml-2 block text-sm text-gray-700">
-                    I agree to the{' '}
+                    J'accepte les{' '}
                     <a href="#" className="text-blue-600 hover:text-blue-500">
-                      Terms and Conditions
+                      Conditions générales
                     </a>{' '}
-                    and{' '}
+                    et la{' '}
                     <a href="#" className="text-blue-600 hover:text-blue-500">
-                      Privacy Policy
+                      Politique de confidentialité
                     </a>
                   </label>
                 </div>
@@ -478,7 +501,7 @@ export default function ClientRegisterForm() {
                   onClick={prevStep}
                   className="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                 >
-                  Previous
+                  Précédent
                 </button>
               )}
               
@@ -488,7 +511,7 @@ export default function ClientRegisterForm() {
                   onClick={nextStep}
                   className="flex-1 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                 >
-                  Next Step
+                  Étape suivante
                 </button>
               ) : (
                 <motion.button
@@ -501,10 +524,10 @@ export default function ClientRegisterForm() {
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Creating Account...</span>
+                      <span>Création en cours...</span>
                     </div>
                   ) : (
-                    'Create Account'
+                    'Créer un compte'
                   )}
                 </motion.button>
               )}
@@ -514,9 +537,9 @@ export default function ClientRegisterForm() {
           {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Already have an account?{' '}
+              Vous avez déjà un compte ?{' '}
               <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
-                Sign in here
+                Se connecter
               </Link>
             </p>
           </div>

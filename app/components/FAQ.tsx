@@ -101,7 +101,7 @@ export function FAQ() {
   };
 
   return (
-    <section className="py-20 sm:py-28 bg-gray-50 overflow-hidden">
+    <section id="faq" className="py-20 sm:py-28 bg-gray-50 overflow-hidden">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}

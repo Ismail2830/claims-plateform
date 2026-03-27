@@ -246,7 +246,7 @@ function MarqueeRow({
 
 export function Testimonials() {
   return (
-    <section id="testimonials" className="py-20 sm:py-28 bg-white overflow-hidden">
+    <section id="temoignages" className="py-20 sm:py-28 bg-white overflow-hidden">
       {/* Header */}
       <div className="text-center mb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-50 border border-yellow-200 text-yellow-700 text-xs font-bold uppercase tracking-wider mb-4">

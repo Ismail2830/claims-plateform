@@ -26,7 +26,7 @@ export function CTA({ onStart }: CTAProps) {
   ] as const;
 
   return (
-    <section className="py-20 sm:py-28 bg-white overflow-hidden">
+    <section id="contact" className="py-20 sm:py-28 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative rounded-3xl overflow-hidden bg-gray-950 p-8 sm:p-12 lg:p-16">
 

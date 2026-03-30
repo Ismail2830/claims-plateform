@@ -210,6 +210,20 @@ export async function GET(
         orderBy: { createdAt: 'asc' },
         select: { toStatus: true, createdAt: true },
       },
+      payment: {
+        select: {
+          paymentId:  true,
+          amount:     true,
+          method:     true,
+          reference:  true,
+          paidAt:     true,
+          notes:      true,
+          createdAt:  true,
+          recordedByUser: {
+            select: { firstName: true, lastName: true },
+          },
+        },
+      },
       conversations: {
         where: { isArchived: false },
         orderBy: { lastMessageAt: 'desc' },
@@ -272,9 +286,23 @@ export async function GET(
       montantApprouve: approved,
       franchise,
       montantVerse: Math.max(0, approved - franchise),
-      virementDate: status === 'CLOSED' ? claim.updatedAt.toISOString() : null,
+      virementDate: claim.payment?.paidAt.toISOString() ?? (status === 'CLOSED' ? claim.updatedAt.toISOString() : null),
     }
   }
+
+  // Offline payment record
+  const offlinePayment = claim.payment
+    ? {
+        paymentId:  claim.payment.paymentId,
+        amount:     Number(claim.payment.amount),
+        method:     claim.payment.method as string,
+        reference:  claim.payment.reference,
+        paidAt:     claim.payment.paidAt.toISOString(),
+        notes:      claim.payment.notes,
+        createdAt:  claim.payment.createdAt.toISOString(),
+        recordedBy: `${claim.payment.recordedByUser.firstName} ${claim.payment.recordedByUser.lastName}`,
+      }
+    : null
 
   const conv = claim.conversations[0]
 
@@ -340,6 +368,7 @@ export async function GET(
       totalMessages: conv?._count.messages ?? 0,
       conversationId: conv?.id ?? null,
       financialSummary,
+      offlinePayment,
     },
   })
   } catch (err) {

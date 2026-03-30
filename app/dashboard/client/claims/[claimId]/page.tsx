@@ -66,6 +66,16 @@ interface FinancialSummary {
   virementDate: string | null
 }
 
+interface OfflinePayment {
+  paymentId: string
+  amount: number
+  method: string
+  reference: string | null
+  paidAt: string
+  notes: string | null
+  recordedBy: string
+}
+
 interface ClaimDetail {
   claimId: string
   claimNumber: string
@@ -92,6 +102,7 @@ interface ClaimDetail {
   totalMessages: number
   conversationId: string | null
   financialSummary: FinancialSummary | null
+  offlinePayment: OfflinePayment | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1020,6 +1031,39 @@ export default function ClaimDetailPage() {
           {/* Financial Summary */}
           {showFinancial && claim.financialSummary && (
             <FinancialSummaryCard summary={claim.financialSummary} status={claim.status} />
+          )}
+
+          {/* Offline Payment Receipt */}
+          {claim.offlinePayment && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
+              <h3 className="font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                <span>✅</span> Confirmation de paiement
+              </h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Montant versé</p>
+                  <p className="font-bold text-emerald-700 text-lg">{fmt(claim.offlinePayment.amount)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Méthode</p>
+                  <p className="font-medium text-gray-800">{{ CASH: 'Espèces', BANK_TRANSFER: 'Virement bancaire', CHECK: 'Chèque', MOBILE_MONEY: 'Mobile Money' }[claim.offlinePayment.method] ?? claim.offlinePayment.method}</p>
+                </div>
+                {claim.offlinePayment.reference && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Référence</p>
+                    <p className="font-mono text-gray-800">{claim.offlinePayment.reference}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Date du paiement</p>
+                  <p className="text-gray-800">{fmtDate(claim.offlinePayment.paidAt)}</p>
+                </div>
+              </div>
+              {claim.offlinePayment.notes && (
+                <p className="mt-3 text-sm text-gray-600 border-t border-emerald-200 pt-3">{claim.offlinePayment.notes}</p>
+              )}
+              <p className="mt-3 text-xs text-emerald-600">Enregistré par {claim.offlinePayment.recordedBy}</p>
+            </div>
           )}
 
           {/* Rejection Details */}

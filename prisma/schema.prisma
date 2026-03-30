@@ -73,6 +73,7 @@ model User {
   reportSchedules      ReportSchedule[]     @relation("ReportScheduleCreator")
   sessions             Session[]
   teamMembers          TeamMember[]
+  recordedPayments     ClaimPayment[]       @relation("PaymentRecordedBy")
 
   @@index([role], map: "idx_users_role")
   @@index([email], map: "idx_users_email")
@@ -226,6 +227,7 @@ model Claim {
   client                   Client               @relation(fields: [clientId], references: [clientId])
   policy                   Policy?              @relation(fields: [policyId], references: [policyId])
   conversations            Conversation[]
+  payment                  ClaimPayment?
 
   @@index([clientId], map: "idx_claims_client")
   @@index([policyId], map: "idx_claims_policy")
@@ -1010,4 +1012,31 @@ enum MessageRole {
   USER
   BOT
   SYSTEM
+}
+
+// ─── Offline Payment ──────────────────────────────────────────────────────────
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  MOBILE_MONEY
+}
+
+model ClaimPayment {
+  paymentId    String        @id @default(uuid()) @map("payment_id") @db.Uuid
+  claimId      String        @unique @map("claim_id") @db.Uuid
+  amount       Decimal       @db.Decimal(12, 2)
+  method       PaymentMethod
+  reference    String?       @db.VarChar(150)
+  paidAt       DateTime      @map("paid_at")
+  recordedBy   String        @map("recorded_by") @db.Uuid
+  notes        String?       @db.Text
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  claim        Claim         @relation(fields: [claimId], references: [claimId], onDelete: Cascade)
+  recordedByUser User        @relation("PaymentRecordedBy", fields: [recordedBy], references: [userId])
+
+  @@index([claimId], map: "idx_claim_payments_claim")
+  @@map("claim_payments")
 }

@@ -274,6 +274,13 @@ export function Footer() {
                 )}
               </React.Fragment>
             ))}
+            <span className="text-gray-700 text-xs">·</span>
+            <a
+              href="/auth/admin"
+              className="text-xs text-gray-600 hover:text-gray-400 transition-colors whitespace-nowrap"
+            >
+              Administration
+            </a>
           </div>
 
         </div>

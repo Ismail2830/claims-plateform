@@ -108,7 +108,7 @@ export default function ManagerSeniorClaimsPage() {
                       client?: { firstName: string; lastName: string };
                       assignedUser?: { firstName: string; lastName: string };
                     }) => (
-                      <tr key={c.claimId} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push('/dashboard/manager-senior/claims')}>
+                      <tr key={c.claimId} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/dashboard/manager-senior/claims/${c.claimId}`)}>
                         <td className="px-5 py-3 font-medium text-gray-900">#{c.claimNumber}</td>
                         <td className="px-5 py-3 text-gray-600">{c.client?.firstName} {c.client?.lastName}</td>
                         <td className="px-5 py-3 text-gray-600">{c.claimType}</td>

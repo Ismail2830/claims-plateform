@@ -7,6 +7,7 @@ import {
   ChevronLeft, FileText, User, RefreshCw, AlertCircle,
   CheckCircle, Clock, Shield, Wallet, Calendar,
   Hash, X, Send, Banknote, CreditCard, Smartphone, Building2,
+  UserCheck,
 } from 'lucide-react'
 import RoleBasedLayout from '@/components/layout/RoleBasedLayout'
 import { useAdminAuth } from '@/app/hooks/useAdminAuth'
@@ -55,6 +56,14 @@ interface PaymentRecord {
   notes: string | null
   createdAt: string
   recordedBy: { firstName: string; lastName: string; role: string }
+}
+
+interface Expert {
+  id: string
+  firstName: string
+  lastName: string
+  inProgress: number
+  totalAssigned: number
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -349,7 +358,71 @@ export default function ManagerSeniorClaimDetailPage() {
   const claimId = params.claimId as string
 
   const { user, isLoading: authLoading, logout, token } = useAdminAuth()
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+  const [paymentModalOpen, setPaymentModalOpen]   = useState(false)
+  const [movingToPayment, setMovingToPayment]     = useState(false)
+  const [experts, setExperts]                     = useState<Expert[]>([])
+  const [selectedExpertId, setSelectedExpertId]   = useState<string>('')
+  const [assigning, setAssigning]                 = useState(false)
+  const [assignToast, setAssignToast]             = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!token) return
+    fetch('/api/manager-senior/team', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((d) => { if (d.data) setExperts(d.data) })
+      .catch(() => {})
+  }, [token])
+
+  async function handleMoveToPayment() {
+    if (!token) return
+    setMovingToPayment(true)
+    try {
+      const res = await fetch(`/api/manager-senior/claims/${claimId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'IN_PAYMENT' }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        setAssignToast('\u274C ' + (d.error ?? 'Erreur'))
+        setTimeout(() => setAssignToast(null), 3500)
+      } else {
+        mutateClaim()
+        mutatePayment()
+      }
+    } catch {
+      setAssignToast('\u274C Erreur réseau')
+      setTimeout(() => setAssignToast(null), 3500)
+    } finally {
+      setMovingToPayment(false)
+    }
+  }
+
+  async function handleAssign() {
+    if (!token || !selectedExpertId) return
+    setAssigning(true)
+    try {
+      const res = await fetch(`/api/claims/${claimId}/`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignedTo: selectedExpertId }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setAssignToast('❌ ' + (d.error ?? 'Erreur lors de l\'assignation'))
+      } else {
+        setAssignToast('✅ Expert assigné avec succès')
+        mutateClaim()
+      }
+    } catch {
+      setAssignToast('❌ Erreur réseau')
+    } finally {
+      setAssigning(false)
+      setTimeout(() => setAssignToast(null), 3500)
+    }
+  }
 
   const fetcher = ([url, t]: [string, string]) =>
     fetch(url, { headers: { Authorization: `Bearer ${t}` } }).then((r) => {
@@ -432,6 +505,19 @@ export default function ManagerSeniorClaimDetailPage() {
                 <button onClick={() => { mutateClaim(); mutatePayment() }} className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                   <RefreshCw className="w-4 h-4" /> Actualiser
                 </button>
+                {claim.status === 'APPROVED' && (
+                  <button
+                    onClick={handleMoveToPayment}
+                    disabled={movingToPayment}
+                    className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    {movingToPayment
+                      ? <RefreshCw className="w-4 h-4 animate-spin" />
+                      : <Wallet className="w-4 h-4" />
+                    }
+                    {movingToPayment ? 'Traitement...' : 'Mettre en paiement'}
+                  </button>
+                )}
                 {claim.status === 'IN_PAYMENT' && !payment && (
                   <button
                     onClick={() => setPaymentModalOpen(true)}
@@ -535,15 +621,58 @@ export default function ManagerSeniorClaimDetailPage() {
               {/* Assigned expert */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                 <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-purple-600" /> Expert assigné
+                  <UserCheck className="w-4 h-4 text-purple-600" /> Expert assigné
                 </h3>
-                {claim.assignedUser ? (
-                  <div>
-                    <p className="font-medium text-gray-900">{claim.assignedUser.firstName} {claim.assignedUser.lastName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{claim.assignedUser.role.replace(/_/g, ' ')}</p>
+
+                {/* Currently assigned */}
+                {claim.assignedUser && (
+                  <div className="flex items-center gap-3 mb-4 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                    <div className="w-9 h-9 rounded-full bg-purple-200 text-purple-800 flex items-center justify-center font-bold text-sm shrink-0">
+                      {claim.assignedUser.firstName[0]}{claim.assignedUser.lastName[0]}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{claim.assignedUser.firstName} {claim.assignedUser.lastName}</p>
+                      <p className="text-xs text-gray-500">{claim.assignedUser.role.replace(/_/g, ' ')}</p>
+                    </div>
                   </div>
-                ) : (
+                )}
+
+                {/* Assign / Reassign UI — only for non-terminal statuses */}
+                {!['CLOSED', 'REJECTED'].includes(claim.status) && (
+                  <>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      {claim.assignedUser ? 'Réassigner à' : 'Assigner à'}
+                    </label>
+                    <select
+                      value={selectedExpertId}
+                      onChange={(e) => setSelectedExpertId(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 mb-2.5"
+                    >
+                      <option value="">— Choisir un expert —</option>
+                      {experts.map((ex) => (
+                        <option key={ex.id} value={ex.id}>
+                          {ex.firstName} {ex.lastName} ({ex.inProgress} en cours)
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      disabled={!selectedExpertId || assigning}
+                      onClick={handleAssign}
+                      className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm font-medium py-2 rounded-xl transition-colors"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      {assigning ? 'Assignation...' : claim.assignedUser ? 'Réassigner' : 'Assigner'}
+                    </button>
+                  </>
+                )}
+
+                {!claim.assignedUser && ['CLOSED', 'REJECTED'].includes(claim.status) && (
                   <p className="text-sm text-gray-400">Non assigné</p>
+                )}
+
+                {/* Toast */}
+                {assignToast && (
+                  <p className="mt-2.5 text-xs text-center font-medium text-gray-700">{assignToast}</p>
                 )}
               </div>
 

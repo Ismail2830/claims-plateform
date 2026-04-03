@@ -112,7 +112,7 @@ function buildTimeline(
   return TIMELINE_DEFS.map((step, idx) => {
     let stepStatus: 'COMPLETED' | 'CURRENT' | 'PENDING'
     if (idx < currentIdx) stepStatus = 'COMPLETED'
-    else if (idx === currentIdx) stepStatus = 'CURRENT'
+    else if (idx === currentIdx) stepStatus = status === 'CLOSED' ? 'COMPLETED' : 'CURRENT'
     else stepStatus = 'PENDING'
 
     return {
@@ -286,7 +286,7 @@ export async function GET(
       montantApprouve: approved,
       franchise,
       montantVerse: Math.max(0, approved - franchise),
-      virementDate: claim.payment?.paidAt.toISOString() ?? (status === 'CLOSED' ? claim.updatedAt.toISOString() : null),
+      virementDate: claim.payment?.paidAt?.toISOString() ?? (status === 'CLOSED' ? claim.updatedAt.toISOString() : null),
     }
   }
 

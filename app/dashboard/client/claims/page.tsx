@@ -95,7 +95,7 @@ function getStatusMeta(status: string): {
     case 'IN_PAYMENT':
       return { label: 'En paiement', colorClass: 'text-emerald-700', borderClass: 'border-emerald-500', bgClass: 'bg-emerald-50', icon: <DollarSign className="w-4 h-4 text-emerald-600" /> };
     case 'CLOSED':
-      return { label: 'Clôturé', colorClass: 'text-gray-700', borderClass: 'border-gray-400', bgClass: 'bg-gray-50', icon: <CheckCircle className="w-4 h-4 text-gray-500" /> };
+      return { label: 'Paiement effectué', colorClass: 'text-emerald-700', borderClass: 'border-emerald-500', bgClass: 'bg-emerald-50', icon: <DollarSign className="w-4 h-4 text-emerald-600" /> };
     case 'REJECTED':
       return { label: 'Rejeté', colorClass: 'text-red-700', borderClass: 'border-red-500', bgClass: 'bg-red-50', icon: <XCircle className="w-4 h-4 text-red-600" /> };
     default:

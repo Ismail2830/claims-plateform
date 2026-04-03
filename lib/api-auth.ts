@@ -1,5 +1,5 @@
-import { jwtVerify } from 'jose';
 import { NextResponse } from 'next/server';
+import { verifyAccessToken } from '@/app/lib/tokens';
 import type { UserRole } from './permissions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -14,16 +14,6 @@ export interface SessionUser {
 type RequireRoleResult =
   | { ok: true; user: SessionUser }
   | { ok: false; response: NextResponse };
-
-// ─── Secret helper ────────────────────────────────────────────────────────────
-
-function getAccessSecret(): Uint8Array {
-  const raw =
-    process.env.JWT_ACCESS_SECRET ||
-    process.env.JWT_SECRET ||
-    'change-this-access-secret-in-production';
-  return new TextEncoder().encode(raw);
-}
 
 // ─── requireRole ─────────────────────────────────────────────────────────────
 /**
@@ -63,8 +53,7 @@ export async function requireRole(
   // 2. Verify token
   let payload: { type?: string; role?: string; userId?: string; email?: string };
   try {
-    const { payload: p } = await jwtVerify(token, getAccessSecret());
-    payload = p as typeof payload;
+    payload = verifyAccessToken(token);
   } catch {
     return {
       ok: false,

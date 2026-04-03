@@ -70,7 +70,11 @@ export default function SuperAdminDashboard() {
 
   // Load managers list for filter dropdown
   useEffect(() => {
-    fetch('/api/admin/users?role=MANAGER_SENIOR,MANAGER_JUNIOR,EXPERT&limit=100', { credentials: 'include' })
+    const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+    fetch('/api/admin/users?role=MANAGER_SENIOR,MANAGER_JUNIOR&limit=100', {
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((r) => r.json())
       .then((json) => {
         const list = (json.users ?? json.data?.users ?? []) as { userId: string; firstName: string; lastName: string }[];

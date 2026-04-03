@@ -6,7 +6,8 @@ import bcrypt from 'bcryptjs';
 // Verify admin token and return user info
 async function verifyAdminToken(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
-  const token = authHeader?.replace('Bearer ', '');
+  const cookieToken = request.cookies.get('admin_at')?.value;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : (authHeader?.replace('Bearer ', '') || cookieToken);
 
   if (!token) {
     return null;
@@ -58,7 +59,10 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {};
-    if (role) where.role = role;
+    if (role) {
+      const roles = role.split(',').map((r) => r.trim()).filter(Boolean);
+      where.role = roles.length === 1 ? roles[0] : { in: roles };
+    }
     if (isActive !== null) where.isActive = isActive === 'true';
 
     // Get users

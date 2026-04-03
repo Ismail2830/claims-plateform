@@ -17,8 +17,6 @@ import {
   Lock,
   Activity,
   Wallet,
-  HelpCircle,
-  ScrollText,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -137,16 +135,5 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
 ];
 
 export const SUPER_ADMIN_NAV_BOTTOM: NavGroup = {
-  items: [
-    {
-      label: 'Aide & Support',
-      href: '/dashboard/super-admin/support',
-      icon: HelpCircle,
-    },
-    {
-      label: 'Changelog',
-      href: '/dashboard/super-admin/changelog',
-      icon: ScrollText,
-    },
-  ],
+  items: [],
 };

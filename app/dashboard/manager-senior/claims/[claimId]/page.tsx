@@ -12,6 +12,19 @@ import {
 import RoleBasedLayout from '@/components/layout/RoleBasedLayout'
 import { useAdminAuth } from '@/app/hooks/useAdminAuth'
 
+const CLAIM_TYPE_FR: Record<string, string> = {
+  ACCIDENT:         'Accident',
+  THEFT:            'Vol',
+  FIRE:             'Incendie',
+  WATER_DAMAGE:     'Dégât des eaux',
+  NATURAL_DISASTER: 'Catastrophe naturelle',
+  VANDALISM:        'Vandalisme',
+  HEALTH:           'Santé',
+  LIABILITY:        'Responsabilité',
+  AUTO:             'Automobile',
+  OTHER:            'Autre',
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ClaimDetail {
@@ -498,7 +511,7 @@ export default function ManagerSeniorClaimDetailPage() {
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  {claim.claimType} · Sinistre du {fmtDate(claim.incidentDate)}
+                  {CLAIM_TYPE_FR[claim.claimType] ?? claim.claimType} · Sinistre du {fmtDate(claim.incidentDate)}
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">

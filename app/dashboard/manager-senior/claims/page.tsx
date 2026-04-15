@@ -27,6 +27,28 @@ const STATUS_COLORS: Record<string, string> = {
   REJECTED: 'bg-red-100 text-red-700',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  DECLARED: 'Déclaré', ANALYZING: 'En analyse', DOCS_REQUIRED: 'Docs requis',
+  UNDER_EXPERTISE: 'En expertise', IN_DECISION: 'En décision', APPROVED: 'Approuvé',
+  IN_PAYMENT: 'En paiement', CLOSED: 'Clôturé', REJECTED: 'Rejeté',
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+  LOW: 'Faible', NORMAL: 'Normal', HIGH: 'Élevé', CRITICAL: 'Critique',
+};
+
+const CLAIM_TYPE_LABELS: Record<string, string> = {
+  ACCIDENT:     'Accident',
+  THEFT:        'Vol',
+  FIRE:         'Incendie',
+  WATER_DAMAGE: 'Dégât des eaux',
+  NATURAL_DISASTER: 'Catastrophe naturelle',
+  VANDALISM:    'Vandalisme',
+  HEALTH:       'Santé',
+  LIABILITY:    'Responsabilité',
+  OTHER:        'Autre',
+};
+
 export default function ManagerSeniorClaimsPage() {
   const router = useRouter();
   const { user, isLoading: authLoading, logout, token } = useAdminAuth();
@@ -111,10 +133,10 @@ export default function ManagerSeniorClaimsPage() {
                       <tr key={c.claimId} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/dashboard/manager-senior/claims/${c.claimId}`)}>
                         <td className="px-5 py-3 font-medium text-gray-900">#{c.claimNumber}</td>
                         <td className="px-5 py-3 text-gray-600">{c.client?.firstName} {c.client?.lastName}</td>
-                        <td className="px-5 py-3 text-gray-600">{c.claimType}</td>
+                        <td className="px-5 py-3 text-gray-600">{CLAIM_TYPE_LABELS[c.claimType] ?? c.claimType}</td>
                         <td className="px-5 py-3 text-gray-600">{c.assignedUser?.firstName ?? '—'} {c.assignedUser?.lastName ?? ''}</td>
-                        <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[c.status] ?? 'bg-gray-100 text-gray-600'}`}>{c.status}</span></td>
-                        <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : c.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{c.priority}</span></td>
+                        <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[c.status] ?? 'bg-gray-100 text-gray-600'}`}>{STATUS_LABELS[c.status] ?? c.status}</span></td>
+                        <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : c.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{PRIORITY_LABELS[c.priority] ?? c.priority}</span></td>
                         <td className="px-5 py-3 text-gray-600">{c.estimatedAmount ? `${parseFloat(c.estimatedAmount).toLocaleString('fr-MA')} MAD` : '—'}</td>
                         <td className="px-5 py-3"><ChevronRight className="h-4 w-4 text-gray-300" /></td>
                       </tr>

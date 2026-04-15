@@ -111,7 +111,16 @@ function PriorityBadge({ priority }: { priority: string }) {
   );
 }
 
-// ─── Edit Modal ───────────────────────────────────────────────────────────────
+const ROLE_LABELS: Record<string, string> = {
+  EXPERT:           'Expert',
+  MANAGER_JUNIOR:   'Manager Junior',
+  MANAGER_SENIOR:   'Manager Senior',
+  ADMIN:            'Admin',
+  SUPER_ADMIN:      'Super Admin',
+};
+function roleLabel(role?: string) {
+  return role ? (ROLE_LABELS[role] ?? role) : '';
+}
 interface ClaimEditModalProps {
   claim: Claim;
   experts: { userId: string; firstName: string; lastName: string; role: string }[];
@@ -218,7 +227,7 @@ function ClaimEditModal({ claim, experts, onClose, onSubmit }: ClaimEditModalPro
                 <option value="">— Non assigné —</option>
                 {experts.map(e => (
                   <option key={e.userId} value={e.userId}>
-                    {e.firstName} {e.lastName}
+                    {e.firstName} {e.lastName} — {roleLabel(e.role)}
                   </option>
                 ))}
               </select>
@@ -479,7 +488,7 @@ function ClaimCreateModal({ clients, policies, experts, onClose, onSubmit }: Cla
             >
               <option value="">— Non assigné —</option>
               {experts.map(e => (
-                <option key={e.userId} value={e.userId}>{e.firstName} {e.lastName}</option>
+                <option key={e.userId} value={e.userId}>{e.firstName} {e.lastName} — {roleLabel(e.role)}</option>
               ))}
             </select>
           </div>

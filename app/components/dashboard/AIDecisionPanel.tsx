@@ -28,6 +28,27 @@ import {
 import { IGNORED_REASON_OPTIONS } from '@/lib/ai-decision/types';
 import type { DecisionFactor } from '@/lib/ai-decision/types';
 
+const CLAIM_TYPE_FR: Record<string, string> = {
+  ACCIDENT:         'Accident',
+  THEFT:            'Vol',
+  FIRE:             'Incendie',
+  WATER_DAMAGE:     'Dégât des eaux',
+  NATURAL_DISASTER: 'Catastrophe naturelle',
+  VANDALISM:        'Vandalisme',
+  HEALTH:           'Santé',
+  LIABILITY:        'Responsabilité',
+  AUTO:             'Automobile',
+  OTHER:            'Autre',
+};
+
+/** Replace any raw English claim type codes in a string with their French label */
+function translateClaimTypes(text: string): string {
+  return Object.entries(CLAIM_TYPE_FR).reduce(
+    (str, [key, val]) => str.replaceAll(key, val),
+    text,
+  );
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AIDecisionRecord {
@@ -113,7 +134,7 @@ function FactorList({ factors }: { factors: DecisionFactor[] }) {
         <div key={f.id} className="flex items-start gap-2 text-sm">
           <FactorIcon result={f.result} />
           <span className={factorTextClass(f.result)}>
-            <span className="font-medium">{f.label}\u00a0:</span> {f.detail}
+            <span className="font-medium">{f.label} :</span> {translateClaimTypes(f.detail)}
           </span>
         </div>
       ))}
@@ -420,7 +441,7 @@ export default function AIDecisionPanel({ claimId, onDecisionMade }: Props) {
 
         <CardContent className="px-4 pb-4">
           {/* Reasoning */}
-          <p className="text-sm text-gray-600 italic">{decision.reasoning}</p>
+          <p className="text-sm text-gray-600 italic">{translateClaimTypes(decision.reasoning)}</p>
 
           {/* Escalate summary card */}
           {rec === 'ESCALATE' && (
@@ -437,7 +458,7 @@ export default function AIDecisionPanel({ claimId, onDecisionMade }: Props) {
                   {copied ? 'Copié !' : 'Copier'}
                 </button>
               </div>
-              <p className="text-xs text-gray-600">{decision.reasoning}</p>
+              <p className="text-xs text-gray-600">{translateClaimTypes(decision.reasoning)}</p>
             </div>
           )}
 

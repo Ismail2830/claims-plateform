@@ -17,6 +17,19 @@ const REQUIRED_DOCS: Record<string, string[]> = {
   ACCIDENT:     ['PHOTO_DEGATS', 'RAPPORT_MEDICAL'],
 };
 
+const CLAIM_TYPE_FR: Record<string, string> = {
+  ACCIDENT:          'Accident',
+  THEFT:             'Vol',
+  FIRE:              'Incendie',
+  WATER_DAMAGE:      'Dégât des eaux',
+  NATURAL_DISASTER:  'Catastrophe naturelle',
+  VANDALISM:         'Vandalisme',
+  HEALTH:            'Santé',
+  LIABILITY:         'Responsabilité',
+  AUTO:              'Automobile',
+  OTHER:             'Autre',
+};
+
 export function calculateDecision(data: ClaimForDecision): DecisionResult {
   let approveScore = 0;
   let rejectScore = 0;
@@ -115,7 +128,7 @@ export function calculateDecision(data: ClaimForDecision): DecisionResult {
       label:  'Montant déclaré',
       result: 'POSITIVE',
       impact: 15,
-      detail: `Montant dans la norme (${Math.round(ratio * 100)}% de la moyenne ${typeSinistre})`,
+      detail: `Montant dans la norme (${Math.round(ratio * 100)}% de la moyenne ${CLAIM_TYPE_FR[typeSinistre] ?? typeSinistre})`,
     });
   } else if (ratio <= 2.5) {
     rejectScore += 5;

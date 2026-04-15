@@ -86,7 +86,14 @@ export async function POST(request: NextRequest) {
     // Always send email OTP on every login
     const code = generateOtp();
     storeOtp('2fa', client.clientId, code);
-    await sendEmailOtp(client.email, code, '2fa');
+
+    try {
+      await sendEmailOtp(client.email, code, '2fa');
+    } catch (emailError) {
+      // In development, log the OTP so it can still be used without email delivery
+      console.warn('[Login] Failed to send OTP email:', emailError);
+      console.info(`[Login] OTP for ${client.email}: ${code}`);
+    }
 
     // Short-lived pending token (5 min) — carries clientId + rememberMe preference
     const pendingToken = jwt.sign(

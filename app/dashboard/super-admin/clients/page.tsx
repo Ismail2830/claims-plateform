@@ -40,16 +40,23 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 // ─── Risk score badge ─────────────────────────────────────────────────────────
+function riskLevel(score?: string): 'high' | 'medium' | 'low' {
+  const s = (score ?? '').toLowerCase();
+  if (s === 'high' || parseFloat(s) > 0.7) return 'high';
+  if (s === 'medium' || parseFloat(s) > 0.4) return 'medium';
+  return 'low';
+}
+
 function RiskBadge({ score }: { score?: string }) {
-  const value = parseFloat(score ?? '0');
-  const pct = Math.round(value * 100);
+  const level = riskLevel(score);
+  const label = level === 'high' ? 'Élevé' : level === 'medium' ? 'Moyen' : 'Faible';
   const color =
-    value > 0.7 ? 'bg-red-100 text-red-800' :
-    value > 0.4 ? 'bg-yellow-100 text-yellow-800' :
+    level === 'high' ? 'bg-red-100 text-red-800' :
+    level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
     'bg-green-100 text-green-800';
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${color}`}>
-      {pct}%
+      {label}
     </span>
   );
 }
@@ -355,9 +362,12 @@ function ClientDrawer({ client, onClose, onEdit }: { client: Client; onClose: ()
               </div>
               <div className="bg-purple-50 rounded-xl p-3 text-center">
                 <p className="text-2xl font-bold text-purple-700">
-                  {client.lifetimeValue
-                    ? `${Math.round(parseFloat(client.lifetimeValue) / 1000)}k`
-                    : '—'}
+                  {(() => {
+                    const raw = String(client.lifetimeValue ?? '').replace(/[^0-9.]/g, '');
+                    const num = parseFloat(raw);
+                    if (!raw || isNaN(num)) return '—';
+                    return num >= 1000 ? `${Math.round(num / 1000)}k` : String(Math.round(num));
+                  })()}
                 </p>
                 <p className="text-xs text-purple-600 mt-0.5">Valeur (MAD)</p>
               </div>
@@ -369,8 +379,8 @@ function ClientDrawer({ client, onClose, onEdit }: { client: Client; onClose: ()
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Score de risque</h3>
             <div className="flex items-center space-x-3">
               <ShieldAlert className={`w-5 h-5 ${
-                parseFloat(client.riskScore ?? '0') > 0.7 ? 'text-red-500' :
-                parseFloat(client.riskScore ?? '0') > 0.4 ? 'text-yellow-500' :
+                riskLevel(client.riskScore) === 'high' ? 'text-red-500' :
+                riskLevel(client.riskScore) === 'medium' ? 'text-yellow-500' :
                 'text-green-500'
               }`} />
               <div className="flex-1">
@@ -381,11 +391,11 @@ function ClientDrawer({ client, onClose, onEdit }: { client: Client; onClose: ()
                 <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${
-                      parseFloat(client.riskScore ?? '0') > 0.7 ? 'bg-red-500' :
-                      parseFloat(client.riskScore ?? '0') > 0.4 ? 'bg-yellow-500' :
+                      riskLevel(client.riskScore) === 'high' ? 'bg-red-500' :
+                      riskLevel(client.riskScore) === 'medium' ? 'bg-yellow-500' :
                       'bg-green-500'
                     }`}
-                    style={{ width: `${Math.round(parseFloat(client.riskScore ?? '0') * 100)}%` }}
+                    style={{ width: riskLevel(client.riskScore) === 'high' ? '80%' : riskLevel(client.riskScore) === 'medium' ? '50%' : '20%' }}
                   />
                 </div>
               </div>

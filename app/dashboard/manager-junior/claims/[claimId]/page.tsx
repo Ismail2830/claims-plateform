@@ -12,6 +12,19 @@ import RoleBasedLayout from '@/components/layout/RoleBasedLayout'
 import { useAdminAuth } from '@/app/hooks/useAdminAuth'
 import AIDecisionPanel from '@/app/components/dashboard/AIDecisionPanel'
 
+const CLAIM_TYPE_FR: Record<string, string> = {
+  ACCIDENT:         'Accident',
+  THEFT:            'Vol',
+  FIRE:             'Incendie',
+  WATER_DAMAGE:     'Dégât des eaux',
+  NATURAL_DISASTER: 'Catastrophe naturelle',
+  VANDALISM:        'Vandalisme',
+  HEALTH:           'Santé',
+  LIABILITY:        'Responsabilité',
+  AUTO:             'Automobile',
+  OTHER:            'Autre',
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ClaimDetail {
@@ -565,7 +578,7 @@ export default function ManagerClaimDetailPage() {
               <FileText className="w-4 h-4 text-blue-600" /> Sinistre
             </h3>
             <div className="space-y-2.5 text-sm">
-              <Row label="Type"       val={claim.claimType} />
+              <Row label="Type"       val={CLAIM_TYPE_FR[claim.claimType] ?? claim.claimType} />
               <Row label="Date incident" val={fmtDate(claim.incidentDate)} />
               <Row label="Date déclaration" val={fmtDate(claim.declarationDate)} />
               {claim.incidentLocation && <Row label="Lieu" val={claim.incidentLocation} />}

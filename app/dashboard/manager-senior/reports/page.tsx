@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { BarChart2, Download, RefreshCw, FileText, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { BarChart2, Download, FileText, TrendingUp, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import RoleBasedLayout from '@/components/layout/RoleBasedLayout';
 import { useAdminAuth } from '@/app/hooks/useAdminAuth';
 
@@ -25,18 +25,80 @@ export default function ManagerSeniorReportsPage() {
     if (!authLoading && !user) router.push('/auth/admin?reason=session_expired');
   }, [authLoading, user, router]);
 
+  const [downloadingCard, setDownloadingCard] = React.useState<string | null>(null);
+
   if (authLoading || !user) return null;
 
   const stats = data?.data;
   const breakdown: Array<{ status: string; count: number }> = stats?.statusBreakdown ?? [];
 
-  const reportCards = [
-    { title: 'Rapport mensuel', desc: 'Synthèse des sinistres du mois en cours', icon: BarChart2, color: 'bg-blue-100 text-blue-600' },
-    { title: 'Rapport hebdomadaire', desc: 'Activité des 7 derniers jours', icon: TrendingUp, color: 'bg-green-100 text-green-600' },
-    { title: 'Cas escaladés', desc: 'Rapport des dossiers HIGH / CRITICAL', icon: AlertTriangle, color: 'bg-red-100 text-red-600' },
-    { title: 'Approbations', desc: 'Décisions prises ce mois', icon: CheckCircle, color: 'bg-orange-100 text-orange-600' },
-    { title: 'Performance équipe', desc: 'Productivité et délais de traitement', icon: FileText, color: 'bg-purple-100 text-purple-600' },
+  function getMonthRange() {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { dateFrom: from.toISOString().split('T')[0], dateTo: now.toISOString().split('T')[0] };
+  }
+
+  function getWeekRange() {
+    const now = new Date();
+    const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return { dateFrom: from.toISOString().split('T')[0], dateTo: now.toISOString().split('T')[0] };
+  }
+
+  type ReportType = 'MONTHLY_ACTIVITY' | 'SINISTRALITE' | 'FINANCIAL' | 'ACAPS_COMPLIANCE' | 'MANAGER_PERFORMANCE' | 'CUSTOM';
+
+  const reportCards: Array<{
+    title: string;
+    desc: string;
+    icon: React.ElementType;
+    color: string;
+    reportType: ReportType;
+    getDateRange: () => { dateFrom: string; dateTo: string };
+  }> = [
+    { title: 'Rapport mensuel', desc: 'Synthèse des sinistres du mois en cours', icon: BarChart2, color: 'bg-blue-100 text-blue-600', reportType: 'MONTHLY_ACTIVITY', getDateRange: getMonthRange },
+    { title: 'Rapport hebdomadaire', desc: 'Activité des 7 derniers jours', icon: TrendingUp, color: 'bg-green-100 text-green-600', reportType: 'MONTHLY_ACTIVITY', getDateRange: getWeekRange },
+    { title: 'Cas escaladés', desc: 'Rapport des dossiers HIGH / CRITICAL', icon: AlertTriangle, color: 'bg-red-100 text-red-600', reportType: 'SINISTRALITE', getDateRange: getMonthRange },
+    { title: 'Approbations', desc: 'Décisions prises ce mois', icon: CheckCircle, color: 'bg-orange-100 text-orange-600', reportType: 'MANAGER_PERFORMANCE', getDateRange: getMonthRange },
+    { title: 'Performance équipe', desc: 'Productivité et délais de traitement', icon: FileText, color: 'bg-purple-100 text-purple-600', reportType: 'MANAGER_PERFORMANCE', getDateRange: getMonthRange },
   ];
+
+  async function handleDownload(card: (typeof reportCards)[number]) {
+    if (!token || downloadingCard) return;
+    setDownloadingCard(card.title);
+    try {
+      const { dateFrom, dateTo } = card.getDateRange();
+      const res = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: card.title,
+          type: card.reportType,
+          format: 'PDF',
+          dateFrom,
+          dateTo,
+          sections: [],
+          recipients: [],
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur inconnue' }));
+        alert(`Erreur : ${err.error ?? 'Impossible de générer le rapport'}`);
+        return;
+      }
+      const json = await res.json();
+      const downloadUrl: string = json.downloadUrl ?? json.report?.filePath;
+      if (!downloadUrl) { alert('URL de téléchargement introuvable'); return; }
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${card.title.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      alert('Erreur réseau lors de la génération du rapport');
+    } finally {
+      setDownloadingCard(null);
+    }
+  }
 
   return (
     <RoleBasedLayout role="MANAGER_SENIOR" user={user} onLogout={logout}>
@@ -57,8 +119,15 @@ export default function ManagerSeniorReportsPage() {
                 <p className="font-semibold text-gray-900">{r.title}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{r.desc}</p>
               </div>
-              <button className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors shrink-0">
-                <Download className="h-3.5 w-3.5" /> PDF
+              <button
+                onClick={() => handleDownload(r)}
+                disabled={downloadingCard === r.title}
+                className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {downloadingCard === r.title
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Download className="h-3.5 w-3.5" />}
+                PDF
               </button>
             </div>
           ))}

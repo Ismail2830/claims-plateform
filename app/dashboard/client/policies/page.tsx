@@ -60,6 +60,18 @@ const TYPE_STYLES: Record<PolicyType, { bg: string; icon: React.ReactNode; label
   },
 };
 
+const COVERAGE_TYPE_LABELS: Record<string, string> = {
+  RC_ONLY: 'Responsabilité civile uniquement',
+  THIRD_PARTY_PLUS: 'Tiers étendu',
+  COMPREHENSIVE: 'Tous risques',
+  FIRE_ONLY: 'Incendie uniquement',
+  MULTIRISQUES: 'Multirisques',
+  LANDLORD: 'Propriétaire non occupant',
+  AMO_BASIC: 'AMO de base',
+  COMPLEMENTAIRE: 'Complémentaire',
+  FULL_COVER: 'Couverture complète',
+};
+
 function StatusBadge({ status, label }: { status: string; label?: string }) {
   const style = STATUS_STYLES[status as PolicyStatus] ?? 'bg-gray-100 text-gray-700';
   const icons: Record<string, React.ReactNode> = {
@@ -279,7 +291,7 @@ export function ClientPoliciesContent() {
                           {policy.coverageType && (
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <FileText className="w-4 h-4 shrink-0 text-gray-400" />
-                              <span>{policy.coverageType}</span>
+                              <span>{COVERAGE_TYPE_LABELS[policy.coverageType] ?? policy.coverageType}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-sm text-gray-600">

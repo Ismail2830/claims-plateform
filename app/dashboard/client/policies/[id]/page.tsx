@@ -57,6 +57,18 @@ const POLICY_TYPE_LABELS: Record<string, string> = {
   LIFE: 'Life Insurance',
 };
 
+const COVERAGE_TYPE_LABELS: Record<string, string> = {
+  RC_ONLY: 'Responsabilité civile uniquement',
+  THIRD_PARTY_PLUS: 'Tiers étendu',
+  COMPREHENSIVE: 'Tous risques',
+  FIRE_ONLY: 'Incendie uniquement',
+  MULTIRISQUES: 'Multirisques',
+  LANDLORD: 'Propriétaire non occupant',
+  AMO_BASIC: 'AMO de base',
+  COMPLEMENTAIRE: 'Complémentaire',
+  FULL_COVER: 'Couverture complète',
+};
+
 const COVERAGE_DETAILS: Record<string, { limits: string[]; exclusions: string[] }> = {
   AUTO: {
     limits: [
@@ -313,8 +325,8 @@ export default function PolicyDetailPage() {
             {policy.coverageType && (
               <InfoRow
                 icon={<FileText className="w-4 h-4" />}
-                label="Coverage Type"
-                value={policy.coverageType}
+                label="Type de couverture"
+                value={COVERAGE_TYPE_LABELS[policy.coverageType] ?? policy.coverageType}
               />
             )}
             <InfoRow

@@ -131,7 +131,6 @@ const MANAGER_SENIOR_NAV: NavGroup[] = [
     title: 'COMMUNICATION',
     items: [
       { label: 'Messages',       href: '/dashboard/manager-senior/messages',              icon: MessageCircle },
-      { label: 'Notifications',  href: '/dashboard/manager-senior/notifications',         icon: Bell },
     ],
   },
 ];

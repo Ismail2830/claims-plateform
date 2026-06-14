@@ -103,7 +103,16 @@ export function SmartChatWidget() {
     setOpen(false)
   }, [pathname])
 
-  // Compute greeting once data arrives (only on first load)
+  // Reset greeting when token changes (e.g. different client logs in)
+  useEffect(() => {
+    greetingComputedRef.current = false
+    setGreeting(null)
+    setSubVisible(false)
+    setAutoOpened(false)
+    setOpen(false)
+  }, [token])
+
+  // Compute greeting once data arrives (only on first load per session)
   useEffect(() => {
     if (!data || greetingComputedRef.current) return
     greetingComputedRef.current = true

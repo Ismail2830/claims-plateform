@@ -1,18 +1,16 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { generateOtp, storeOtp, sendEmailOtp } from '@/app/lib/otp';
-import { ACCESS_SECRET } from '@/app/lib/tokens';
-
-const JWT_SECRET = ACCESS_SECRET;
-
-/** Mask email - show first 3 chars and domain */
-function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  const visible = local.slice(0, Math.min(3, local.length));
-  return `${visible}***@${domain}`;
-}
+import {
+  signAccessToken,
+  signRefreshToken,
+  hashToken,
+  parseDeviceName,
+  buildRefreshCookieOptions,
+  CLIENT_REFRESH_COOKIE,
+  CLIENT_ACCESS_COOKIE,
+  ACCESS_COOKIE_OPTIONS,
+} from '@/app/lib/tokens';
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,32 +81,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Always send email OTP on every login
-    const code = generateOtp();
-    storeOtp('2fa', client.clientId, code);
-
-    try {
-      await sendEmailOtp(client.email, code, '2fa');
-    } catch (emailError) {
-      // In development, log the OTP so it can still be used without email delivery
-      console.warn('[Login] Failed to send OTP email:', emailError);
-      console.info(`[Login] OTP for ${client.email}: ${code}`);
-    }
-
-    // Short-lived pending token (5 min) — carries clientId + rememberMe preference
-    const pendingToken = jwt.sign(
-      { clientId: client.clientId, type: 'PENDING_2FA', rememberMe: !!rememberMe },
-      JWT_SECRET,
-      { expiresIn: '5m' }
-    );
-
-    return NextResponse.json({
-      success: true,
-      requires2FA: true,
-      method: 'email' as const,
-      maskedContact: maskEmail(client.email),
-      pendingToken,
+    // Issue tokens directly — 2FA email step is disabled
+    const accessToken = signAccessToken({
+      clientId: client.clientId,
+      email: client.email,
+      cin: client.cin,
+      type: 'CLIENT',
     });
+
+    const refreshDays = rememberMe ? 30 : 7;
+    const rawRefresh  = signRefreshToken({ clientId: client.clientId, type: 'CLIENT' }, `${refreshDays}d`);
+    const ipAddress   = request.headers.get('x-forwarded-for') || 'unknown';
+    const userAgent   = request.headers.get('user-agent') || '';
+
+    await prisma.client.update({ where: { clientId: client.clientId }, data: { lastLoginAt: new Date() } });
+
+    await prisma.session.create({
+      data: {
+        clientId: client.clientId,
+        hashedToken: hashToken(rawRefresh),
+        ipAddress,
+        userAgent,
+        deviceName: parseDeviceName(userAgent),
+        rememberMe,
+        expiresAt: new Date(Date.now() + refreshDays * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        entityType: 'CLIENT',
+        entityId: client.clientId,
+        action: 'LOGIN',
+        description: `Successful login: ${client.firstName} ${client.lastName}`,
+        clientId: client.clientId,
+        ipAddress,
+        userAgent,
+        metadata: { email: client.email, loginTime: new Date(), success: true },
+      },
+    });
+
+    const response = NextResponse.json({
+      success: true,
+      message: 'Login successful',
+      data: { token: accessToken, client },
+    });
+
+    response.cookies.set(CLIENT_REFRESH_COOKIE, rawRefresh, buildRefreshCookieOptions(rememberMe));
+    response.cookies.set(CLIENT_ACCESS_COOKIE,  accessToken, ACCESS_COOKIE_OPTIONS);
+
+    return response;
 
   } catch (error) {
     console.error('Login error:', error);

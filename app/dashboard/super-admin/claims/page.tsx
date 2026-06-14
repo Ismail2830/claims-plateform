@@ -312,7 +312,7 @@ function ClaimEditModal({ claim, experts, onClose, onSubmit }: ClaimEditModalPro
 interface ClaimCreateModalProps {
   clients: { clientId: string; firstName: string; lastName: string; email: string }[];
   policies: { policyId: string; policyNumber: string; clientId: string }[];
-  experts: { userId: string; firstName: string; lastName: string }[];
+  experts: { userId: string; firstName: string; lastName: string; role: string }[];
   onClose: () => void;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
 }
